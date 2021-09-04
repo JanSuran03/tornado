@@ -29,13 +29,13 @@
      => #tornado.types.CSSUnit{:compiles-to \"%\"
                                :value       20}
 
-  With meta:
+  With a documentation:
      (defunit hs \"hs\" \"A time unit, halfsecond.\")
      **you have to include the 2nd arg**
 
 
-  Note that if you define a unit with different identifier and css-unit, the css-unit
-  has to be in a string form."
+  Note that if you define a unit with a different identifier and css-unit,
+  the css-unit has to be in a string form."
   ([unit]
    (let [compiles-to (str unit)]
      `(defunit ~unit ~compiles-to nil)))
@@ -49,12 +49,12 @@
 (defunit px "px" "An absolute length unit \"pixel\".")
 (defunit pt "pt" "An absolute length unit \"point\".")
 (defunit pc "pc" "An absolute length unit \"pica\".")
-(defunit in "in" "An absolute length unit \"point\"")
+(defunit in "in" "An absolute length unit \"inch\"")
 (defunit cm "cm" "An absolute length unit \"centimeter\".")
 (defunit mm "mm" "An absolute length unit \"millimeter\".")
-(defunit percent "%" "An absolute length unit \"percent\", can also\nbe used as color alpha in this library.")
 
 ;; relative size units
+(defunit percent "%" "An absolute length unit \"percent\", can also\nbe used as color alpha in this library.")
 (defunit rem* "rem" "A relative length unit \"rem\", depending\non the size of the root element")
 (defunit em "em" "A relative length unit \"em\", depending\non the size of the parent element.")
 (defunit fr "fr" "A relative length unit \"fraction\", depending\non the size of the parent element. Accepts values 0-1.")
@@ -72,7 +72,7 @@
 (defunit deg "deg" "An angular unit, \"degree\".")
 (defunit rad "rad" "An angular unit, \"radian\". Equal to 360°/2π")
 (defunit grad "grad" "An angular unit, \"gradian\". 100 gradians\nare equal to 90 degrees.")
-(defunit turn "turn" "An angular unit, \"turn\". Equal to 360 degrees.")
+(defunit turn "turn" "An angular unit, \"turn\". Represents one\n whole turn, equal to 360 degrees.")
 
 ;; frequency units
 (defunit Hz "Hz" "A frequency unit, \"Hertz.")

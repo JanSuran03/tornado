@@ -16,6 +16,7 @@
   "Available default colors in tornado."
   {:black  "#000000"
    :blue   "#0000FF"
+   :gray   "#808080"
    :green  "#00FF00"
    :red    "#FF0000"
    :white  "#FFFFFF"
@@ -36,7 +37,7 @@
   ([[red green blue alpha]]
    (let [alpha (or alpha 1)]
      (if (and (every? #(util/between % 0 255) [red green blue]) (util/between alpha 0 1))
-       (CSSColor. "rgba" {:red red, :green green, :blue blue, :alpha (util/percent->number alpha)})
+       (CSSColor. "rgba" {:red red, :green green, :blue blue, :alpha (util/percent->number alpha true)})
        (throw (IllegalArgumentException.
                 (str "All r, g, b values of an rgb color must be between 0 and 255: "
                      red ", " green ", " blue " and alpha between 0 and 1: " alpha))))))
@@ -65,7 +66,7 @@
   ([hue saturation lightness]
    (hsla [hue saturation lightness 1]))
   ([hue saturation lightness alpha]
-   (hsla [hue saturation lightness])))
+   (hsla [hue saturation lightness alpha])))
 
 (defn hex->rgba
   "Converts a color in hexadecimal string to an rgba color:
@@ -183,4 +184,4 @@
          not-strings? (every? #(not (string? %)) colors)]
      (if (and (apply = types) not-strings?)
        (-mix-colors (first types) colors)
-       (throw (IllegalArgumentException. (str "Can't add colors of different types: " colors)))))))
+       (throw (IllegalArgumentException. (str "Can't mix colors of different types: " colors)))))))

@@ -2,7 +2,7 @@
 
 (defrecord CSSUnit [compiles-to value])
 
-(defrecord CSSFunction [compiles-to args])
+(defrecord CSSFunction [compiles-to compile-fn args])
 
 (defrecord CSSAtRule [identifier value])
 

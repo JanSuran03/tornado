@@ -1,14 +1,17 @@
-# tornado
+# Tornado
 
-A Clojure library designed to ... well, that part is up to you.
+A Clojure library designed to generate CSS using Clojure with focus on simplcity,
+with high compilation speed, many features and compilation warnings.
+The Tornado library is not designed to work in ClojureScript.
 
 ## Usage
 
-FIXME
+For now, this library has no automatizations and does not
+have any compile options. Everything is coming later.
 
 ## License
 
-Copyright © 2021 FIXME
+Copyright © 2021 Jan Šuráň
 
 This program and the accompanying materials are made available under the
 terms of the Eclipse Public License 2.0 which is available at

@@ -5,7 +5,8 @@
             [clojure.string :as str]
             [tornado.props-vals :as pv]
             [tornado.selectors :as sel]
-            [tornado.colors :as colors])
+            [tornado.colors :as colors]
+            [tornado.units :as u])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSSelector CSSPseudoClass CSSPseudoElement)))
 
@@ -16,6 +17,8 @@
 (def left-bracket "{")
 (def right-bracket "}")
 
+(defonce unevaluated-hiccup (atom #{}))
+
 (defn conjv [vect value]
   (if (sequential? vect)
     (conj (if (vector? vect)
@@ -23,13 +26,6 @@
             (vec vect))
           value)
     (throw (IllegalArgumentException. (str "Not sequential: " vect)))))
-
-(defmacro cartesian-product [& seqs]
-  (let [seqs (cond->> seqs (every? #(every? sequential? %) seqs) (apply concat))
-        w-bindings (map #(vector (gensym) %) seqs)
-        binding-syms (map first w-bindings)
-        for-bindings (vec (apply concat w-bindings))]
-    `(for ~for-bindings (vector ~@binding-syms))))
 
 (defn contains-num-maps [coll]
   (if (sequential? coll)
@@ -198,39 +194,109 @@
     (str "@media " expanded-rules "\n"
          indent changes)))
 
-;; rest can return an empty seq
-;; next can return nil
-
-(defn compile-selector-and-children
-  ""
-  [selector children]
-  (for [child children]
-    (css nil nil child)))
+#_(defn compile-selector-and-children
+    ""
+    [selector children]
+    (for [child children]
+      (css nil nil child)))
 
 (defn expand-css
   ""
   ([tag-or-selector children])
   ([tag-or-selector params children]))
 
-(defn css
-  "Generates CSS from hiccup-like data structures. This is the main function, which is
-  called after every further nesting. It then calls other relevant functions with
-  arguments depending on its input."
-  ([[tag-or-selector maybe-params & maybe-children :as input]]
-   (css nil nil input))
-  ([parent-tags parent-params [tag-or-selector maybe-params & maybe-children]]
-   (when maybe-params
-     (some-> maybe-children contains-num-maps
-             (#(when (pos? %) (throw (IllegalArgumentException.
-                                       (str "Invalid hiccup structure: If a param map is included, it has "
-                                            "to be the second element of the vector: " tag-or-selector))))))
-     (if-let [params (when (map? maybe-params)
-                       maybe-params)]
-       ;; with params map
-       (if (seq maybe-children)
-         ;; with params map and children
-         (expand-css tag-or-selector params maybe-children)
-         ;; with params map, without children
-         (compile-selector-and-children tag-or-selector maybe-children))
-       ;; without params map
-       (expand-css tag-or-selector (concat [maybe-params] maybe-children))))))
+#_(defn css
+    "Generates CSS from hiccup-like data structures. This is the main function, which is
+    called after every further nesting. It then calls other relevant functions with
+    arguments depending on its input."
+    ([[tag-or-selector maybe-params & maybe-children :as input]]
+     (css nil nil input))
+    ([parent-tags parent-params [tag-or-selector maybe-params & maybe-children]]
+     (when maybe-params
+       (some-> maybe-children contains-num-maps
+               (#(when (pos? %) (throw (IllegalArgumentException.
+                                         (str "Invalid hiccup structure: If a param map is included, it has "
+                                              "to be the second element of the vector: " tag-or-selector))))))
+       (if-let [params (when (map? maybe-params)
+                         maybe-params)]
+         ;; with params map
+         (if (seq maybe-children)
+           ;; with params map and children
+           (expand-css tag-or-selector params maybe-children)
+           ;; with params map, without children
+           (compile-selector-and-children tag-or-selector maybe-children))
+         ;; without params map
+         (expand-css tag-or-selector (concat [maybe-params] maybe-children))))))
+
+(def spc-err-msg (str "Error: Hiccup rules:\nYou have to include at least one selector before params or "
+                      "children.\nIf you include any of params or children, the order has to be selectors"
+                      " -> params -> children.\nYou also cannot include more than one parameters map."))
+
+(defmacro cartesian-product [& seqs]
+  (let [w-bindings (map #(vector (gensym) %) seqs)
+        binding-syms (mapv first w-bindings)
+        for-bindings (vec (apply concat w-bindings))]
+    `(for ~for-bindings ~binding-syms)))
+
+(defmacro apply-cartesian-product [input-seq]
+  `(cartesian-product ~@input-seq))
+
+(defn expand-seqs [coll]
+  (mapcat (fn [coll]
+            (if (seq? coll)
+              (expand-seqs coll)
+              (list coll)))
+          coll))
+
+(defn selectors-params-children [hiccup]
+  (as-> hiccup <> (reduce (fn [{:keys [selectors params* children] :as spc-map} hiccup-element]
+                            (let [belongs-to (cond (sel/id-class-tag? hiccup-element) :selectors
+                                                   (map? hiccup-element) :params*
+                                                   (vector? hiccup-element) :children
+                                                   :else (throw (IllegalArgumentException.
+                                                                  (str "Invalid hiccup element: " hiccup-element
+                                                                       "\nNone from a class, id, selector, child-vector"
+                                                                       " or a params map."))))]
+                              (if (or (and (not= belongs-to :selectors)
+                                           (empty? selectors))
+                                      (and (= belongs-to :selectors)
+                                           (or (seq params*) (seq children)))
+                                      (and (= belongs-to :params*)
+                                           (or (seq params*) (seq children))))
+                                (throw (IllegalArgumentException. spc-err-msg))
+                                (update spc-map belongs-to conj hiccup-element))))
+                          {:selectors []
+                           :params*   []
+                           :children  []} <>)
+        (update <> :params* first)))
+
+(declare -css)
+
+(defn --css [parents params hiccup-vector]
+  (let [{:keys [selectors params* children]} (selectors-params-children hiccup-vector)
+        new-params (merge params params*)
+        children-with-params (if (seq children) (apply-cartesian-product [selectors children])
+                                                (apply-cartesian-product [selectors ]))]
+    #_(cond (and (seq new-params) (seq children))
+            (and (seq new-params) (empty children))
+            (and (empty new-params) (seq children)) (if parents)
+            :else (conj parents))
+    (for [child children-with-params]
+      (if children
+        (do (swap! unevaluated-hiccup conj {:route   child
+                                            :params  new-params
+                                            :parents parents})
+            (-css parents params child))
+        (swap! unevaluated-hiccup conj {:route   child
+                                        :params  new-params
+                                        :parents parents})))))
+
+(defn -css [parents params css-hiccup]
+  (let [expanded-list (expand-seqs css-hiccup)]
+    (doseq [hiccup-vector expanded-list]
+      (--css parents params hiccup-vector))))
+
+(defn css [css-hiccup]
+  (-css nil nil css-hiccup))
+
+(comment (count @unevaluated-hiccup))
