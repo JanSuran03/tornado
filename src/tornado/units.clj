@@ -2,12 +2,11 @@
   (:require [tornado.types])
   (:import (tornado.types CSSUnit)))
 
-(defn make-unit-fn
+(defn make-cssunit-record
   "Creates a unit function which takes a value parameter and gives it to
   CSSUnit record."
-  [unit]
-  (fn [value]
-    (CSSUnit. unit value)))
+  [unit value]
+  (CSSUnit. unit value))
 
 (defmacro defunit
   "Creates a CSS unit, where a function (`identifier` <value>) can be used in
@@ -31,18 +30,14 @@
 
   With a documentation:
      (defunit hs \"hs\" \"A time unit, halfsecond.\")
-     **you have to include the 2nd arg**
-
-
-  Note that if you define a unit with a different identifier and css-unit,
-  the css-unit has to be in a string form."
+     **you have to include the 2nd arg**"
   ([unit]
    (let [compiles-to (str unit)]
      `(defunit ~unit ~compiles-to nil)))
   ([identifier css-unit]
    `(defunit ~identifier ~css-unit nil))
   ([identifier css-unit doc]
-   `(do (def ~identifier (make-unit-fn ~css-unit))
+   `(do (def ~identifier (partial ~make-cssunit-record ~css-unit))
         (alter-meta! #'~identifier assoc :doc ~doc))))
 
 ;; absolute size units

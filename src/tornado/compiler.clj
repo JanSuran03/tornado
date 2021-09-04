@@ -241,7 +241,9 @@
 (defmacro apply-cartesian-product [input-seq]
   `(cartesian-product ~@input-seq))
 
-(defn expand-seqs [coll]
+(defn expand-seqs
+  "Expands and concanetates nested sequences (lists and lazy-seqs)."
+  [coll]
   (mapcat (fn [coll]
             (if (seq? coll)
               (expand-seqs coll)

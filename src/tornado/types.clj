@@ -1,4 +1,5 @@
-(ns tornado.types)
+(ns tornado.types
+  "Internal CSS records used by tornado.")
 
 (defrecord CSSUnit [compiles-to value])
 
