@@ -2,7 +2,6 @@
   (:require [tornado.types :as t]
             [tornado.selectors :as sel]
             [tornado.units :as u]
-            [tornado.props-vals :as pv]
             [tornado.compiler :as compiler]
             [tornado.colors :as col]
             [tornado.selectors :as sel]

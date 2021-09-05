@@ -2,7 +2,8 @@
   (:require [tornado.types]
             [clojure.edn :as edn]
             [clojure.set :as set]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [tornado.units :as u])
   (:import (tornado.types CSSUnit)))
 
 (defn keyword->str [k]
@@ -129,14 +130,12 @@
           [value]
           (subvec vect index)))
 
-(defn eval-unit [x]
-  (identity x))
+(defn str-spacejoin
+  "str/join with \" \""
+  [coll]
+  (str/join " " coll))
 
-(defn general-parser-fn
-  "A universal compile function for #'tornado.functions/defcssfn."
-  [{:keys [compiles-to args]}]
-  (str compiles-to "(" (->> args (map eval-unit)
-                            (str/join ", ")) ")"))
-
-(defn self-compile-CSSFunction [{:keys [compile-fn] :as CSSFn-record}]
-  (compile-fn CSSFn-record))
+(defn str-commajoin
+  "str/join with \", \""
+  [coll]
+  (str/join ", " coll))

@@ -1,14 +1,15 @@
 (ns tornado.functions
   (:require [tornado.types]
-            [tornado.util :refer [general-parser-fn]])
+            [tornado.compiler :refer [general-parser-fn]])
   (:import (tornado.types CSSFunction)
            (clojure.lang PersistentList)))
 
-(defn make-cssfn-record
-  ""
+(defn- make-cssfn-record
+  "An internal CSSFunction function which takes the \"compiles-to\"
+  function parameter, e.g. min\", a function which is applied to args
+  during the compilation and the arguments and creates a CSSFunction record."
   [compiles-to* compile-fn* & args]
-  (CSSFunction. compiles-to* compile-fn*
-                args))
+  (CSSFunction. compiles-to* compile-fn* args))
 
 (defmacro defcssfn
   "Defines a CSS function:
@@ -54,7 +55,7 @@
                                       PersistentList (let [compiles-to (str fn-name)]
                                                        `(defcssfn ~fn-name ~compiles-to ~css-fn-or-fn-tail))
                                       (throw (IllegalArgumentException.
-                                               (str "Error defining a CSS function fn-name with arity(2):"
+                                               (str "Error defining a CSS function " fn-name " with arity(2):"
                                                     "\nThe second argument " css-fn-or-fn-tail " is"
                                                     " neither a string nor a function.")))))
   ([fn-name compiles-to compile-fn]

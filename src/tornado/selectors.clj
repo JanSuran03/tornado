@@ -1,7 +1,8 @@
 (ns tornado.selectors
   ""
   (:require [tornado.types]
-            [tornado.util :as util])
+            [tornado.util :as util]
+            [clojure.string :as str])
   (:import (tornado.types CSSSelector CSSPseudoClass CSSPseudoElement)))
 
 (def selector-keys->selectors
@@ -10,16 +11,15 @@
 
 (defn make-pseudoclass-fn
   ""
-  [pseudoclass]
-  (fn [element]
-    (CSSPseudoClass. pseudoclass element)))
+  [pseudoclass parent]
+  (CSSPseudoClass. pseudoclass parent))
 
 (defmacro defpseudoclass
   ([pseudoclass]
    (let [compiles-to (str pseudoclass)]
      `(defpseudoclass ~pseudoclass ~compiles-to)))
   ([identifier css-pseudoclass]
-   `(def ~identifier (make-pseudoclass-fn ~css-pseudoclass))))
+   `(def ~identifier (partial ~make-pseudoclass-fn ~css-pseudoclass))))
 
 (defpseudoclass active)
 
@@ -55,127 +55,127 @@
 (defpseudoclass valid)
 (defpseudoclass visited)
 (def html-tags
-  (set (map name #{:a
-                   :abbr
-                   :address
-                   :area
-                   :article
-                   :aside
-                   :audio
-                   :b
-                   :base
-                   :bdi
-                   :bdo
-                   :blockquote
-                   :body
-                   :br
-                   :button
-                   :canvas
-                   :caption
-                   :cite
-                   :code
-                   :col
-                   :colgroup
-                   :command
-                   :datalist
-                   :dd
-                   :del
-                   :details
-                   :dfn
-                   :div
-                   :dl
-                   :dt
-                   :em
-                   :embed
-                   :fieldset
-                   :figcaption
-                   :figure
-                   :footer
-                   :form
-                   :h1
-                   :h2
-                   :h3
-                   :h4
-                   :h5
-                   :h6
-                   :head
-                   :header
-                   :hgroup
-                   :hr
-                   :html
-                   :i
-                   :iframe
-                   :img
-                   :input
-                   :ins
-                   :kbd
-                   :keygen
-                   :label
-                   :legend
-                   :li
-                   :link
-                   :map
-                   :mark
-                   :math
-                   :menu
-                   :meta
-                   :meter
-                   :nav
-                   :noscript
-                   :object
-                   :ol
-                   :optgroup
-                   :option
-                   :output
-                   :p
-                   :param
-                   :pre
-                   :progress
-                   :q
-                   :rp
-                   :rt
-                   :ruby
-                   :s
-                   :samp
-                   :script
-                   :section
-                   :select
-                   :small
-                   :source
-                   :span
-                   :strong
-                   :style
-                   :sub
-                   :summary
-                   :sup
-                   :svg
-                   :table
-                   :tbody
-                   :td
-                   :textarea
-                   :tfoot
-                   :th
-                   :thead
-                   :time
-                   :title
-                   :tr
-                   :track
-                   :u
-                   :ul
-                   :var
-                   :video
-                   :wbr})))
+  (set (map name #{:html-tag/a
+                   :html-tag/abbr
+                   :html-tag/address
+                   :html-tag/area
+                   :html-tag/article
+                   :html-tag/aside
+                   :html-tag/audio
+                   :html-tag/b
+                   :html-tag/base
+                   :html-tag/bdi
+                   :html-tag/bdo
+                   :html-tag/blockquote
+                   :html-tag/body
+                   :html-tag/br
+                   :html-tag/button
+                   :html-tag/canvas
+                   :html-tag/caption
+                   :html-tag/cite
+                   :html-tag/code
+                   :html-tag/col
+                   :html-tag/colgroup
+                   :html-tag/command
+                   :html-tag/datalist
+                   :html-tag/dd
+                   :html-tag/del
+                   :html-tag/details
+                   :html-tag/dfn
+                   :html-tag/div
+                   :html-tag/dl
+                   :html-tag/dt
+                   :html-tag/em
+                   :html-tag/embed
+                   :html-tag/fieldset
+                   :html-tag/figcaption
+                   :html-tag/figure
+                   :html-tag/footer
+                   :html-tag/form
+                   :html-tag/h1
+                   :html-tag/h2
+                   :html-tag/h3
+                   :html-tag/h4
+                   :html-tag/h5
+                   :html-tag/h6
+                   :html-tag/head
+                   :html-tag/header
+                   :html-tag/hgroup
+                   :html-tag/hr
+                   :html-tag/html
+                   :html-tag/i
+                   :html-tag/iframe
+                   :html-tag/img
+                   :html-tag/input
+                   :html-tag/ins
+                   :html-tag/kbd
+                   :html-tag/keygen
+                   :html-tag/label
+                   :html-tag/legend
+                   :html-tag/li
+                   :html-tag/link
+                   :html-tag/map
+                   :html-tag/mark
+                   :html-tag/math
+                   :html-tag/menu
+                   :html-tag/meta
+                   :html-tag/meter
+                   :html-tag/nav
+                   :html-tag/noscript
+                   :html-tag/object
+                   :html-tag/ol
+                   :html-tag/optgroup
+                   :html-tag/option
+                   :html-tag/output
+                   :html-tag/p
+                   :html-tag/param
+                   :html-tag/pre
+                   :html-tag/progress
+                   :html-tag/q
+                   :html-tag/rp
+                   :html-tag/rt
+                   :html-tag/ruby
+                   :html-tag/s
+                   :html-tag/samp
+                   :html-tag/script
+                   :html-tag/section
+                   :html-tag/select
+                   :html-tag/small
+                   :html-tag/source
+                   :html-tag/span
+                   :html-tag/strong
+                   :html-tag/style
+                   :html-tag/sub
+                   :html-tag/summary
+                   :html-tag/sup
+                   :html-tag/svg
+                   :html-tag/table
+                   :html-tag/tbody
+                   :html-tag/td
+                   :html-tag/textarea
+                   :html-tag/tfoot
+                   :html-tag/th
+                   :html-tag/thead
+                   :html-tag/time
+                   :html-tag/title
+                   :html-tag/tr
+                   :html-tag/track
+                   :html-tag/u
+                   :html-tag/ul
+                   :html-tag/var
+                   :html-tag/video
+                   :html-tag/wbr})))
 
 (defn selector? [x]
   (instance? CSSSelector x))
 
-(defn css-id? [x]
-  (and (util/valid? x)
-       (-> x util/get-valid first (= \#))))
-
 (defn css-class? [x]
   (and (util/valid? x)
-       (-> x util/get-valid first (= \.))))
+       (-> x util/get-valid (str/starts-with? "."))))
+
+(defn css-id? [x]
+  (and (util/valid? x)
+       (-> x util/get-valid (str/starts-with? "#"))))
 
 (defn html-tag? [x]
   (and (util/valid? x)
@@ -186,9 +186,8 @@
 
 (defn make-pseudoelement-fn
   ""
-  [pseudoelement]
-  (fn [element]
-    (CSSPseudoElement. pseudoelement element)))
+  [pseudoelement parent]
+  (CSSPseudoElement. pseudoelement parent))
 
 (defmacro defpseudoelement
   ""
@@ -196,7 +195,7 @@
    (let [compiles-to (str pseudoelement)]
      `(defpseudoelement ~pseudoelement ~compiles-to)))
   ([identifier css-pseudoelement]
-   `(def ~identifier (make-pseudoelement-fn ~css-pseudoelement))))
+   `(def ~identifier (partial ~make-pseudoelement-fn ~css-pseudoelement))))
 
 (defpseudoelement after)
 (defpseudoelement before)
