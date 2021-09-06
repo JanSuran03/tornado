@@ -22,7 +22,6 @@
    `(def ~identifier (partial ~make-pseudoclass-fn ~css-pseudoclass))))
 
 (defpseudoclass active)
-
 (defpseudoclass checked)
 (defpseudoclass default)
 (defpseudoclass disabled)

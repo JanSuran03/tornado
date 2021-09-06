@@ -1,6 +1,7 @@
 (ns tornado.functions
   (:require [tornado.types]
-            [tornado.compiler :refer [general-parser-fn]])
+            [tornado.compiler :refer [general-parser-fn]]
+            [tornado.util :as util])
   (:import (tornado.types CSSFunction)
            (clojure.lang PersistentList)))
 
@@ -49,20 +50,18 @@
   the second arg \"min\" and the third arg the function (fn [{:keys [args]}] ...)."
   ([fn-name]
    (let [compiles-to (str fn-name)]
-     `(defcssfn ~fn-name ~compiles-to ~#'general-parser-fn)))
+     `(defcssfn ~fn-name ~compiles-to nil)))
   ([fn-name css-fn-or-fn-tail]
-   (condp instance? css-fn-or-fn-tail String `(defcssfn ~fn-name ~css-fn-or-fn-tail ~#'general-parser-fn)
+   (condp instance? css-fn-or-fn-tail String `(defcssfn ~fn-name ~css-fn-or-fn-tail nil)
                                       PersistentList (let [compiles-to (str fn-name)]
                                                        `(defcssfn ~fn-name ~compiles-to ~css-fn-or-fn-tail))
                                       (throw (IllegalArgumentException.
                                                (str "Error defining a CSS function " fn-name " with arity(2):"
                                                     "\nThe second argument " css-fn-or-fn-tail " is"
                                                     " neither a string nor a function.")))))
-  ([fn-name compiles-to compile-fn]
-   `(def ~fn-name (partial ~make-cssfn-record ~compiles-to ~compile-fn))))
+  ([clojure-fn-name compiles-to compile-fn]
+   `(def ~clojure-fn-name (partial ~make-cssfn-record ~compiles-to ~compile-fn))))
 
-
-(defcssfn scale)
 (defcssfn translate)
 (defcssfn translate3d)
 (defcssfn translateX)

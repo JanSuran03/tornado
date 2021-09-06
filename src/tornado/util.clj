@@ -90,6 +90,13 @@
   [value n1 n2]
   (<= n1 value n2))
 
+(defn one-or-two [coll]
+  (if (sequential? coll)
+    (between (count coll) 1 2)
+    (throw (IllegalArgumentException.
+             (str "Tried to check count of elements of " coll ", but it is not"
+                  " a sequential collection.")))))
+
 (def ^:private base16-chars "0123456789ABCDEF")
 (def ^:private lowercase-base16 "abcdef")
 (def ^:private uppercase-base16-set (set "ABCDEF"))

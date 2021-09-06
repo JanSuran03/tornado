@@ -1,6 +1,6 @@
 (ns tornado.compiler
   (:require [tornado.types]
-            [tornado.stylesheet :as stylesheet]
+            [tornado.at-rules :as at-rules]
             [tornado.util :as util]
             [clojure.string :as str]
             [tornado.selectors :as sel]
@@ -8,28 +8,19 @@
             [tornado.units :as u])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSSelector CSSPseudoClass CSSPseudoElement)
-           (clojure.lang PersistentArrayMap)))
+           (clojure.lang PersistentArrayMap Keyword Symbol)))
 
-(def comma ", ")
-(def colon ": ")
-(def semicolon "; ")
-(def indent "  ")
-(def left-bracket "{")
-(def right-bracket "}")
-
-(defonce unevaluated-hiccup (atom #{}))
+(defonce unevaluated-hiccup (atom []))
 
 (declare compile-expression
          expand-at-rule
          css)
+
 (defn general-parser-fn
   "A universal compile function for #'tornado.functions/defcssfn."
   [{:keys [compiles-to args]}]
   (str compiles-to "(" (->> args (map compile-expression)
                             util/str-commajoin) ")"))
-
-(defn self-compile-CSSFunction [{:keys [compile-fn] :as CSSFn-record}]
-  (compile-fn CSSFn-record))
 
 (def vector* "Same as (vec (list* ...))" (comp vec list*))
 
@@ -54,6 +45,16 @@
           color's type:
           \"rgb\", \"rgba\", \"hsl\", \"hsla\""
           colors/get-color-type)
+
+(defmethod compile-color Symbol
+  [color] (name color))
+
+(defmethod compile-color Keyword
+  [color]
+  (if-let [color* (get colors/default-colors color)]
+    color*
+    (do (println "Warning: Unknown color:" color)
+        (name color))))
 
 (defmethod compile-color String
   [color] color)
@@ -98,8 +99,8 @@
   (str (util/int* value) compiles-to))
 
 (defmethod compile-css-record CSSFunction
-  [{:keys [compile-fn] :as cssfn}]
-  (compile-fn cssfn))
+  [{:keys [compile-fn] :or {compile-fn #'general-parser-fn} :as CSSFn-record}]
+  (compile-fn CSSFn-record))
 
 (defmethod compile-css-record CSSAtRule
   [at-rule-record]
@@ -124,7 +125,8 @@
   a two-times nested structure (lazy-seq in a vector, vector ain a vector etc.),
   compile each of these and concatenate them by #(str/join \" \" %)"
   [expr]
-  (cond (util/valid? expr) (name expr)
+  (cond (and (keyword? expr) (get colors/default-colors expr)) (get colors/default-colors expr)
+        (util/valid? expr) (name expr)
         (number? expr) (util/int* expr)
         (record? expr) (compile-css-record expr)
         (and (sequential? expr)
@@ -132,7 +134,7 @@
                                       util/str-spacejoin)
         :else (throw (IllegalArgumentException.
                        (str "Not a CSS unit, CSS function, CSS at-rule, nor a string,"
-                            " a number or a nested sequential structure:\n" expr)))))
+                            " a number or a double nested sequential structure:\n" expr)))))
 
 (defmulti expand-at-rule
           "Generates CSS from CSSAtRule record: @media, @keyframes, @import, @font-face.
@@ -154,11 +156,14 @@
   [{:keys [value]}]
   (let [{:keys [rules changes]} value
         expanded-rules (->> (for [[prop unit] rules]
-                              (let [compiled-property (util/keyword->str prop)
+                              (let [compiled-property (if (util/valid? prop)
+                                                        (util/get-valid prop)
+                                                        (throw (IllegalArgumentException.
+                                                                 (str "Invalid format of a CSS property: " prop))))
                                     compiled-unit (compile-expression unit)]
                                 (str "(" compiled-property ": " compiled-unit ")")))
                             (str/join " and "))]
-    (str "@media " expanded-rules "{\n  "
+    (str "@media " expanded-rules "{\n "
          (str/join "\n  " changes) "}")))
 
 (defn expand-css

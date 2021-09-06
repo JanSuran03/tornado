@@ -1,6 +1,6 @@
-(ns tornado.stylesheet
+(ns tornado.at-rules
   (:require [tornado.types])
-  (:import (tornado.types CSSUnit CSSFunction CSSAtRule CSSColor)))
+  (:import (tornado.types CSSAtRule)))
 
 (defn at-media [rules & changes]
   (CSSAtRule. "media" {:rules   rules
@@ -15,5 +15,7 @@
   [props-map]
   (CSSAtRule. "font-face" props-map))
 
-(defn at-keyframes [name anim-class-or-ids props]
-  (CSSAtRule. "keyframes" nil))
+(defmacro defkeyframes
+  [animation-name & frames]
+  `(def ~animation-name (CSSAtRule. "keyframes" {:anim-name (str '~animation-name)
+                                                 :frames (list ~@frames)})))

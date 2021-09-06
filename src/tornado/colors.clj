@@ -2,22 +2,25 @@
   (:require [tornado.types]
             [tornado.units]
             [tornado.util :as util])
-  (:import (tornado.types CSSColor)))
+  (:import (tornado.types CSSColor)
+           (clojure.lang Keyword Symbol)))
 
 (defn get-color-type
-  ""
+  "Returns "
   [color]
   (condp = (type color) CSSColor (:type color)
                         String String
+                        Keyword Keyword
+                        Symbol Symbol
                         (throw (IllegalArgumentException. (str "The given color is neither a tornado"
                                                                " CSSColor record nor a string.")))))
 
-(def tornado-colors
+(def default-colors
   "Available default colors in tornado.
   Usage: {:color            :black
           :background-color :crimson}   etc.
   Tornado does the hex-code translation for you."
-  ; See https://www.w3schools.com/cssref/css_colors.asp + ":font"
+  ; See https://www.w3schools.com/cssref/css_colors.asp + ":font-black for recommended font color"
   {:aliceblue            "#F0F8FF"
    :antiquewhite         "#FAEBD7"
    :aqua                 "#00FFFF"
@@ -65,7 +68,7 @@
    :dodgerblue           "#1E90FF"
    :firebrick            "#B22222"
    :floralwhite          "#FFFAF0"
-   :font                 "#1A1B1F"                          ; recommended font color
+   :font-black           "#1A1B1F"                          ; recommended font color
    :forestgreen          "#228B22"
    :fuchsia              "#FF00FF"
    :gainsboro            "#DCDCDC"
@@ -327,7 +330,7 @@
   ([color1 & more]
    (let [colors (into [color1] more)
          types (map get-color-type colors)
-         not-strings? (every? #(not (string? %)) colors)]
-     (if (and (apply = types) not-strings?)
+         not-symbols-keywords-strings? (not-any? #((some-fn keyword? symbol? string?) %) colors)]
+     (if (and (apply = types) not-symbols-keywords-strings?)
        (-mix-colors (first types) colors)
        (throw (IllegalArgumentException. (str "Can't mix colors of different types: " colors)))))))
