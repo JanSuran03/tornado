@@ -22,23 +22,13 @@
   (str compiles-to "(" (->> args (map compile-expression)
                             util/str-commajoin) ")"))
 
-(def vector* "Same as (vec (list* ...))" (comp vec list*))
-
 (defn conjv [vect value]
-  (if (sequential? vect)
-    (conj (if (vector? vect)
-            vect
-            (vec vect))
-          value)
-    (throw (IllegalArgumentException. (str "Not sequential: " vect)))))
-
-(defn contains-num-maps [coll]
-  (if (sequential? coll)
-    (as-> coll <> (map type <>)
-          (frequencies <>)
-          (get <> PersistentArrayMap)
-          (or <> 0))
-    (throw (IllegalArgumentException. (str "Not sequential: " coll)))))
+  (cond (sequential? vect) (conj (if (vector? vect)
+                                   vect
+                                   (vec vect))
+                                 value)
+        (nil? vect) [value]
+        :else (throw (IllegalArgumentException. (str "Not sequential, nor `nil`: " vect)))))
 
 (defmulti compile-color
           "Generates CSS from a color, calls a relevant method to do so depending on the
@@ -106,22 +96,22 @@
   [at-rule-record]
   (expand-at-rule at-rule-record))
 
-(defmethod compile-css-record CSSPseudoClass
-  [{:keys [pseudoclass parent]}]
-  (let [css-pseudoclass (str ":" pseudoclass)]
-    (str (css parent) css-pseudoclass)))
+#_(defmethod compile-css-record CSSPseudoClass
+    [{:keys [pseudoclass parent]}]
+    (let [css-pseudoclass (str ":" pseudoclass)]
+      (str (css parent) css-pseudoclass)))
 
-(defmethod compile-css-record CSSPseudoElement
-  [{:keys [pseudoelement parent]}]
-  (let [css-pseudoelement (str "::" pseudoelement)]
-    (str (css parent) css-pseudoelement)))
+#_(defmethod compile-css-record CSSPseudoElement
+    [{:keys [pseudoelement parent]}]
+    (let [css-pseudoelement (str "::" pseudoelement)]
+      (str (css parent) css-pseudoelement)))
 
 (defmethod compile-css-record CSSColor
   [color-record]
   (compile-color color-record))
 
 (defn compile-expression
-  "Compilers an expression: a number, string or a record. If the expresiion is
+  "Compilers an expression: a number, string or a record. If the expression is
   a two-times nested structure (lazy-seq in a vector, vector ain a vector etc.),
   compile each of these and concatenate them by #(str/join \" \" %)"
   [expr]
@@ -156,8 +146,8 @@
   [{:keys [value]}]
   (let [{:keys [rules changes]} value
         expanded-rules (->> (for [[prop unit] rules]
-                              (let [compiled-property (if (util/valid? prop)
-                                                        (util/get-valid prop)
+                              (let [compiled-property (if-let [prop (util/valid-or-nil prop)]
+                                                        prop
                                                         (throw (IllegalArgumentException.
                                                                  (str "Invalid format of a CSS property: " prop))))
                                     compiled-unit (compile-expression unit)]
@@ -165,11 +155,6 @@
                             (str/join " and "))]
     (str "@media " expanded-rules "{\n "
          (str/join "\n  " changes) "}")))
-
-(defn expand-css
-  ""
-  ([tag-or-selector children])
-  ([tag-or-selector params children]))
 
 (def spc-err-msg (str "Error: Hiccup rules:\nYou have to include at least one selector before params or "
                       "children.\nIf you include any of params or children, the order has to be selectors"
@@ -194,9 +179,9 @@
           coll))
 
 (defn selectors-params-children [hiccup]
-  (as-> hiccup <> (reduce (fn [{:keys [selectors params* children] :as spc-map} hiccup-element]
+  (as-> hiccup <> (reduce (fn [{:keys [selectors params children] :as spc-map} hiccup-element]
                             (let [belongs-to (cond (sel/id-class-tag? hiccup-element) :selectors
-                                                   (map? hiccup-element) :params*
+                                                   (map? hiccup-element) :params
                                                    (vector? hiccup-element) :children
                                                    :else (throw (IllegalArgumentException.
                                                                   (str "Invalid hiccup element: " hiccup-element
@@ -205,43 +190,64 @@
                               (if (or (and (not= belongs-to :selectors)
                                            (empty? selectors))
                                       (and (= belongs-to :selectors)
-                                           (or (seq params*) (seq children)))
-                                      (and (= belongs-to :params*)
-                                           (or (seq params*) (seq children))))
+                                           (or (seq params) (seq children)))
+                                      (and (= belongs-to :params)
+                                           (or (seq params) (seq children))))
                                 (throw (IllegalArgumentException. spc-err-msg))
                                 (update spc-map belongs-to conj hiccup-element))))
                           {:selectors []
-                           :params*   []
+                           :params    []
                            :children  []} <>)
-        (update <> :params* first)))
+        (update <> :params first)))
 
 (declare -css)
 
-(defn --css [parents params hiccup-vector]
-  (let [{:keys [selectors params* children]} (selectors-params-children hiccup-vector)
-        new-params (merge params params*)
-        children-with-params (if (seq children) (apply-cartesian-product [selectors children])
-                                                (apply-cartesian-product [selectors]))]
-    (println selectors)
-    (println params*)
-    (println children)
-    (for [child children-with-params]
-      (if children
-        (do (swap! unevaluated-hiccup conj {:route   child
-                                            :params  new-params
-                                            :parents parents})
-            (-css parents params child))
-        (swap! unevaluated-hiccup conj {:route   child
-                                        :params  new-params
-                                        :parents parents})))))
+(defn insert-to-unevaluated-seq [path params]
+  (swap! unevaluated-hiccup conj {:path   path
+                                  :params params}))
 
-(defn -css [parents params css-hiccup]
-  (let [expanded-list (expand-seqs css-hiccup)]
+(defn --css
+  "<parents> are in a form of a vector of selectors before the current
+             hiccup vector: [:.abc :#def :.ghi ...], can potentially be nil
+
+  <inherited-params> is a map of params inherited from the parents, can
+                     potentially be nil as well
+
+  <hiccup-vector> is a vector containing selectors, params & children:
+  [*sel1* *sel2* *sel3* ... *optional-params-map*
+    [*child1*]
+    [*child3*]
+    [*child2*]
+       ...]
+  Since each child is a vector and that the 3rd argument passed to this
+  function is a vector as well, we can call this function recursively
+  infinitely."
+  [parents inherited-params hiccup-vector]
+  (let [{:keys [selectors params children]} (selectors-params-children hiccup-vector)
+        new-params (merge inherited-params params)]
+    (if (seq children)
+      (doseq [[selector child] (cartesian-product selectors children)
+              :let [new-parents (conjv parents selector)]]
+        (insert-to-unevaluated-seq new-parents new-params)
+        (-css new-parents new-params (list child)))
+      (doseq [selector selectors
+              :let [new-parents (conjv parents selector)]]
+        (insert-to-unevaluated-seq new-parents new-params)))))
+
+
+(defn -css
+  "Given a hiccup element path (parents) and params inherited from
+  the parents, goes through it recursively and generates CSS from it."
+  [parents inherited-params hiccup-vector]
+  (let [expanded-list (expand-seqs hiccup-vector)]
+    ;; for each element of a hiccup vector, recursively unwraps it and generates CSS from it
     (doseq [hiccup-vector expanded-list]
-      (--css parents params hiccup-vector))))
+      (--css parents inherited-params hiccup-vector))))
 
-(defn css [css-hiccup]
-  (-css nil nil css-hiccup))
+(defn css
+  "Generates CSS from a list of hiccup."
+  [css-hiccup-list]
+  (-css nil nil css-hiccup-list))
 
 (defn x []
   (count @unevaluated-hiccup))

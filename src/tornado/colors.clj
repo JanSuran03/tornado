@@ -286,9 +286,9 @@
         red-vals (map :red values)
         green-vals (map :green values)
         blue-vals (map :blue values)]
-    (CSSColor. "rgb" {:red   (apply util/avg red-vals)
-                      :green (apply util/avg green-vals)
-                      :blue  (apply util/avg blue-vals)})))
+    (CSSColor. "rgb" {:red   (util/apply-avg red-vals)
+                      :green (util/apply-avg green-vals)
+                      :blue  (util/apply-avg blue-vals)})))
 
 (defmethod -mix-colors "rgba"
   [_ colors]
@@ -297,10 +297,10 @@
         green-vals (map :green values)
         blue-vals (map :blue values)
         alpha-vals (map :alpha values)]
-    (CSSColor. "rgba" {:red   (apply util/avg red-vals)
-                       :green (apply util/avg green-vals)
-                       :blue  (apply util/avg blue-vals)
-                       :alpha (apply util/avg alpha-vals)})))
+    (CSSColor. "rgba" {:red   (util/apply-avg red-vals)
+                       :green (util/apply-avg green-vals)
+                       :blue  (util/apply-avg blue-vals)
+                       :alpha (util/apply-avg alpha-vals)})))
 
 (defmethod -mix-colors "hsl"
   [_ colors]
@@ -308,9 +308,9 @@
         hue-vals (map :hue values)
         saturation-vals (map :saturation values)
         lightness-vals (map :lightness values)]
-    (CSSColor. "hsl" {:hue        (apply util/avg hue-vals)
-                      :saturation (apply util/avg saturation-vals)
-                      :lightness  (apply util/avg lightness-vals)})))
+    (CSSColor. "hsl" {:hue        (util/apply-avg hue-vals)
+                      :saturation (util/apply-avg saturation-vals)
+                      :lightness  (util/apply-avg lightness-vals)})))
 
 (defmethod -mix-colors "hsla"
   [_ colors]
@@ -319,10 +319,10 @@
         saturation-vals (map :saturation values)
         lightness-vals (map :lightness values)
         alpha-vals (map :alpha values)]
-    (CSSColor. "hsla" {:hue        (apply util/avg hue-vals)
-                       :saturation (apply util/avg saturation-vals)
-                       :lightness  (apply util/avg lightness-vals)
-                       :alpha      (apply util/avg alpha-vals)})))
+    (CSSColor. "hsla" {:hue        (util/apply-avg hue-vals)
+                       :saturation (util/apply-avg saturation-vals)
+                       :lightness  (util/apply-avg lightness-vals)
+                       :alpha      (util/apply-avg alpha-vals)})))
 
 (defn mix-colors
   ([color]

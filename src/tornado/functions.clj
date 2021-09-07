@@ -1,7 +1,6 @@
 (ns tornado.functions
   (:require [tornado.types]
-            [tornado.compiler :refer [general-parser-fn]]
-            [tornado.util :as util])
+            [tornado.compiler :refer [general-parser-fn]])
   (:import (tornado.types CSSFunction)
            (clojure.lang PersistentList)))
 

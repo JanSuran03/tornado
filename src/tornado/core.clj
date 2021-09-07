@@ -5,8 +5,7 @@
             [tornado.colors :as colors]
             [tornado.selectors :as sel]
             [tornado.functions :as functions]
-            [tornado.at-rules :as at-rules]
-            [tornado.util :as util])
+            [tornado.at-rules :as at-rules])
   (:import (tornado.types CSSAtRule CSSFunction CSSUnit CSSSelector
                           CSSPseudoClass CSSPseudoElement CSSColor)))
 
