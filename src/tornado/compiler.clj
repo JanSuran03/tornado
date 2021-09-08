@@ -4,13 +4,13 @@
             [tornado.util :as util]
             [clojure.string :as str]
             [tornado.selectors :as sel]
-            [tornado.colors :as colors]
-            [tornado.units :as u])
+            [tornado.colors :as colors])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSSelector CSSPseudoClass CSSPseudoElement)
            (clojure.lang PersistentArrayMap Keyword Symbol)))
 
 (defonce unevaluated-hiccup (atom []))
+(defonce unevaluated-at-media (atom []))
 
 (declare compile-expression
          expand-at-rule
@@ -43,7 +43,8 @@
   [color]
   (if-let [color* (get colors/default-colors color)]
     color*
-    (do (println "Warning: Unknown color:" color)
+    (do (println (str "Warning: Unknown color keyword: " color
+                      ", not found in tornado.colors/default-colors."))
         (name color))))
 
 (defmethod compile-color String
@@ -156,10 +157,6 @@
     (str "@media " expanded-rules "{\n "
          (str/join "\n  " changes) "}")))
 
-(def spc-err-msg (str "Error: Hiccup rules:\nYou have to include at least one selector before params or "
-                      "children.\nIf you include any of params or children, the order has to be selectors"
-                      " -> params -> children.\nYou also cannot include more than one parameters map."))
-
 (defmacro cartesian-product [& seqs]
   (let [w-bindings (map #(vector (gensym) %) seqs)
         binding-syms (mapv first w-bindings)
@@ -179,25 +176,32 @@
           coll))
 
 (defn selectors-params-children [hiccup]
-  (as-> hiccup <> (reduce (fn [{:keys [selectors params children] :as spc-map} hiccup-element]
+  (as-> hiccup <> (reduce (fn [{:keys [selectors params children at-media] :as spc-map} hiccup-element]
                             (let [belongs-to (cond (sel/id-class-tag? hiccup-element) :selectors
-                                                   (map? hiccup-element) :params
+                                                   (and (not (record? hiccup-element))
+                                                        (map? hiccup-element)) :params
                                                    (vector? hiccup-element) :children
+                                                   (at-rules/at-media? hiccup-element) :at-media
                                                    :else (throw (IllegalArgumentException.
-                                                                  (str "Invalid hiccup element: " hiccup-element
-                                                                       "\nNone from a class, id, selector, child-vector"
-                                                                       " or a params map."))))]
+                                                                  (str "Invalid hiccup element: " hiccup-element "\nNone"
+                                                                       " from a class, id, selector, child-vector, "
+                                                                       "at-media CSSAtRule instance or a params map."))))]
                               (if (or (and (not= belongs-to :selectors)
                                            (empty? selectors))
                                       (and (= belongs-to :selectors)
-                                           (or (seq params) (seq children)))
+                                           (or (seq params) (seq children) (seq at-media)))
                                       (and (= belongs-to :params)
-                                           (or (seq params) (seq children))))
-                                (throw (IllegalArgumentException. spc-err-msg))
+                                           (or (seq params) (seq children) (seq at-media))))
+                                (throw (IllegalArgumentException.
+                                         (str "Error: Hiccup rules:\nYou have to include at least one selector before"
+                                              " params or children.\nIf you include any of params or children, the order"
+                                              " has to be selectors -> params -> children.\nYou also cannot include more"
+                                              " than one parameters map.")))
                                 (update spc-map belongs-to conj hiccup-element))))
                           {:selectors []
                            :params    []
-                           :children  []} <>)
+                           :children  []
+                           :at-media  []} <>)
         (update <> :params first)))
 
 (declare -css)
@@ -206,12 +210,13 @@
   (swap! unevaluated-hiccup conj {:path   path
                                   :params params}))
 
+(defn insert-to-unevaluated-at-media [path at-media]
+  (swap! unevaluated-at-media conj {:path   path
+                                    :media-record at-media}))
+
 (defn --css
   "<parents> are in a form of a vector of selectors before the current
              hiccup vector: [:.abc :#def :.ghi ...], can potentially be nil
-
-  <inherited-params> is a map of params inherited from the parents, can
-                     potentially be nil as well
 
   <hiccup-vector> is a vector containing selectors, params & children:
   [*sel1* *sel2* *sel3* ... *optional-params-map*
@@ -222,32 +227,39 @@
   Since each child is a vector and that the 3rd argument passed to this
   function is a vector as well, we can call this function recursively
   infinitely."
-  [parents inherited-params hiccup-vector]
-  (let [{:keys [selectors params children]} (selectors-params-children hiccup-vector)
-        new-params (merge inherited-params params)]
+  [parents hiccup-vector]
+  (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)]
+    (when (seq at-media)
+      (doseq [media at-media]
+        (insert-to-unevaluated-at-media parents media)))
     (if (seq children)
       (doseq [[selector child] (cartesian-product selectors children)
               :let [new-parents (conjv parents selector)]]
-        (insert-to-unevaluated-seq new-parents new-params)
-        (-css new-parents new-params (list child)))
+        (insert-to-unevaluated-seq new-parents params)
+        (-css new-parents (list child)))
       (doseq [selector selectors
               :let [new-parents (conjv parents selector)]]
-        (insert-to-unevaluated-seq new-parents new-params)))))
-
+        (insert-to-unevaluated-seq new-parents params)))))
 
 (defn -css
   "Given a hiccup element path (parents) and params inherited from
   the parents, goes through it recursively and generates CSS from it."
-  [parents inherited-params hiccup-vector]
+  [parents hiccup-vector]
   (let [expanded-list (expand-seqs hiccup-vector)]
     ;; for each element of a hiccup vector, recursively unwraps it and generates CSS from it
     (doseq [hiccup-vector expanded-list]
-      (--css parents inherited-params hiccup-vector))))
+      (--css parents hiccup-vector))))
 
 (defn css
   "Generates CSS from a list of hiccup."
   [css-hiccup-list]
-  (-css nil nil css-hiccup-list))
+  (-css nil css-hiccup-list))
 
-(defn x []
-  (count @unevaluated-hiccup))
+(defn !reset []
+  (reset! unevaluated-hiccup [])
+  (reset! unevaluated-at-media []))
+
+(defn css!
+  [css-hiccup-list]
+  (!reset)
+  (css css-hiccup-list))

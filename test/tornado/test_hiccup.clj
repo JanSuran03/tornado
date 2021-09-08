@@ -2,7 +2,8 @@
   (:require [clojure.test :refer :all]
             [tornado.at-rules :as stylesheet]
             [tornado.core :as c :refer [px rem* percent fr em vw vh]]
-            [tornado.colors :as colors]))
+            [tornado.colors :as colors]
+            [tornado.at-rules :as at-rules]))
 
 (def SimpleAtMedia (stylesheet/at-media {:min-width (px 500)
                                          :max-width (rem* 30)}
@@ -22,6 +23,12 @@
                          :background-color :chocolate}
                   [:.pqr :#stu {:height (vw 25)
                                 :width  (vh 20)}
-                   [:.vwx :yza {:width nil}]]]]
+                   [:.vwx :yza {:width nil}]]
+                  (at-rules/at-media {:min-width "500px"
+                                      :max-width "700px"}
+                                     [:.abc :#def {:margin-top [[0 "15px" "3rem" "1fr"]]}]
+                                     [:.ghi {:margin "20px"}
+                                      [:.jkl {:margin "150pc"}]]
+                                     [:.mno {:overflow :hidden}])]]
                 [:.something :#something-else :#more-examples! {:width  (percent 15)
                                                                 :height (percent 25)}])))

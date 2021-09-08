@@ -6,6 +6,10 @@
   (CSSAtRule. "media" {:rules   rules
                        :changes changes}))
 
+(defn at-media? [expr]
+  (and (instance? CSSAtRule expr)
+       (= (:identifier expr) "media")))
+
 (defn at-font-face
   "(at-font-face {:font-family \"Source Sans Pro\"
                   :src [\"url1
@@ -18,4 +22,4 @@
 (defmacro defkeyframes
   [animation-name & frames]
   `(def ~animation-name (CSSAtRule. "keyframes" {:anim-name (str '~animation-name)
-                                                 :frames (list ~@frames)})))
+                                                 :frames    (list ~@frames)})))
