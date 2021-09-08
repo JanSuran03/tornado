@@ -9,8 +9,6 @@
 
 (defrecord CSSColor [type value])
 
-(defrecord CSSSelector [selector-type compiles-to])
-
 (defrecord CSSCombinator [compiles-to element])
 
 (defrecord CSSAttributeSelector [compiles-to attribute subvalue])

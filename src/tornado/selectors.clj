@@ -2,12 +2,12 @@
   (:require [tornado.types]
             [tornado.util :as util]
             [clojure.string :as str])
-  (:import (tornado.types CSSSelector CSSPseudoClass CSSPseudoElement
+  (:import (tornado.types CSSPseudoClass CSSPseudoElement
                           CSSAttributeSelector CSSCombinator)))
 
 (defn make-attribute-selector-fn
   "Creates an attribute selector record."
-  [compiles-to attribute subvalue]
+  [compiles-to attribute ^String subvalue]
   (CSSAttributeSelector. compiles-to attribute subvalue))
 
 (defmacro defattributeselector
@@ -57,6 +57,7 @@
   [selector-name compiles-to]
   `(def ~selector-name (partial ~make-attribute-selector-fn ~compiles-to)))
 
+(defn has-attr [attr])
 (defattributeselector has-val "=")
 (defattributeselector contains-word "~=")
 (defattributeselector starts-with-word "|=")
@@ -221,8 +222,8 @@
                    :html-tag/wbr})))
 
 (defn selector? [x]
-  (or (instance? CSSSelector x)
-      (instance? CSSAttributeSelector x)
+  (or (instance? CSSAttributeSelector x)
+      (instance? CSSCombinator x)
       (instance? CSSPseudoClass x)
       (instance? CSSPseudoClass x)))
 
@@ -272,6 +273,6 @@
 
 (comment (defcombinatorselector descendant-selector \space)
          "Not needed, descendant selector is the default one.")
-(defcombinatorselector child-selrctor ">")
+(defcombinatorselector child-selector ">")
 (defcombinatorselector adjacent-sibling "+")
 (defcombinatorselector general-sibling "~")

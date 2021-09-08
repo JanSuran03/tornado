@@ -4,11 +4,12 @@
             [tornado.util :as util]
             [clojure.string :as str]
             [tornado.selectors :as sel]
-            [tornado.colors :as colors])
+            [tornado.colors :as colors]
+            [tornado.units :as u])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
-                          CSSSelector CSSCombinator CSSAttributeSelector
+                          CSSCombinator CSSAttributeSelector
                           CSSPseudoClass CSSPseudoElement)
-           (clojure.lang PersistentArrayMap Keyword Symbol)))
+           (clojure.lang Keyword Symbol)))
 
 (defonce unevaluated-hiccup (atom []))
 (defonce unevaluated-at-media (atom []))
@@ -30,6 +31,13 @@
                                  value)
         (nil? vect) [value]
         :else (throw (IllegalArgumentException. (str "Not sequential, nor `nil`: " vect)))))
+
+(defmulti compile-selector
+          "Compiles a CSS combinator, attribute selector, pseudoclass or pseudoelement."
+          class)
+
+#_(defmethod compile-selector CSSCombinator
+  )
 
 (defmulti compile-color
           "Generates CSS from a color, calls a relevant method to do so depending on the
@@ -75,7 +83,7 @@
         saturation (util/percent* saturation)
         lightness (util/percent* lightness)
         alpha (util/percent->number alpha)]
-    (str "hsl(" hue ", " saturation ", " lightness ", " alpha ")")))
+    (str "hsla(" hue ", " saturation ", " lightness ", " alpha ")")))
 
 (defmulti compile-css-record
           "Compiles a CSS record."
@@ -158,6 +166,12 @@
     (str "@media " expanded-rules "{\n "
          (str/join "\n  " changes) "}")))
 
+(defn compile-attributes-map [attributes-map]
+  (when attributes-map
+    (->> (for [[attribute value] attributes-map]
+           [(compile-expression attribute) (compile-expression value)])
+         (into {}))))
+
 (defmacro cartesian-product [& seqs]
   (let [w-bindings (map #(vector (gensym) %) seqs)
         binding-syms (mapv first w-bindings)
@@ -178,7 +192,8 @@
 
 (defn selectors-params-children [hiccup]
   (as-> hiccup <> (reduce (fn [{:keys [selectors params children at-media] :as spc-map} hiccup-element]
-                            (let [belongs-to (cond (sel/id-class-tag? hiccup-element) :selectors
+                            (let [belongs-to (cond (or (sel/id-class-tag? hiccup-element)
+                                                       (sel/selector? hiccup-element)) :selectors
                                                    (and (not (record? hiccup-element))
                                                         (map? hiccup-element)) :params
                                                    (vector? hiccup-element) :children
@@ -212,7 +227,7 @@
                                   :params params}))
 
 (defn insert-to-unexpanded-at-media [path at-media]
-  (swap! unevaluated-at-media conj {:path   path
+  (swap! unevaluated-at-media conj {:path         path
                                     :media-record at-media}))
 
 (defn --css
@@ -225,9 +240,8 @@
     [*child3*]
     [*child2*]
        ...]
-  Since each child is a vector and that the 3rd argument passed to this
-  function is a vector as well, we can call this function recursively
-  infinitely."
+  Since each child is a vector and the 2nd argument passed to this function
+  is a vector as well, we can call this function recursively infinitely."
   [parents hiccup-vector]
   (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)]
     (when (seq at-media)
@@ -243,8 +257,8 @@
         (insert-to-unevaluated-seq new-parents params)))))
 
 (defn -css
-  "Given a hiccup element path (parents) and params inherited from
-  the parents, goes through it recursively and generates CSS from it."
+  "Given a hiccup element path (parents), goes through it recursively
+  and expands all the expressions."
   [parents hiccup-vector]
   (let [expanded-list (expand-seqs hiccup-vector)]
     ;; for each element of a hiccup vector, recursively unwraps it and generates CSS from it
@@ -259,6 +273,28 @@
 (defn !reset []
   (reset! unevaluated-hiccup [])
   (reset! unevaluated-at-media []))
+
+(def styles
+  (list
+    (list
+      [:.abc :#def {:width      (u/px 15)
+                    :height     (u/percent 20)
+                    :margin-top [[(u/px 15) 0 (u/px 20) (u/rem* 3)]]}
+       [:.ghi :#jkl {:height (u/fr 15)}]
+       [:.mno {:height           (u/px 20)
+               :background-color :chocolate}
+        [:.pqr (sel/adjacent-sibling :#stu) {:height (u/vw 25)
+                                             :width  (u/vh 20)}
+         [:.vwx :.yza {:width nil}]]
+        (at-rules/at-media {:min-width "500px"
+                            :max-width "700px"}
+                           [:& {:height (u/px 40)}]
+                           [:.abc :#def {:margin-top [[0 "15px" "3rem" "1fr"]]}]
+                           [:.ghi {:margin "20px"}
+                            [:.jkl {:margin "150pc"}]]
+                           [:.mno {:overflow :hidden}])]]
+      [:.something :#something-else :#more-examples! {:width  (u/percent 15)
+                                                      :height (u/percent 25)}])))
 
 (defn css!
   [css-hiccup-list]

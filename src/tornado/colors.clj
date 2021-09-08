@@ -208,7 +208,7 @@
   "Creates an hsla CSSColor record."
   ([[hue saturation lightness alpha]]
    (let [alpha (or alpha 1)]
-     (CSSColor. "hsl" {:hue        hue
+     (CSSColor. "hsla" {:hue        hue
                        :saturation (util/percent->number saturation)
                        :lightness  (util/percent->number lightness)
                        :alpha      (util/percent->number alpha)})))

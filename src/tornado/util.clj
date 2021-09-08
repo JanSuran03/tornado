@@ -72,10 +72,9 @@
          (instance? CSSUnit value) (if (= (:compiles-to value) "%")
                                      (int* (/ (:value value) 100))
                                      value)
-         :else (if throw-if-no-match
-                 (throw (IllegalArgumentException.
-                          (str "Not a valid value for conversion from percent to number: " value)))
-                 value))))
+         throw-if-no-match (throw (IllegalArgumentException.
+                                    (str "Not a valid value for conversion from percent to number: " value)))
+         :else value)))
 
 (defn average
   "Computes the average of 1 or more numbers. Accepts elements, not a sequence of elements."
