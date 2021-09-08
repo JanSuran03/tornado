@@ -6,7 +6,8 @@
             [tornado.selectors :as sel]
             [tornado.colors :as colors])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
-                          CSSSelector CSSPseudoClass CSSPseudoElement)
+                          CSSSelector CSSCombinator CSSAttributeSelector
+                          CSSPseudoClass CSSPseudoElement)
            (clojure.lang PersistentArrayMap Keyword Symbol)))
 
 (defonce unevaluated-hiccup (atom []))
@@ -210,7 +211,7 @@
   (swap! unevaluated-hiccup conj {:path   path
                                   :params params}))
 
-(defn insert-to-unevaluated-at-media [path at-media]
+(defn insert-to-unexpanded-at-media [path at-media]
   (swap! unevaluated-at-media conj {:path   path
                                     :media-record at-media}))
 
@@ -231,7 +232,7 @@
   (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)]
     (when (seq at-media)
       (doseq [media at-media]
-        (insert-to-unevaluated-at-media parents media)))
+        (insert-to-unexpanded-at-media parents media)))
     (if (seq children)
       (doseq [[selector child] (cartesian-product selectors children)
               :let [new-parents (conjv parents selector)]]

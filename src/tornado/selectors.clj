@@ -1,18 +1,73 @@
 (ns tornado.selectors
-  ""
   (:require [tornado.types]
             [tornado.util :as util]
             [clojure.string :as str])
-  (:import (tornado.types CSSSelector CSSPseudoClass CSSPseudoElement)))
+  (:import (tornado.types CSSSelector CSSPseudoClass CSSPseudoElement
+                          CSSAttributeSelector CSSCombinator)))
 
-(def selector-keys->selectors
-  {:child        " "
-   :direct-child ">"})
+(defn make-attribute-selector-fn
+  "Creates an attribute selector record."
+  [compiles-to attribute subvalue]
+  (CSSAttributeSelector. compiles-to attribute subvalue))
+
+(defmacro defattributeselector
+  "Attribute selectors select all descendant elements containing a given attribute,
+  of which the value matches with a given substring. All attribute selectors have
+  different conditions for matching. Dashes count as words separators.
+
+  Usage:
+     (defattributeselector contains-word \"~=\")
+     => #'tornado.selectors/contains-word
+     (contains-word :direction \"reverse\")
+     => #tornado.types.CSSAttributeSelector{:compiles-to \"~=\"
+                                            :attribute   :direction
+                                            :subvalue    \"reverse\"}
+
+
+  [attribute=\"value\"]:
+     Selects all descendant elements which have a given parameter with a given value.
+     In code: <has-val>
+
+  [attribute~=\"value\"]:
+     Selects all descendant elements which have a given parameter with a value
+     containing a given word (not substring, word).
+     In code: <contains-word>
+
+  [attribute|=\"value\"]:
+     Selects all descendant elements which have a given parameter with a value
+     starting with a given word (not substring, word).
+     In code: <starts-with-word>
+
+  [attribute^=\"value\"]:
+     Selects all descendant elements which have a given parameter with a value
+     starting with a given substring (unlike the \"|=\" selector, the substring
+     does not have to be a whole word.
+     In code: <starts-with>
+
+  [attribute$=\"value\"]:
+     Selects all descendant elements which have a given parameter with a value
+     ending with a given substring. The substring does not have to be a whole word.
+     In code: <ends-with>
+
+  [attribute*=\"value\"]:
+     Selects all descendant elements which have a given parameter with a value
+     containing a given substring. (unlike the \"~=\" selector, the substring does
+     not have to be a whole word).
+     In code: <contains-subs>"
+  [selector-name compiles-to]
+  `(def ~selector-name (partial ~make-attribute-selector-fn ~compiles-to)))
+
+(defattributeselector has-val "=")
+(defattributeselector contains-word "~=")
+(defattributeselector starts-with-word "|=")
+(defattributeselector starts-with "^=")
+(defattributeselector ends-with "$=")
+(defattributeselector contains-subs "*=")
 
 (defn make-pseudoclass-fn
   ""
   [pseudoclass parent]
-  (CSSPseudoClass. pseudoclass parent))
+  (CSSPseudoClass. pseudoclass))
 
 (defmacro defpseudoclass
   ([pseudoclass]
@@ -166,7 +221,10 @@
                    :html-tag/wbr})))
 
 (defn selector? [x]
-  (instance? CSSSelector x))
+  (or (instance? CSSSelector x)
+      (instance? CSSAttributeSelector x)
+      (instance? CSSPseudoClass x)
+      (instance? CSSPseudoClass x)))
 
 (defn css-class? [x]
   (and (util/valid? x)
@@ -183,10 +241,10 @@
 (defn id-class-tag? [x]
   ((some-fn css-class? css-id? html-tag?) x))
 
-(defn make-pseudoelement-fn
+(defn create-pseudoelement
   ""
-  [pseudoelement parent]
-  (CSSPseudoElement. pseudoelement parent))
+  [pseudoelement]
+  (CSSPseudoElement. pseudoelement))
 
 (defmacro defpseudoelement
   ""
@@ -194,7 +252,7 @@
    (let [compiles-to (str pseudoelement)]
      `(defpseudoelement ~pseudoelement ~compiles-to)))
   ([identifier css-pseudoelement]
-   `(def ~identifier (partial ~make-pseudoelement-fn ~css-pseudoelement))))
+   `(def ~identifier (create-pseudoelement ~css-pseudoelement))))
 
 (defpseudoelement after)
 (defpseudoelement before)
@@ -202,12 +260,18 @@
 (defpseudoelement first-line)
 (defpseudoelement selection)
 
-(defn child-selector
+(defn make-combinator-fn
   ""
-  [el1 el2]
-  (CSSSelector. :child (list el1 el2)))
+  [compiles-to child]
+  (CSSCombinator. compiles-to child))
 
-(defn direct-child-selector [])
+(defmacro defcombinatorselector
+  ""
+  [selector-name compiles-to]
+  `(def ~selector-name (partial ~make-combinator-fn ~compiles-to)))
 
-(def +> child-selector)
-(def >> direct-child-selector)
+(comment (defcombinatorselector descendant-selector \space)
+         "Not needed, descendant selector is the default one.")
+(defcombinatorselector child-selrctor ">")
+(defcombinatorselector adjacent-sibling "+")
+(defcombinatorselector general-sibling "~")
