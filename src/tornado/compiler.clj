@@ -5,7 +5,8 @@
             [clojure.string :as str]
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
-            [tornado.units :as u])
+            [tornado.units :as u]
+            [clojure.pprint :as pp])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSCombinator CSSAttributeSelector
                           CSSPseudoClass CSSPseudoElement)
@@ -29,6 +30,9 @@
                                  value)
         (nil? vect) [value]
         :else (throw (IllegalArgumentException. (str "Not sequential, nor `nil`: " vect)))))
+
+(defn conjs [s value]
+  (conj (or s #{}) value))
 
 (defmulti compile-selector
           "Compiles a CSS combinator, attribute selector, pseudoclass or pseudoelement."
@@ -166,9 +170,16 @@
 
 (defn compile-attributes-map [attributes-map]
   (when attributes-map
-    (->> (for [[attribute value] attributes-map]
-           [(compile-expression attribute) (compile-expression value)])
-         (into {}))))
+    (for [[attribute value] attributes-map]
+      [(compile-expression attribute) (compile-expression value)])))
+
+(defn attr-map-to-css [attributes-map]
+  (when attributes-map
+    (->> attributes-map compile-attributes-map
+         (map util/str-colonjoin)
+         util/str-semicolonjoin)))
+
+;(defn selectors-attributes-string)
 
 (defmacro cartesian-product [& seqs]
   (let [w-bindings (map #(vector (gensym) %) seqs)
@@ -233,6 +244,20 @@
 (defn update-unevaluated-hiccup [hiccup path params]
   (conjv hiccup {:path   path
                  :params params}))
+
+(defn simplify-prepared-expanded-hiccup [path-params-vector]
+  (->> path-params-vector
+       (reduce (fn [params->paths-map {:keys [path params]}]
+                 (if (get params->paths-map params)
+                   (update params->paths-map params conjs path)
+                   (assoc params->paths-map params #{path})))
+               {})
+       (reduce (fn [final-expanded-hiccup [params selectors-set]]
+                 (conj! final-expanded-hiccup {:paths  (vec selectors-set)
+                                               :params params}))
+               (transient []))
+       persistent!))
+
 (defn --css
   "<parents> are in a form of a vector of selectors before the current
              hiccup vector: [:.abc :#def :.ghi ...], can potentially be nil
@@ -246,19 +271,27 @@
   Since each child is a vector and the 2nd argument passed to this function
   is a vector as well, we can call this function recursively infinitely."
   [parents unevaluated-hiccup hiccup-vector]
-  (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)]
+  (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
+        maybe-media (when (seq at-media)
+                      ;
+                      ; (pp/pprint at-media)
+                      (->> (cartesian-product (concat parents selectors) at-media)
+                           (map (fn [[selector media-rules]]
+                                  {:path     selector
+                                   :at-media media-rules}))))
+        #_unevaluated-hiccup #_(if maybe-media
+                                 (reduce conj unevaluated-hiccup maybe-media)
+                                 unevaluated-hiccup)]
     (if (seq children)
-      (let [selectors-children-combinations (cartesian-product selectors children)]
-        (reduce (fn [current-unevaluated-hiccup [selector child]]
-                  (let [new-parents (conjv parents selector)
-                        updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
-                    (-css new-parents updated-hiccup (list child))))
-                unevaluated-hiccup
-                selectors-children-combinations))
-      (reduce (fn [current-unevaluated-hiccup selector]
+      (reduce (fn [current-unevaluated-hiccup [selector child]]
                 (let [new-parents (conjv parents selector)
                       updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
-                  updated-hiccup))
+                  (-css new-parents updated-hiccup (list child))))
+              unevaluated-hiccup
+              (cartesian-product selectors children))
+      (reduce (fn [current-unevaluated-hiccup selector]
+                (let [new-parents (conjv parents selector)]
+                  (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)))
               unevaluated-hiccup
               selectors))))
 
@@ -282,11 +315,17 @@
             unevaled-hiccup
             expanded-list)))
 
+(defn save-stylesheet [path stylesheet]
+  (spit path stylesheet))
+
 (defn css
   "Generates CSS from a list of hiccup."
   [css-hiccup-list]
-  (-css nil nil css-hiccup-list)
-  nil)
+  (->> css-hiccup-list (-css nil nil)
+       simplify-prepared-expanded-hiccup))
+
+(defn css-time [x]
+  (time (let [_ (css x)])))
 
 (def styles2
   (list
@@ -300,21 +339,47 @@
 (def styles
   (list
     (list
-      [:.abc :#def {:width      (u/px 15)
-                    :height     (u/percent 20)
-                    :margin-top [[(u/px 15) 0 (u/px 20) (u/rem* 3)]]}
-       [:.ghi :#jkl {:height (u/fr 15)}]
-       [:.mno {:height           (u/px 20)
-               :background-color :chocolate}
-        [:.pqr (sel/adjacent-sibling :#stu) {:height (u/vw 25)
-                                             :width  (u/vh 20)}
-         [:.vwx :.yza {:width nil}]]
-        (at-rules/at-media {:min-width "500px"
-                            :max-width "700px"}
-                           [:& {:height (u/px 40)}]
-                           [:.abc :#def {:margin-top [[0 "15px" "3rem" "1fr"]]}]
-                           [:.ghi {:margin "20px"}
-                            [:.jkl {:margin "150pc"}]]
-                           [:.mno {:overflow :hidden}])]]
+      [:.something
+       [:.abc :#def {:width      (u/px 15)
+                     :height     (u/percent 20)
+                     :margin-top [[(u/px 15) 0 (u/px 20) (u/rem* 3)]]}
+        [:.ghi :#jkl {:height (u/fr 15)}]
+        [:.mno {:height           (u/px 20)
+                :background-color :chocolate}
+         [:.pqr (sel/adjacent-sibling :#stu) {:height (u/vw 25)
+                                              :width  (u/vh 20)}
+          [:.vwx :.yza {:width nil}]]
+         (at-rules/at-media {:min-width "500px"
+                             :max-width "700px"}
+                            [:& {:height (u/px 40)}]
+                            [:.abc :#def {:margin-top [[0 "15px" "3rem" "1fr"]]}]
+                            [:.ghi {:margin "20px"}
+                             [:.jkl {:margin "150pc"}]]
+                            [:.mno {:overflow :hidden}])]]]
       [:.something :#something-else :#more-examples! {:width  (u/percent 15)
-                                                      :height (u/percent 25)}])))
+                                                      :height (u/percent 25)}]
+      [:*])))
+
+(def brutal
+  (list
+    (list
+      [:.something
+       [:.abc :#def {:width      (u/px 15)
+                     :height     (u/percent 20)
+                     :margin-top [[(u/px 15) 0 (u/px 20) (u/rem* 3)]]}
+        [:.ghi :#jkl {:height (u/fr 15)}]
+        [:.mno {:height           (u/px 20)
+                :background-color :chocolate}
+         [:.pqr (sel/adjacent-sibling :#stu) {:height (u/vw 25)
+                                              :width  (u/vh 20)}
+          [:.vwx :.yza {:width nil}]]
+         (at-rules/at-media {:min-width "500px"
+                             :max-width "700px"}
+                            [:& {:height (u/px 40)}]
+                            [:.abc :#def {:margin-top [[0 "15px" "3rem" "1fr"]]}]
+                            [:.ghi {:margin "20px"}
+                             [:.jkl {:margin "150pc"}]]
+                            [:.mno {:overflow :hidden}])]]]
+      (repeat 500 [:.something :#something-else :#more-examples! {:width  (u/percent 15)
+                                                                  :height (u/percent 25)}])
+      )))

@@ -220,12 +220,16 @@
                    :html-tag/var
                    :html-tag/video
                    :html-tag/wbr})))
+(def ^:private special-sels {:* "A selector for selecting all descendants."})
+(def special-selectors (->> special-sels keys (map name) set))
 
 (defn selector? [x]
   (or (instance? CSSAttributeSelector x)
       (instance? CSSCombinator x)
       (instance? CSSPseudoClass x)
-      (instance? CSSPseudoClass x)))
+      (instance? CSSPseudoClass x)
+      (and (util/valid? x)
+           (contains? special-selectors (name x)))))
 
 (defn css-class? [x]
   (and (util/valid? x)

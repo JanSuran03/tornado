@@ -144,3 +144,13 @@
   "str/join with \", \""
   [coll]
   (str/join ", " coll))
+
+(defn str-colonjoin
+  "str/join with \": \""
+  [coll]
+  (str/join ": " coll))
+
+(defn str-semicolonjoin
+  "str/join with \";\n\""
+  [coll]
+  (str/join ";\n" coll))
