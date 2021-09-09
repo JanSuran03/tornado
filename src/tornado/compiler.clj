@@ -11,8 +11,6 @@
                           CSSPseudoClass CSSPseudoElement)
            (clojure.lang Keyword Symbol)))
 
-(defonce unevaluated-hiccup (atom []))
-(defonce unevaluated-at-media (atom []))
 
 (declare compile-expression
          expand-at-rule
@@ -37,7 +35,7 @@
           class)
 
 #_(defmethod compile-selector CSSCombinator
-  )
+    )
 
 (defmulti compile-color
           "Generates CSS from a color, calls a relevant method to do so depending on the
@@ -182,7 +180,17 @@
   `(cartesian-product ~@input-seq))
 
 (defn expand-seqs
-  "Expands and concanetates nested sequences (lists and lazy-seqs)."
+  "Expands lists and lazy sequences in a nested structure. Always expands the first
+   collection. When any more deeply nested collection is neither a list nor a lazy-seq,
+   this function does not expand it.
+   (expand-seqs [:a :b])
+   => (:a :b) ... the first element is anything seqable -> transforms it to a list
+
+   (expand-seqs [[:a :b]])
+   => ([:a :b]) ... the 2nd element is neither a list nor a lazy-seq -> does not expand it
+
+   (expand-seqs [(list :a [:b (map identity [:c :d :e])])])
+   => (:a [:b (:c :d :e)]) ... 2nd element a vector -> does not expand the nested lazy-seq"
   [coll]
   (mapcat (fn [coll]
             (if (seq? coll)
@@ -222,14 +230,9 @@
 
 (declare -css)
 
-(defn insert-to-unevaluated-seq [path params]
-  (swap! unevaluated-hiccup conj {:path   path
-                                  :params params}))
-
-(defn insert-to-unexpanded-at-media [path at-media]
-  (swap! unevaluated-at-media conj {:path         path
-                                    :media-record at-media}))
-
+(defn update-unevaluated-hiccup [hiccup path params]
+  (conjv hiccup {:path   path
+                 :params params}))
 (defn --css
   "<parents> are in a form of a vector of selectors before the current
              hiccup vector: [:.abc :#def :.ghi ...], can potentially be nil
@@ -242,37 +245,57 @@
        ...]
   Since each child is a vector and the 2nd argument passed to this function
   is a vector as well, we can call this function recursively infinitely."
-  [parents hiccup-vector]
+  [parents unevaluated-hiccup hiccup-vector]
   (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)]
-    (when (seq at-media)
-      (doseq [media at-media]
-        (insert-to-unexpanded-at-media parents media)))
     (if (seq children)
-      (doseq [[selector child] (cartesian-product selectors children)
-              :let [new-parents (conjv parents selector)]]
-        (insert-to-unevaluated-seq new-parents params)
-        (-css new-parents (list child)))
-      (doseq [selector selectors
-              :let [new-parents (conjv parents selector)]]
-        (insert-to-unevaluated-seq new-parents params)))))
+      (let [selectors-children-combinations (cartesian-product selectors children)]
+        (reduce (fn [current-unevaluated-hiccup [selector child]]
+                  (let [new-parents (conjv parents selector)
+                        updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
+                    (-css new-parents updated-hiccup (list child))))
+                unevaluated-hiccup
+                selectors-children-combinations))
+      (reduce (fn [current-unevaluated-hiccup selector]
+                (let [new-parents (conjv parents selector)
+                      updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
+                  updated-hiccup))
+              unevaluated-hiccup
+              selectors))))
 
 (defn -css
-  "Given a hiccup element path (parents), goes through it recursively
-  and expands all the expressions."
-  [parents hiccup-vector]
-  (let [expanded-list (expand-seqs hiccup-vector)]
-    ;; for each element of a hiccup vector, recursively unwraps it and generates CSS from it
-    (doseq [hiccup-vector expanded-list]
-      (--css parents hiccup-vector))))
+  "Given a hiccup element path (parents) and current unevaluated hiccup, this function
+  first expands all lists and lazy sequences until it comes across a structure which
+  is neither of them. After that, the function recursively goes through all hiccup vectors
+  in the expanded hiccup vectors list: The current vector of unevaluated hiccup
+  combinations is passed to another expanding function to update it. Then, the updated
+  vector is passed to another hiccup vector in that expanded sequence and the another
+  expanding function expands its inner again...
+  The second expanding function calculates cartesian product of all selectors and
+  children in the current vector and attempts to expand all the combinations further,
+  if the children is another nested hiccup. It updates the received current unevaluated
+  hiccup with a map of the current :path and :params."
+  [parents unevaluated-hiccup nested-hiccup-vectors-list]
+  (let [expanded-list (expand-seqs nested-hiccup-vectors-list)
+        unevaled-hiccup (or unevaluated-hiccup [])]
+    (reduce (fn [current-unevaluated-hiccup hiccup-vector]
+              (--css parents current-unevaluated-hiccup hiccup-vector))
+            unevaled-hiccup
+            expanded-list)))
 
 (defn css
   "Generates CSS from a list of hiccup."
   [css-hiccup-list]
-  (-css nil css-hiccup-list))
+  (-css nil nil css-hiccup-list)
+  nil)
 
-(defn !reset []
-  (reset! unevaluated-hiccup [])
-  (reset! unevaluated-at-media []))
+(def styles2
+  (list
+    (list
+      [:.abc :#mno {:height (u/vw 25)
+                    :width  (u/vh 20)}
+       [:.def :.ghi {:width :something-else}]]
+      [:.jkl (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
+                                                 :height (u/percent 25)}])))
 
 (def styles
   (list
@@ -295,8 +318,3 @@
                            [:.mno {:overflow :hidden}])]]
       [:.something :#something-else :#more-examples! {:width  (u/percent 15)
                                                       :height (u/percent 25)}])))
-
-(defn css!
-  [css-hiccup-list]
-  (!reset)
-  (css css-hiccup-list))
