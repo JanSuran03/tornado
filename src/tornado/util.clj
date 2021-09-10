@@ -12,7 +12,7 @@
       (string? x)
       (symbol? x)))
 
-(defn get-valid
+(defn ^String get-valid
   "If the argument is a symbol, a keyword or a string, return its string form."
   [x]
   (if (valid? x)
@@ -25,7 +25,7 @@
   (when (valid? x)
     (get-valid x)))
 
-(defn int*
+(defn ^Number int*
   "Converts a float to an integer if the value would stay the same.
   A ratio will be converted to a float, or to an integer if possible."
   [^Number x]
@@ -37,15 +37,26 @@
       int-x
       non-ratio)))
 
+(defn ^Number to-percent-float
+  "Parses a percentage from a string \"12%\" or multiplies a number with 100
+  to get a percentage value of it. Returns a numeral form of it."
+  [value]
+  (assert (or (number? value) (string? value))
+          (str "Cannot transform to percent int from a value that is none from"
+               " a number or a string: " value))
+  (if (number? value)
+    (int* (* value 100))
+    (-> value Float/parseFloat to-percent-float)))
 
-(defn percent*
-  "If the given value is a number, convert it to a string with \"%\" appended."
+(defn ^String percent-with-symbol-append
+  "Parses a percentage from a string \"12%\" or multiplies a number with 100
+  to get a percentage value of it. Returns a string form with \"%\" appended."
   [value]
   (if (number? value)
     (str (int* (* value 100)) "%")
     value))
 
-(defn percent->number
+(defn ^Number percent->number
   "If the argument is a value in percent, convert it to an integer between 0 and 1.
   Throws an exception if the optional 2nd argument has a truthy value and the input
   type is none of string, number or CSSUnit instance. Otherwise thís function does not
@@ -76,17 +87,18 @@
                                     (str "Not a valid value for conversion from percent to number: " value)))
          :else value)))
 
-(defn average
+(defn ^Number average
   "Computes the average of 1 or more numbers. Accepts elements, not a sequence of elements."
   ([x] x)
   ([x y] (/ (+ x y) 2))
   ([x y & more] (/ (reduce + (+ x y) more)
                    (+ 2 (count more)))))
 
-(def avg "Alias for \"average\". Takes any number of args, directly, not in a sequence."
+(def ^Number avg
+  "Alias for \"average\". Takes any number of args, directly, not in a sequence."
   average)
 
-(defn apply-avg "Same as (apply average coll)"
+(defn ^Number apply-avg "Same as (apply average coll)"
   [coll]
   (apply average coll))
 
@@ -135,22 +147,22 @@
           [value]
           (subvec vect index)))
 
-(defn str-spacejoin
+(defn ^String str-spacejoin
   "str/join with \" \""
   [coll]
   (str/join " " coll))
 
-(defn str-commajoin
+(defn ^String str-commajoin
   "str/join with \", \""
   [coll]
   (str/join ", " coll))
 
-(defn str-colonjoin
+(defn ^String str-colonjoin
   "str/join with \": \""
   [coll]
   (str/join ": " coll))
 
-(defn str-semicolonjoin
+(defn ^String str-semicolonjoin
   "str/join with \";\n\""
   [coll]
   (str/join ";\n" coll))

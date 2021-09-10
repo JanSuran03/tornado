@@ -209,13 +209,26 @@
   ([[hue saturation lightness alpha]]
    (let [alpha (or alpha 1)]
      (CSSColor. "hsla" {:hue        hue
-                       :saturation (util/percent->number saturation)
-                       :lightness  (util/percent->number lightness)
-                       :alpha      (util/percent->number alpha)})))
+                        :saturation (util/percent->number saturation)
+                        :lightness  (util/percent->number lightness)
+                        :alpha      (util/percent->number alpha)})))
   ([hue saturation lightness]
    (hsla [hue saturation lightness 1]))
   ([hue saturation lightness alpha]
    (hsla [hue saturation lightness alpha])))
+
+(defn rgb? [x]
+  (and (instance? CSSColor x)
+       (= (:type x) "rgb")))
+(defn rgba? [x]
+  (and (instance? CSSColor x)
+       (= (:type x) "rgba")))
+(defn hsl? [x]
+  (and (instance? CSSColor x)
+       (= (:type x) "hsl")))
+(defn hsla? [x]
+  (and (instance? CSSColor x)
+       (= (:type x) "hsla")))
 
 (defn hex->rgba
   "Converts a color in hexadecimal string to an rgba color:
@@ -267,7 +280,7 @@
                            in-hex (map util/base10->double-hex-map [red green blue])]
                        (apply str "#" in-hex))
                "rgba" (let [{:keys [red green blue alpha]} value
-                            alpha (Math/round (* 256 alpha))
+                            alpha (Math/round (float (* 256 alpha)))
                             in-hex (map util/base10->double-hex-map [red green blue alpha])]
                         (apply str "#" in-hex))
                :else (do (println (str "Unable to convert " color " to a hex-string -"
@@ -279,6 +292,26 @@
           "Calls a relevant function to compute the average of more colors."
           (fn [color-type _]
             color-type))
+
+(defn hsl->rgb
+  "https://www.rapidtables.com/convert/color/hsl-to-rgb.html
+  Unfortunately, Math/round throws an error with ratios, they need
+  to be converted to floats first."
+  [{:keys [value] :as hsl-color}]
+  {:pre [(hsl? hsl-color)]}
+  (let [{:keys [hue saturation lightness]} value
+        C (* (- 1 (Math/abs (float (- (* 2 lightness) 1)))) saturation)
+        X (* C (- 1 (Math/abs (float (- (mod (/ hue 60) 2) 1)))))
+        m (- lightness (/ C 2))
+        idxof0 (mod (int (/ (+ 240 hue) 120)) 3)
+        idxofC (int (mod (+ idxof0 1 (mod (/ hue 60) 2)) 3))
+        idxofX (int (mod (+ idxof0 1 (mod (inc (/ hue 60)) 2)) 3))
+        c-x-m [[0 idxof0] [C idxofC] [X idxofX]]
+        [[R' _] [G' _] [B' _]] (sort-by (fn [[_ x]] x) < c-x-m)
+        R (Math/round (float (* (+ R' m) 255)))
+        G (Math/round (float (* (+ G' m) 255)))
+        B (Math/round (float (* (+ B' m) 255)))]
+    [R G B]))
 
 (defmethod -mix-colors "rgb"
   [_ colors]

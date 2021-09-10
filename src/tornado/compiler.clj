@@ -75,15 +75,15 @@
 (defmethod compile-color "hsl"
   [{:keys [value]}]
   (let [{:keys [hue saturation lightness]} value
-        saturation (util/percent* saturation)
-        lightness (util/percent* lightness)]
+        saturation (util/percent-with-symbol-append saturation)
+        lightness (util/percent-with-symbol-append lightness)]
     (str "hsl(" hue ", " saturation ", " lightness ")")))
 
 (defmethod compile-color "hsla"
   [{:keys [value]}]
   (let [{:keys [hue saturation lightness alpha]} value
-        saturation (util/percent* saturation)
-        lightness (util/percent* lightness)
+        saturation (util/percent-with-symbol-append saturation)
+        lightness (util/percent-with-symbol-append lightness)
         alpha (util/percent->number alpha)]
     (str "hsla(" hue ", " saturation ", " lightness ", " alpha ")")))
 
