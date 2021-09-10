@@ -295,8 +295,8 @@
 
 (defn hsl->rgb
   "https://www.rapidtables.com/convert/color/hsl-to-rgb.html
-  Unfortunately, Math/round throws an error with ratios, they need
-  to be converted to floats first."
+  Unfortunately, Math/round abs Math/abs would throw an error
+  with ratios, they need to be converted to floats first."
   [{:keys [value] :as hsl-color}]
   {:pre [(hsl? hsl-color)]}
   (let [{:keys [hue saturation lightness]} value
@@ -308,9 +308,7 @@
         idxofX (int (mod (+ idxof0 1 (mod (inc (/ hue 60)) 2)) 3))
         c-x-m [[0 idxof0] [C idxofC] [X idxofX]]
         [[R' _] [G' _] [B' _]] (sort-by (fn [[_ x]] x) < c-x-m)
-        R (Math/round (float (* (+ R' m) 255)))
-        G (Math/round (float (* (+ G' m) 255)))
-        B (Math/round (float (* (+ B' m) 255)))]
+        [R G B] (map #(Math/round (float (* (+ % m) 255))) [R' G' B'])]
     [R G B]))
 
 (defmethod -mix-colors "rgb"
