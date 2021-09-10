@@ -6,7 +6,7 @@
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
             [tornado.units :as u]
-            [clojure.pprint :as pp])
+            [tornado.compression :as compression])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSCombinator CSSAttributeSelector
                           CSSPseudoClass CSSPseudoElement)
@@ -108,16 +108,6 @@
   [at-rule-record]
   (expand-at-rule at-rule-record))
 
-#_(defmethod compile-css-record CSSPseudoClass
-    [{:keys [pseudoclass parent]}]
-    (let [css-pseudoclass (str ":" pseudoclass)]
-      (str (css parent) css-pseudoclass)))
-
-#_(defmethod compile-css-record CSSPseudoElement
-    [{:keys [pseudoelement parent]}]
-    (let [css-pseudoelement (str "::" pseudoelement)]
-      (str (css parent) css-pseudoelement)))
-
 (defmethod compile-css-record CSSColor
   [color-record]
   (compile-color color-record))
@@ -154,7 +144,8 @@
   [{:keys [identifier]}]
   (throw (IllegalArgumentException. (str "Unknown at-rule identifier: " identifier))))
 
-(defmethod expand-at-rule "media"
+(defmethod expand-at-rule
+  "media"
   [{:keys [value]}]
   (let [{:keys [rules changes]} value
         expanded-rules (->> (for [[prop unit] rules]

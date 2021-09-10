@@ -12,7 +12,7 @@
       (string? x)
       (symbol? x)))
 
-(defn ^String get-valid
+(defn get-valid
   "If the argument is a symbol, a keyword or a string, return its string form."
   [x]
   (if (valid? x)
@@ -25,10 +25,10 @@
   (when (valid? x)
     (get-valid x)))
 
-(defn ^Number int*
+(defn int*
   "Converts a float to an integer if the value would stay the same.
   A ratio will be converted to a float, or to an integer if possible."
-  [^Number x]
+  [x]
   (let [non-ratio (if (ratio? x)
                     (float x)
                     x)
@@ -37,7 +37,7 @@
       int-x
       non-ratio)))
 
-(defn ^Number to-percent-float
+(defn to-percent-float
   "Parses a percentage from a string \"12%\" or multiplies a number with 100
   to get a percentage value of it. Returns a numeral form of it."
   [value]
@@ -48,7 +48,7 @@
     (int* (* value 100))
     (-> value Float/parseFloat to-percent-float)))
 
-(defn ^String percent-with-symbol-append
+(defn percent-with-symbol-append
   "Parses a percentage from a string \"12%\" or multiplies a number with 100
   to get a percentage value of it. Returns a string form with \"%\" appended."
   [value]
@@ -56,7 +56,7 @@
     (str (int* (* value 100)) "%")
     value))
 
-(defn ^Number percent->number
+(defn percent->number
   "If the argument is a value in percent, convert it to an integer between 0 and 1.
   Throws an exception if the optional 2nd argument has a truthy value and the input
   type is none of string, number or CSSUnit instance. Otherwise thís function does not
@@ -87,25 +87,44 @@
                                     (str "Not a valid value for conversion from percent to number: " value)))
          :else value)))
 
-(defn ^Number average
+(defn ->fixed
+  "Rounds a given number x to d decimal digits, or 0 by default."
+  ([x] (if (int? x)
+         x
+         (Math/round x)))
+  ([x d] (if (zero? d)
+           (Math/round x)
+           (let [scale (Math/pow 10 d)]
+             (/ (Math/round (* x scale)) scale)))))
+
+(defn round
+  "Rounds a given number to 4 decimal digits, which should be enough in most cases."
+  [x]
+  (->fixed (float x) 4))
+
+(defn -average
   "Computes the average of 1 or more numbers. Accepts elements, not a sequence of elements."
   ([x] x)
   ([x y] (/ (+ x y) 2))
   ([x y & more] (/ (reduce + (+ x y) more)
                    (+ 2 (count more)))))
 
-(def ^Number avg
+(defn average [& args]
+  (let [avg (apply -average args)]
+    (round avg)))
+
+(def avg
   "Alias for \"average\". Takes any number of args, directly, not in a sequence."
   average)
 
-(defn ^Number apply-avg "Same as (apply average coll)"
+(defn apply-avg "Same as (apply average coll)"
   [coll]
   (apply average coll))
 
 (defn between
   "Returns true if value is smaller than or equal n1 and greater than or equal n2."
   [value n1 n2]
-  (<= n1 value n2))
+  (<= (min n1 n2) value (max n1 n2)))
 
 (def ^:private base16-chars "0123456789ABCDEF")
 (def ^:private lowercase-base16 "abcdef")
@@ -147,22 +166,22 @@
           [value]
           (subvec vect index)))
 
-(defn ^String str-spacejoin
+(defn str-spacejoin
   "str/join with \" \""
   [coll]
   (str/join " " coll))
 
-(defn ^String str-commajoin
+(defn str-commajoin
   "str/join with \", \""
   [coll]
   (str/join ", " coll))
 
-(defn ^String str-colonjoin
+(defn str-colonjoin
   "str/join with \": \""
   [coll]
   (str/join ": " coll))
 
-(defn ^String str-semicolonjoin
+(defn str-semicolonjoin
   "str/join with \";\n\""
   [coll]
   (str/join ";\n" coll))

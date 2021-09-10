@@ -230,6 +230,14 @@
   (and (instance? CSSColor x)
        (= (:type x) "hsla")))
 
+(defn rgb->rgba [{:keys [value]}]
+  (let [{:keys [red green blue]} value]
+    (rgba [red green blue 1])))
+
+(defn hsl->hsla [{:keys [value]}]
+  (let [{:keys [hue saturation lightness]} value]
+    (hsla [hue saturation lightness 1])))
+
 (defn hex->rgba
   "Converts a color in hexadecimal string to an rgba color:
 
@@ -271,16 +279,18 @@
              (update <> 3 #(util/int* (/ % 256))))
            (rgba <>)))))
 
-(defn rgb?a->hex
+(defn rgb->hex
   "Converts an rgb/rgba CSSColor record to a hex-string. Rounds the hex-alpha of
   the color if the color is in rgba format."
   [{:keys [type value] :as color}]
   (if (instance? CSSColor color)
     (case type "rgb" (let [{:keys [red green blue]} value
+                           [red green blue] (map #(Math/round %) [red green blue])
                            in-hex (map util/base10->double-hex-map [red green blue])]
                        (apply str "#" in-hex))
                "rgba" (let [{:keys [red green blue alpha]} value
-                            alpha (Math/round (float (* 256 alpha)))
+                            [red green blue] (map #(Math/round %) [red green blue])
+                            alpha (Math/round (float (* 255 alpha)))
                             in-hex (map util/base10->double-hex-map [red green blue alpha])]
                         (apply str "#" in-hex))
                :else (do (println (str "Unable to convert " color " to a hex-string -"
@@ -288,28 +298,84 @@
                          color))
     (throw (IllegalArgumentException. (str "Expected a CSSColor record: " color)))))
 
+(defn hsl->rgb
+  "https://www.rapidtables.com/convert/color/hsl-to-rgb.html
+  Hsl to rgb. hsla to rgba.
+
+  Unfortunately, Math/round abs Math/abs would throw an error
+  with ratios, they need to be converted to floats first."
+  [{:keys [value] :as hsl-color}]
+  {:pre [(or (hsl? hsl-color) (hsla? hsl-color))]}
+  (let [{:keys [hue saturation lightness alpha]} value
+        C (* (- 1 (Math/abs (float (- (* 2 lightness) 1)))) saturation)
+        X (* C (- 1 (Math/abs (float (- (mod (/ hue 60) 2) 1)))))
+        m (- lightness (/ C 2))
+        idx0 (mod (int (/ (+ 240 hue) 120)) 3)
+        idxC (int (mod (+ idx0 1 (mod (/ hue 60) 2)) 3))
+        idxX (int (mod (+ idx0 1 (mod (inc (/ hue 60)) 2)) 3))
+        c-x-m [[0 idx0] [C idxC] [X idxX]]
+        [[R' _] [G' _] [B' _]] (sort-by second < c-x-m)
+        [R G B] (map #(Math/round (float (* (+ % m) 255))) [R' G' B'])]
+    (if (hsl? hsl-color)
+      (rgb R G B)
+      (rgba R G B alpha))))
+
+(defn rgb->hsl
+  "https://www.rapidtables.com/convert/color/rgb-to-hsl.html
+  Rgb to hsl, rgba to hsla."
+  [{:keys [value] :as rgb-color}]
+  {:pre [(or (rgb? rgb-color) (rgba? rgb-color))]}
+  (let [{:keys [red green blue alpha]} value
+        [R' G' B' :as rgb'] (map #(/ % 255) [red green blue])
+        Cmax (apply max rgb')
+        Cmin (apply min rgb')
+        Crange (- Cmax Cmin)
+        hue (cond (= Cmax R') (* 60 (mod (/ (- G' B') Crange) 6))
+                  (= Cmax G') (* 60 (+ (/ (- B' R') Crange) 2))
+                  :else (* 60 (+ (/ (- R' G') Crange) 4)))
+        lightness (util/avg Cmax Cmin)
+        saturation (if (zero? Crange) 0 (/ Crange (- 1 (Math/abs (float (- (* 2 lightness) 1))))))
+        [H S L] [(Math/round (float hue)) (util/round saturation) (util/round lightness)]]
+    (if (rgb? rgb-color)
+      (hsl H S L)
+      (hsla H S L alpha))))
+
+(defn- unknown-color-type [type color]
+  (throw (IllegalArgumentException. (str "Unknown color type: " type " of color " color))))
+
+(defn ->rgb [{:keys [type] :as color}]
+  (case type "rgb" color
+             "rgba" (throw (IllegalArgumentException.
+                             (str "Error: an rgba color is not convertible to rgb: " color)))
+             "hsl" (hsl->rgb color)
+             "hsla" (throw (IllegalArgumentException.
+                             (str "Error: an hsla color is not convertible to rgb: " color)))
+             (unknown-color-type type color)))
+(defn ->rgba [{:keys [type] :as color}]
+  (case type "rgb" (rgb->rgba color)
+             "rgba" color
+             "hsl" (-> color hsl->rgb rgb->rgba)
+             "hsla" (hsl->rgb color)
+             (unknown-color-type type color)))
+(defn ->hsl [{:keys [type] :as color}]
+  (case type "rgb" (rgb->hsl color)
+             "rgba" (throw (IllegalArgumentException.
+                             (str "Error: an rgba color is not convertible to hsl: " color)))
+             "hsl" color
+             "hsla" (throw (IllegalArgumentException.
+                             (str "Error: an hsla color is not convertible to hsl: " color)))
+             (unknown-color-type type color)))
+(defn ->hsla [{:keys [type] :as color}]
+  (case type "rgb" (-> color rgb->hsl hsl->hsla)
+             "rgba" (rgb->hsl color)
+             "hsl" (hsl->hsla color)
+             "hsla" color
+             (unknown-color-type type color)))
+
 (defmulti -mix-colors
           "Calls a relevant function to compute the average of more colors."
           (fn [color-type _]
             color-type))
-
-(defn hsl->rgb
-  "https://www.rapidtables.com/convert/color/hsl-to-rgb.html
-  Unfortunately, Math/round abs Math/abs would throw an error
-  with ratios, they need to be converted to floats first."
-  [{:keys [value] :as hsl-color}]
-  {:pre [(hsl? hsl-color)]}
-  (let [{:keys [hue saturation lightness]} value
-        C (* (- 1 (Math/abs (float (- (* 2 lightness) 1)))) saturation)
-        X (* C (- 1 (Math/abs (float (- (mod (/ hue 60) 2) 1)))))
-        m (- lightness (/ C 2))
-        idxof0 (mod (int (/ (+ 240 hue) 120)) 3)
-        idxofC (int (mod (+ idxof0 1 (mod (/ hue 60) 2)) 3))
-        idxofX (int (mod (+ idxof0 1 (mod (inc (/ hue 60)) 2)) 3))
-        c-x-m [[0 idxof0] [C idxofC] [X idxofX]]
-        [[R' _] [G' _] [B' _]] (sort-by (fn [[_ x]] x) < c-x-m)
-        [R G B] (map #(Math/round (float (* (+ % m) 255))) [R' G' B'])]
-    [R G B]))
 
 (defmethod -mix-colors "rgb"
   [_ colors]
@@ -359,9 +425,20 @@
   ([color]
    color)
   ([color1 & more]
-   (let [colors (into [color1] more)
+   (let [colors (list* color1 more)
          types (map get-color-type colors)
          not-symbols-keywords-strings? (not-any? #((some-fn keyword? symbol? string?) %) colors)]
-     (if (and (apply = types) not-symbols-keywords-strings?)
-       (-mix-colors (first types) colors)
+     (if (and not-symbols-keywords-strings?)
+       (let [dominant-type (->> types frequencies (sort-by second >)
+                                (sort-by (fn [[type _]]
+                                           (if (= (last type) \a)
+                                             1 0)) >)
+                                ffirst)
+             conversion-fn (case dominant-type "rgb" #'->rgb
+                                               "rgba" #'->rgba
+                                               "hsl" #'->hsl
+                                               "hsla" #'->hsla)
+             converted-colors (map conversion-fn colors)]
+         (-mix-colors (first types) converted-colors))
        (throw (IllegalArgumentException. (str "Can't mix colors of different types: " colors)))))))
+

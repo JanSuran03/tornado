@@ -48,7 +48,7 @@
 (def hsl colors/hsl)
 (def hsla colors/hsla)
 (def hex->rgba colors/hex->rgba)
-(def rgb?a->hex colors/rgb?a->hex)
+(def rgb?a->hex colors/rgb->hex)
 (def mix-colors colors/mix-colors)
 
 
