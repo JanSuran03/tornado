@@ -6,14 +6,23 @@
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
             [tornado.units :as u]
-            [tornado.compression :as compression])
+            [tornado.compression :as compression]
+            [clojure.pprint :as pp])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSCombinator CSSAttributeSelector
                           CSSPseudoClass CSSPseudoElement)
            (clojure.lang Keyword Symbol)))
 
-(def ^:dynamic in-media-query-context false)
-(def ^:dynamic in-keyframes-context false)
+(def ^:dynamic media-query-context false)
+(def ^:dynamic keyframes-context false)
+
+(defmacro in-media-query-context [& body]
+  `(let [~'media-query-context true]
+     ~@body))
+
+(defmacro in-keyframes-context [& body]
+  `(let [~'keyframes-context true]
+     ~@body))
 
 (declare compile-expression
          expand-at-rule
@@ -277,16 +286,20 @@
 
 (defn simplify-prepared-expanded-hiccup [path-params-vector]
   (->> path-params-vector
-       (reduce (fn [params->paths-map {:keys [path params]}]
-                 (if (get params->paths-map params)
-                   (update params->paths-map params conjs path)
-                   (assoc params->paths-map params #{path})))
+       (reduce (fn [params->paths-map {:keys [path params at-media]}]
+                 (let [known-at-media (get params->paths-map at-media)]
+                   (cond (and at-media known-at-media) (update params->paths-map at-media conjs path)
+                         (and at-media (not known-at-media)) (assoc params->paths-map at-media #{path})
+                         (get params->paths-map params) (update params->paths-map params conjs path)
+                         :else (assoc params->paths-map params #{path}))))
                {})
        (reduce (fn [final-expanded-hiccup [params selectors-set]]
-                 (conj! final-expanded-hiccup {:paths  (vec selectors-set)
-                                               :params params}))
-               (transient []))
-       persistent!))
+                 (if (at-rules/at-media? params)
+                   (conj final-expanded-hiccup {:paths    (vec selectors-set)
+                                                :at-media params})
+                   (conj final-expanded-hiccup {:paths  (vec selectors-set)
+                                                :params params})))
+               [])))
 
 (defn expand-hiccup-vector
   "<parents> are in a form of a vector of selectors before the current
@@ -301,15 +314,15 @@
   [parents unevaluated-hiccup hiccup-vector]
   (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
         maybe-media (when (seq at-media)
-                      ;
-                      ; (pp/pprint at-media)
-                      (->> (cartesian-product (concat parents selectors) at-media)
-                           (map (fn [[selector media-rules]]
-                                  {:path     selector
+                      (->> (let [new-selectors (for [selector selectors]
+                                                 (util/conjv parents selector))]
+                             (cartesian-product new-selectors at-media))
+                           (map (fn [[path media-rules]]
+                                  {:path     path
                                    :at-media media-rules}))))
-        #_unevaluated-hiccup #_(if maybe-media
-                                 (reduce conj unevaluated-hiccup maybe-media)
-                                 unevaluated-hiccup)]
+        unevaluated-hiccup (if maybe-media
+                             (reduce conj unevaluated-hiccup maybe-media)
+                             unevaluated-hiccup)]
     (if (seq children)
       (reduce (fn [current-unevaluated-hiccup [selector child]]
                 (let [new-parents (util/conjv parents selector)
@@ -365,7 +378,8 @@
   [css-hiccup-list]
   (->> css-hiccup-list (expand-hiccup-list-for-compilation nil nil)
        simplify-prepared-expanded-hiccup
-       compile-all-selectors-params-combinations))
+       ; compile-all-selectors-params-combinations
+       ))
 
 (defn compressed-css [css-hiccup-list]
   (->> css-hiccup-list css
@@ -374,15 +388,22 @@
 (defn css-time [x]
   (time (let [_ (css x)])))
 
+(defn css-time* [x]
+  (time (let [_ (compressed-css x)])))
+
 (def styles2
   (list
-    (list
-      [:.someselector
-       [:.abc :#mno {:height (u/vw 25)
-                     :width  (u/vh 20)}
-        [:.def :.ghi {:width :something-else}]]
-       [:.jkl :.kekw (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
-                                                         :height (u/percent 25)}]])))
+    (repeat 1
+            [:.someselector
+             [:.abc :#mno {:height (u/vw 25)
+                           :width  (u/vh 20)}
+              [:.def :.ghi {:width :something-else}]
+              (at-rules/at-media {:min-width "500px"
+                                  :max-width "700px"}
+                                 [:.ghi {:margin "20px"}
+                                  [:.jkl {:margin "150pc"}]])]
+             [:.jkl :.kekw (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
+                                                               :height (u/percent 25)}]])))
 
 (def styles
   (list
@@ -411,27 +432,3 @@
 (def sels [[:#abc :.def sel/after :iframe sel/hover]
            [:#ghi sel/focus (sel/contains-subs :div :class "info")]
            [:.jkl (sel/child-selector :div :p :iframe) :#mno]])
-
-(def brutal
-  (list
-    (list
-      [:.something
-       [:.abc :#def {:width      (u/px 15)
-                     :height     (u/percent 20)
-                     :margin-top [[(u/px 15) 0 (u/px 20) (u/rem* 3)]]}
-        [:.ghi :#jkl {:height (u/fr 15)}]
-        [:.mno {:height           (u/px 20)
-                :background-color :chocolate}
-         [:.pqr (sel/adjacent-sibling :#stu) {:height (u/vw 25)
-                                              :width  (u/vh 20)}
-          [:.vwx :.yza {:width nil}]]
-         (at-rules/at-media {:min-width "500px"
-                             :max-width "700px"}
-                            [:& {:height (u/px 40)}]
-                            [:.abc :#def {:margin-top [[0 "15px" "3rem" "1fr"]]}]
-                            [:.ghi {:margin "20px"}
-                             [:.jkl {:margin "150pc"}]]
-                            [:.mno {:overflow :hidden}])]]]
-      (repeat 500 [:.something :#something-else :#more-examples! {:width  (u/percent 15)
-                                                                  :height (u/percent 25)}])
-      )))
