@@ -5,6 +5,9 @@
             [clojure.string :as str])
   (:import (tornado.types CSSUnit)))
 
+(defn str-butlast [s]
+  (->> s butlast (apply str)))
+
 (defn valid?
   "Returns tue if the argument is a symbol, a keyword or a string."
   [x]
@@ -44,9 +47,9 @@
   (assert (or (number? value) (string? value))
           (str "Cannot transform to percent int from a value that is none from"
                " a number or a string: " value))
-  (if (number? value)
-    (int* (* value 100))
-    (-> value Float/parseFloat to-percent-float)))
+  (cond (number? value) (int* (* value 100))
+        (str/ends-with? value "%") (-> value str-butlast edn/read-string)
+        :else (-> value Float/parseFloat to-percent-float)))
 
 (defn percent-with-symbol-append
   "Parses a percentage from a string \"12%\" or multiplies a number with 100
@@ -78,7 +81,9 @@
   ([value]
    (percent->number value false))
   ([value throw-if-no-match]
-   (cond (string? value) (->> value butlast (apply str) edn/read-string (#(/ % 100)) int*)
+   (cond (string? value) (if (str/ends-with? value "%")
+                           (->> value str-butlast edn/read-string (#(/ % 100)) int*)
+                           (edn/read-string value))
          (number? value) (int* value)
          (instance? CSSUnit value) (if (= (:compiles-to value) "%")
                                      (int* (/ (:value value) 100))
@@ -199,3 +204,6 @@
                                  value)
         (nil? vect) [value]
         :else (throw (IllegalArgumentException. (str "Not sequential, nor `nil`: " vect)))))
+
+(defn in-range [val min-val max-val]
+  (min max-val (max val min-val)))

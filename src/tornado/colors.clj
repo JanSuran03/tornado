@@ -364,7 +364,7 @@
       (hsl H S L)
       (hsla H S L alpha))))
 
-(defn- unknown-color-type [type color]
+(defn- unknown-color-type [{:keys [type] :as color}]
   (throw (IllegalArgumentException. (str "Unknown color type: " type " of color " color))))
 
 (defn ->rgb [{:keys [type] :as color}]
@@ -376,7 +376,7 @@
                              (str "Error: an hsla color is not convertible to rgb: " color)))
              (if (hex-no-alpha? color)
                (-> color hex->rgba rgba->rgb)
-               (unknown-color-type type color))))
+               (unknown-color-type color))))
 
 (defn ->rgba [{:keys [type] :as color}]
   (case type "rgb" (rgb->rgba color)
@@ -385,7 +385,7 @@
              "hsla" (hsl->rgb color)
              (if (hex? color)
                (hex->rgba color)
-               (unknown-color-type type color))))
+               (unknown-color-type color))))
 (defn ->hsl [{:keys [type] :as color}]
   (case type "rgb" (rgb->hsl color)
              "rgba" (throw (IllegalArgumentException.
@@ -395,7 +395,7 @@
                              (str "Error: an hsla color is not convertible to hsl: " color)))
              (if (hex-no-alpha? color)
                (-> color hex->rgba rgba->rgb rgb->hsl)
-               (unknown-color-type type color))))
+               (unknown-color-type color))))
 (defn ->hsla [{:keys [type] :as color}]
   (case type "rgb" (-> color rgb->hsl hsl->hsla)
              "rgba" (rgb->hsl color)
@@ -403,7 +403,62 @@
              "hsla" color
              (if (hex? color)
                (-> color hex->rgba rgb->hsl)
-               (unknown-color-type type color))))
+               (unknown-color-type color))))
+
+(defn has-alpha? [color]
+  (or (rgb? color) (hsl? color) (hex-no-alpha? color)))
+
+(defn with-alpha [color]
+  (cond (or (rgb? color) (rgba? color)) (->rgba color)
+        (or (hsl? color) (hsla? color)) (->hsla color)
+        (hex? color) (hex->rgba color)
+        :else (unknown-color-type color)))
+
+(defn ->hsl?a [color]
+  (if (has-alpha? color)
+    (->hsl color)
+    (->hsla color)))
+
+(defn- range-0-1 [value]
+  (util/in-range value 0 1))
+
+(defn rotate-hue
+  "Rotates hue of a color by a given angle in degrees for any color type,
+  e.g. (rotate-hue \"#00ff00\" 90)"
+  [color angle]
+  (-> color ->hsl?a (update-in [:value :hue] #(mod (+ % angle) 360))))
+
+(defn saturate
+  "Saturates a color by a given value: 0.15, (percent 15), \"15%\" work the same way."
+  [color value]
+  (let [value (util/percent->number value)]
+    (-> color ->hsl?a (update-in [:value :saturation] #(range-0-1 (+ % value))))))
+
+(defn desaturate
+  "Same as (saturate color value), but the value is subtracted instead."
+  [color value]
+  (saturate color (- (util/percent->number value))))
+
+(defn lighten
+  "Lightens a color by a given value: 0.15, (percent 15), \"15%\" work the same way."
+  [color value]
+  (let [value (util/percent->number value)]
+    (-> color ->hsl?a (update-in [:value :lightness] #(range-0-1 (+ % value))))))
+
+(defn darken
+  "Same as (lighten color value), but the value is subtracted instead."
+  [color value]
+  (lighten color (- (util/percent->number value))))
+
+(defn opacify
+  "Opacifies a color by a given value: 0.15, (percent 15), \"15%\" work the same way."
+  [color value]
+  (-> color with-alpha (update-in [:value :alpha] #(range-0-1 (+ % value)))))
+
+(defn transparentize
+  "Same as (opacify color value), but the value is subtracted instead."
+  [color value]
+  (opacify color (- (util/percent->number value))))
 
 (defmulti -mix-colors
           "Calls a relevant function to compute the average of more colors."
@@ -480,4 +535,3 @@
              converted-colors (map conversion-fn colors)]
          (-mix-colors dominant-type converted-colors))
        (throw (IllegalArgumentException. (str "Can't mix colors of different types: " colors)))))))
-
