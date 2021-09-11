@@ -56,23 +56,29 @@
   [{:keys [pseudoelement]}]
   (str "::" pseudoelement))
 
+(defmethod compile-selector CSSCombinator
+  [{:keys [compiles-to children]}]
+  (->> children (map #(str compiles-to " " %))
+       util/str-spacejoin))
+
 (defn compile-selectors-sequence [selectors-path]
-  (->> selectors-path (reduce (fn [selectors next-selector]
-                                (assert (or (sel/selector? next-selector)
-                                            (sel/id-class-tag? next-selector))
-                                        (str "Expected a selector while compiling: " next-selector))
-                                (let [selectors (if (or (instance? CSSPseudoClass next-selector)
-                                                        (instance? CSSPseudoElement next-selector))
-                                                  selectors
-                                                  (util/conjv selectors " "))]
-                                  (util/conjv selectors (compile-selector next-selector))))
-                              [])
-       (apply str)))
+  (as-> selectors-path <> (reduce (fn [selectors next-selector]
+                                    (assert (or (sel/selector? next-selector)
+                                                (sel/id-class-tag? next-selector))
+                                            (str "Expected a selector while compiling: " next-selector))
+                                    (let [selectors (if (or (instance? CSSPseudoClass next-selector)
+                                                            (instance? CSSPseudoElement next-selector))
+                                                      selectors
+                                                      (util/conjv selectors " "))]
+                                      (util/conjv selectors (compile-selector next-selector))))
+                                  [] <>)
+        (apply str <>)
+        (subs <> 1)))
 
 (defn compile-selectors [selectors-sequences]
   (->> (for [selectors-path selectors-sequences]
          (compile-selectors-sequence selectors-path))
-       (str/join ", ")))
+       util/str-commajoin))
 
 (defmulti compile-color
           "Generates CSS from a color, calls a relevant method to do so depending on the
@@ -386,7 +392,8 @@
       [:*])))
 
 (def sels [[:#abc :.def sel/after :iframe sel/hover]
-           [:#ghi sel/focus (sel/contains-subs :div :class "info")]])
+           [:#ghi sel/focus (sel/contains-subs :div :class "info")]
+           [:.jkl (sel/child-selector :div :p :iframe) :#mno]])
 
 (def brutal
   (list

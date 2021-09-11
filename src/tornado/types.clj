@@ -9,7 +9,7 @@
 
 (defrecord CSSColor [type value])
 
-(defrecord CSSCombinator [compiles-to element])
+(defrecord CSSCombinator [compiles-to children])
 
 (defrecord CSSAttributeSelector [compiles-to tag attribute subvalue])
 

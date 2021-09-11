@@ -270,16 +270,14 @@
 
 (defn make-combinator-fn
   ""
-  [compiles-to child]
-  (CSSCombinator. compiles-to child))
+  [compiles-to & children]
+  (CSSCombinator. compiles-to children))
 
 (defmacro defcombinatorselector
   ""
   [selector-name compiles-to]
   `(def ~selector-name (partial ~make-combinator-fn ~compiles-to)))
 
-(comment (defcombinatorselector descendant-selector \space)
-         "Not needed, descendant selector is the default one.")
 (defcombinatorselector child-selector ">")
 (defcombinatorselector adjacent-sibling "+")
 (defcombinatorselector general-sibling "~")
