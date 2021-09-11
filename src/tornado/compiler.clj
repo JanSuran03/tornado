@@ -13,11 +13,22 @@
                           CSSPseudoClass CSSPseudoElement)
            (clojure.lang Keyword Symbol)))
 
-(def ^:dynamic media-query-context false)
+(def ^:dynamic media-query-parents
+  "Used for compiling @media to temporarily store parents paths for
+  compiling @media changes."
+  nil)
+
+(def ^:dynamic maybe-at-media-indent
+  "Extra indentation when nested inside a media query."
+  "")
+
 (def ^:dynamic keyframes-context false)
 
-(defmacro in-media-query-context [& body]
-  `(let [~'media-query-context true]
+(defmacro with-media-query-parents
+  "Temporarily stores current parents paths for compiling @media changes."
+  [*parents* & body]
+  `(binding [~'media-query-parents ~*parents*
+             ~'maybe-at-media-indent "  "]
      ~@body))
 
 (defmacro in-keyframes-context [& body]
@@ -25,8 +36,11 @@
      ~@body))
 
 (declare compile-expression
-         expand-at-rule
-         css)
+         compile-at-rule
+         expand-hiccup-list-for-compilation
+         attr-map-to-css
+         simplify-prepared-expanded-hiccup
+         compile-all-selectors-params-combinations)
 
 (defn general-parser-fn
   "A universal compile function for #'tornado.functions/defcssfn."
@@ -85,9 +99,10 @@
         (subs <> 1)))
 
 (defn compile-selectors [selectors-sequences]
-  (->> (for [selectors-path selectors-sequences]
-         (compile-selectors-sequence selectors-path))
-       util/str-commajoin))
+  (let [compiled-selectors (->> (for [selectors-path selectors-sequences]
+                                  (compile-selectors-sequence selectors-path))
+                                util/str-commajoin)]
+    (str maybe-at-media-indent compiled-selectors)))
 
 (defmulti compile-color
           "Generates CSS from a color, calls a relevant method to do so depending on the
@@ -154,7 +169,7 @@
 
 (defmethod compile-css-record CSSAtRule
   [at-rule-record]
-  (expand-at-rule at-rule-record))
+  (compile-at-rule at-rule-record))
 
 (defmethod compile-css-record CSSColor
   [color-record]
@@ -177,7 +192,16 @@
                        (str "Not a CSS unit, CSS function, CSS at-rule, nor a string,"
                             " a number or a double nested sequential structure:\n" expr)))))
 
-(defmulti expand-at-rule
+(defmacro cartesian-product [& seqs]
+  (let [w-bindings (map #(vector (gensym) %) seqs)
+        binding-syms (mapv first w-bindings)
+        for-bindings (vec (apply concat w-bindings))]
+    `(for ~for-bindings ~binding-syms)))
+
+(defmacro apply-cartesian-product [input-seq]
+  `(cartesian-product ~@input-seq))
+
+(defmulti compile-at-rule
           "Generates CSS from CSSAtRule record: @media, @keyframes, @import, @font-face.
 
           E.g.:
@@ -189,24 +213,39 @@
           Depending on the :identifier (\"media\" in this case), a relevant method is called."
           :identifier)
 
-(defmethod expand-at-rule :default
+(defmethod compile-at-rule :default
   [{:keys [identifier]}]
   (throw (IllegalArgumentException. (str "Unknown at-rule identifier: " identifier))))
 
-(defmethod expand-at-rule
+(def special-media-rules-map
+  "A special map for generating media queries rules."
+  {:only (fn [rule] (str "only " (name rule)))
+   true  name
+   false (fn [rule] (str "not " (name rule)))})
+
+(defmethod compile-at-rule
   "media"
   [{:keys [value]}]
-  (let [{:keys [rules changes]} value
-        expanded-rules (->> (for [[prop unit] rules]
-                              (let [compiled-property (if-let [prop (util/valid-or-nil prop)]
-                                                        prop
-                                                        (throw (IllegalArgumentException.
-                                                                 (str "Invalid format of a CSS property: " prop))))
-                                    compiled-unit (compile-expression unit)]
-                                (str "(" compiled-property ": " compiled-unit ")")))
-                            (str/join " and "))]
-    (str "@media " expanded-rules "{\n "
-         (str/join "\n  " changes) "}")))
+  (let [paths media-query-parents
+        {:keys [rules changes]} value
+        changes-combinations (->> (cartesian-product paths changes) (map #(apply concat %)))
+        compiled-media-rules (->> (for [[param value] rules]
+                                    (let [param-fn (get special-media-rules-map value)]
+                                      (if (some? param-fn)
+                                        (param-fn param)
+                                        (if-let [compiled-param (util/valid-or-nil param)]
+                                          (let [compiled-unit (compile-expression value)]
+                                            (str "(" compiled-param ": " compiled-unit ")"))
+                                          (throw (IllegalArgumentException.
+                                                   (str "Invalid format of a CSS property: " value)))))))
+                                  (str/join " and "))
+        compiled-media-changes (->> (for [parents-path paths]
+                                      (-> (expand-hiccup-list-for-compilation parents-path [] changes)
+                                          simplify-prepared-expanded-hiccup
+                                          compile-all-selectors-params-combinations
+                                          (str/replace #"\&" "")))
+                                    (str/join "\n\n"))]
+    (str "@media " compiled-media-rules " {\n" compiled-media-changes "\n}")))
 
 (defn compile-attributes-map [attributes-map]
   (when attributes-map
@@ -217,17 +256,8 @@
   (when attributes-map
     (->> attributes-map compile-attributes-map
          (map util/str-colonjoin)
-         (map #(str % ";"))
-         (str/join "\n  "))))
-
-(defmacro cartesian-product [& seqs]
-  (let [w-bindings (map #(vector (gensym) %) seqs)
-        binding-syms (mapv first w-bindings)
-        for-bindings (vec (apply concat w-bindings))]
-    `(for ~for-bindings ~binding-syms)))
-
-(defmacro apply-cartesian-product [input-seq]
-  `(cartesian-product ~@input-seq))
+         (map #(str maybe-at-media-indent % ";"))
+         (str/join (str "\n  " (when media-query-parents "  "))))))
 
 (defn expand-seqs
   "Expands lists and lazy sequences in a nested structure. Always expands the first
@@ -277,8 +307,6 @@
                            :children  []
                            :at-media  []} <>)
         (update <> :params first)))
-
-(declare expand-hiccup-list-for-compilation)
 
 (defn update-unevaluated-hiccup [hiccup path params]
   (util/conjv hiccup {:path   path
@@ -336,6 +364,22 @@
               unevaluated-hiccup
               selectors))))
 
+(defn compile-selectors-and-params
+  ""
+  [{:keys [paths params at-media]}]
+  (if at-media
+    (with-media-query-parents paths (compile-at-rule at-media))
+    (when params (let [compiled-selectors (compile-selectors paths)
+                       compiled-params (attr-map-to-css params)]
+                   (str compiled-selectors " {\n  " compiled-params "\n" maybe-at-media-indent "}")))))
+
+(defn compile-all-selectors-params-combinations
+  ""
+  [prepared-hiccup]
+  (->> prepared-hiccup (map compile-selectors-and-params)
+       (remove nil?)
+       (str/join "\n\n")))
+
 (defn expand-hiccup-list-for-compilation
   "Given a hiccup element path (parents) and current unevaluated hiccup, this function
   first expands all lists and lazy sequences until it comes across a structure which
@@ -349,37 +393,18 @@
   if the children is another nested hiccup. It updates the received current unevaluated
   hiccup with a map of the current :path and :params."
   [parents unevaluated-hiccup nested-hiccup-vectors-list]
-  (let [expanded-list (expand-seqs nested-hiccup-vectors-list)
-        unevaled-hiccup (or unevaluated-hiccup [])]
+  (let [expanded-list (expand-seqs nested-hiccup-vectors-list)]
     (reduce (fn [current-unevaluated-hiccup hiccup-vector]
               (expand-hiccup-vector parents current-unevaluated-hiccup hiccup-vector))
-            unevaled-hiccup
+            unevaluated-hiccup
             expanded-list)))
-
-(defn save-stylesheet [path stylesheet]
-  (spit path stylesheet))
-
-(defn compile-selectors-and-params
-  ""
-  [{:keys [paths params]}]
-  (when params (let [compiled-selectors (compile-selectors paths)
-                     compiled-params (attr-map-to-css params)]
-                 (str compiled-selectors " {\n  " compiled-params "\n}"))))
-
-(defn compile-all-selectors-params-combinations
-  ""
-  [prepared-hiccup]
-  (->> prepared-hiccup (map compile-selectors-and-params)
-       (remove nil?)
-       (str/join "\n\n")))
 
 (defn css
   "Generates CSS from a list of hiccup."
   [css-hiccup-list]
-  (->> css-hiccup-list (expand-hiccup-list-for-compilation nil nil)
+  (->> css-hiccup-list (expand-hiccup-list-for-compilation nil [])
        simplify-prepared-expanded-hiccup
-       ; compile-all-selectors-params-combinations
-       ))
+       compile-all-selectors-params-combinations))
 
 (defn compressed-css [css-hiccup-list]
   (->> css-hiccup-list css
@@ -398,8 +423,9 @@
              [:.abc :#mno {:height (u/vw 25)
                            :width  (u/vh 20)}
               [:.def :.ghi {:width :something-else}]
-              (at-rules/at-media {:min-width "500px"
-                                  :max-width "700px"}
+              (at-rules/at-media {:min-width (u/px 500)
+                                  :max-width (u/px 1000)}
+                                 [:& {:margin-top (u/px 15)}]
                                  [:.ghi {:margin "20px"}
                                   [:.jkl {:margin "150pc"}]])]
              [:.jkl :.kekw (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
