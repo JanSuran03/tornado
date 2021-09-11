@@ -23,14 +23,6 @@
   (str compiles-to "(" (->> args (map compile-expression)
                             util/str-commajoin) ")"))
 
-(defn conjv [vect value]
-  (cond (sequential? vect) (conj (if (vector? vect)
-                                   vect
-                                   (vec vect))
-                                 value)
-        (nil? vect) [value]
-        :else (throw (IllegalArgumentException. (str "Not sequential, nor `nil`: " vect)))))
-
 (defn conjs [s value]
   (conj (or s #{}) value))
 
@@ -122,8 +114,9 @@
         (number? expr) (util/int* expr)
         (record? expr) (compile-css-record expr)
         (and (sequential? expr)
-             (= (count expr) 1)) (->> expr first (map compile-expression)
-                                      util/str-spacejoin)
+             (= (count expr) 1)
+             (sequential? (first expr))) (->> expr first (map compile-expression)
+                                              util/str-spacejoin)
         :else (throw (IllegalArgumentException.
                        (str "Not a CSS unit, CSS function, CSS at-rule, nor a string,"
                             " a number or a double nested sequential structure:\n" expr)))))
@@ -233,8 +226,8 @@
 (declare -css)
 
 (defn update-unevaluated-hiccup [hiccup path params]
-  (conjv hiccup {:path   path
-                 :params params}))
+  (util/conjv hiccup {:path   path
+                      :params params}))
 
 (defn simplify-prepared-expanded-hiccup [path-params-vector]
   (->> path-params-vector
@@ -275,13 +268,13 @@
                                  unevaluated-hiccup)]
     (if (seq children)
       (reduce (fn [current-unevaluated-hiccup [selector child]]
-                (let [new-parents (conjv parents selector)
+                (let [new-parents (util/conjv parents selector)
                       updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
                   (-css new-parents updated-hiccup (list child))))
               unevaluated-hiccup
               (cartesian-product selectors children))
       (reduce (fn [current-unevaluated-hiccup selector]
-                (let [new-parents (conjv parents selector)]
+                (let [new-parents (util/conjv parents selector)]
                   (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)))
               unevaluated-hiccup
               selectors))))

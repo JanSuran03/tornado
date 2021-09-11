@@ -6,7 +6,7 @@
             [tornado.selectors :as sel]
             [tornado.functions :as functions]
             [tornado.at-rules :as at-rules])
-  (:import (tornado.types CSSAtRule CSSFunction CSSUnit CSSSelector
+  (:import (tornado.types CSSAtRule CSSFunction CSSUnit
                           CSSPseudoClass CSSPseudoElement CSSColor)))
 
 ;; cannot refer macros: units/defunit, functions/defcssfn, defpseudoclass

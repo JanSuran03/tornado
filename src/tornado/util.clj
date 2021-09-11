@@ -128,6 +128,7 @@
 
 (def ^:private base16-chars "0123456789ABCDEF")
 (def ^:private lowercase-base16 "abcdef")
+(def ^:private base16-chars-set (set (concat base16-chars lowercase-base16)))
 (def ^:private uppercase-base16-set (set "ABCDEF"))
 (def ^:private lowercase-uppercase-difference (- (int \a) (int \A)))
 (defn- toLower [c]
@@ -158,6 +159,11 @@
 
 (def base10->double-hex-map (set/map-invert double-hex->base10-map))
 
+(defn double-hex? [expr]
+  (and (even? (count expr))
+       (let [pairs (->> expr (partition 2) (map #(apply str %)))]
+         (every? double-hex->base10-map pairs))))
+
 (defn insert-at
   "(insert at [:a :b :c :d] 2 :val])
     => [:a :b :val :c :d]"
@@ -185,3 +191,11 @@
   "str/join with \";\n\""
   [coll]
   (str/join ";\n" coll))
+
+(defn conjv [vect value]
+  (cond (sequential? vect) (conj (if (vector? vect)
+                                   vect
+                                   (vec vect))
+                                 value)
+        (nil? vect) [value]
+        :else (throw (IllegalArgumentException. (str "Not sequential, nor `nil`: " vect)))))

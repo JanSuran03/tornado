@@ -1,7 +1,8 @@
 (ns tornado.colors
   (:require [tornado.types]
             [tornado.units]
-            [tornado.util :as util])
+            [tornado.util :as util]
+            [clojure.string :as str])
   (:import (tornado.types CSSColor)
            (clojure.lang Keyword Symbol)))
 
@@ -12,8 +13,9 @@
                         String String
                         Keyword Keyword
                         Symbol Symbol
-                        (throw (IllegalArgumentException. (str "The given color is neither a tornado"
-                                                               " CSSColor record nor a string.")))))
+                        (throw (IllegalArgumentException.
+                                 (str "The given color is none of a tornado CSSColor record, color keyword,"
+                                      " color symbol or a string: " color)))))
 
 (def default-colors
   "Available default colors in tornado.
@@ -230,9 +232,30 @@
   (and (instance? CSSColor x)
        (= (:type x) "hsla")))
 
+(defn hex? [x]
+  (and (string? x)
+       (let [[first & rest] x]
+         (and (= first \#)
+              (util/double-hex? (apply str rest))))))
+
+(defn hex-no-alpha? [x]
+  (and (hex? x)
+       (= (count x) 7)))
+
+(defn hex-alpha? [x]
+  (and (hex? x)
+       (= (count x) 9)))
+
 (defn rgb->rgba [{:keys [value]}]
   (let [{:keys [red green blue]} value]
     (rgba [red green blue 1])))
+
+(defn rgba->rgb
+  "Used for converting rgba to rgb since #'hex->rgba always returns rgba.
+  Sometimes we might want and rgb color from that."
+  [{:keys [value]}]
+  (let [{:keys [red green blue]} value]
+    (rgb [red green blue])))
 
 (defn hsl->hsla [{:keys [value]}]
   (let [{:keys [hue saturation lightness]} value]
@@ -330,7 +353,8 @@
         Cmax (apply max rgb')
         Cmin (apply min rgb')
         Crange (- Cmax Cmin)
-        hue (cond (= Cmax R') (* 60 (mod (/ (- G' B') Crange) 6))
+        hue (cond (zero? Crange) 0
+                  (= Cmax R') (* 60 (mod (/ (- G' B') Crange) 6))
                   (= Cmax G') (* 60 (+ (/ (- B' R') Crange) 2))
                   :else (* 60 (+ (/ (- R' G') Crange) 4)))
         lightness (util/avg Cmax Cmin)
@@ -350,13 +374,18 @@
              "hsl" (hsl->rgb color)
              "hsla" (throw (IllegalArgumentException.
                              (str "Error: an hsla color is not convertible to rgb: " color)))
-             (unknown-color-type type color)))
+             (if (hex-no-alpha? color)
+               (-> color hex->rgba rgba->rgb)
+               (unknown-color-type type color))))
+
 (defn ->rgba [{:keys [type] :as color}]
   (case type "rgb" (rgb->rgba color)
              "rgba" color
              "hsl" (-> color hsl->rgb rgb->rgba)
              "hsla" (hsl->rgb color)
-             (unknown-color-type type color)))
+             (if (hex? color)
+               (hex->rgba color)
+               (unknown-color-type type color))))
 (defn ->hsl [{:keys [type] :as color}]
   (case type "rgb" (rgb->hsl color)
              "rgba" (throw (IllegalArgumentException.
@@ -364,13 +393,17 @@
              "hsl" color
              "hsla" (throw (IllegalArgumentException.
                              (str "Error: an hsla color is not convertible to hsl: " color)))
-             (unknown-color-type type color)))
+             (if (hex-no-alpha? color)
+               (-> color hex->rgba rgba->rgb rgb->hsl)
+               (unknown-color-type type color))))
 (defn ->hsla [{:keys [type] :as color}]
   (case type "rgb" (-> color rgb->hsl hsl->hsla)
              "rgba" (rgb->hsl color)
              "hsl" (hsl->hsla color)
              "hsla" color
-             (unknown-color-type type color)))
+             (if (hex? color)
+               (-> color hex->rgba rgb->hsl)
+               (unknown-color-type type color))))
 
 (defmulti -mix-colors
           "Calls a relevant function to compute the average of more colors."
@@ -426,19 +459,25 @@
    color)
   ([color1 & more]
    (let [colors (list* color1 more)
-         types (map get-color-type colors)
-         not-symbols-keywords-strings? (not-any? #((some-fn keyword? symbol? string?) %) colors)]
-     (if (and not-symbols-keywords-strings?)
+         types (->> colors (map get-color-type) (filter string?) (#(if (seq %) % ["rgba"])))
+         colors (map (fn [color]
+                       (get default-colors color color)) colors)
+         some-alpha-hex? (some hex-alpha? colors)
+         not-symbols? (not-any? symbol? colors)]
+     (if (and not-symbols?)
        (let [dominant-type (->> types frequencies (sort-by second >)
-                                (sort-by (fn [[type _]]
-                                           (if (= (last type) \a)
+                                (sort-by (fn [[color-type _]]
+                                           (if (= (last color-type) \a)
                                              1 0)) >)
                                 ffirst)
+             dominant-type (if (and some-alpha-hex? (not (str/ends-with? dominant-type "a")))
+                             (str dominant-type "a")
+                             dominant-type)
              conversion-fn (case dominant-type "rgb" #'->rgb
                                                "rgba" #'->rgba
                                                "hsl" #'->hsl
                                                "hsla" #'->hsla)
              converted-colors (map conversion-fn colors)]
-         (-mix-colors (first types) converted-colors))
+         (-mix-colors dominant-type converted-colors))
        (throw (IllegalArgumentException. (str "Can't mix colors of different types: " colors)))))))
 
