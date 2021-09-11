@@ -3,7 +3,7 @@
             [tornado.util :as util]
             [clojure.string :as str])
   (:import (tornado.types CSSPseudoClass CSSPseudoElement
-                          CSSAttributeSelector CSSCombinator)))
+                          CSSAttributeSelector CSSCombinator CSSPseudoClassFn)))
 
 (defn make-attribute-selector-fn
   "Creates an attribute selector record."
@@ -116,6 +116,29 @@
 (defpseudoclass target)
 (defpseudoclass valid)
 (defpseudoclass visited)
+
+(defn make-pseudoclassfn-fn
+  ""
+  [pseudoclass arg]
+  (CSSPseudoClassFn. pseudoclass arg))
+
+(defmacro defpseudoclassfn
+  ""
+  ([pseudoclass]
+   (let [compiles-to (str pseudoclass)]
+     `(defpseudoclassfn ~pseudoclass ~compiles-to)))
+  ([pseudoclass compiles-to]
+   `(def ~pseudoclass (partial ~make-pseudoclassfn-fn ~compiles-to))))
+
+(defpseudoclassfn lang)
+(defpseudoclassfn not* "not")
+(defpseudoclassfn nth-child)
+(defpseudoclassfn nth-last-child)
+(defpseudoclassfn nth-last-of-type)
+(defpseudoclassfn nth-of-type)
+(defpseudoclassfn nth-of-type)
+(defpseudoclassfn nth-of-type)
+
 (def html-tags
   (set (map name #{:html-tag/a
                    :html-tag/abbr
@@ -236,6 +259,7 @@
       (instance? CSSCombinator x)
       (instance? CSSPseudoClass x)
       (instance? CSSPseudoElement x)
+      (instance? CSSPseudoClassFn x)
       (and (util/valid? x)
            (contains? special-selectors (name x)))))
 

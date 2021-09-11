@@ -15,4 +15,6 @@
 
 (defrecord CSSPseudoClass [pseudoclass])
 
+(defrecord CSSPseudoClassFn [compiles-to arg])
+
 (defrecord CSSPseudoElement [pseudoelement])

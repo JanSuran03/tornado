@@ -10,7 +10,7 @@
             [clojure.pprint :as pp])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSCombinator CSSAttributeSelector
-                          CSSPseudoClass CSSPseudoElement)
+                          CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
            (clojure.lang Keyword Symbol)
            (java.util Vector)))
 
@@ -95,6 +95,10 @@
   [{:keys [pseudoelement]}]
   (str "::" pseudoelement))
 
+(defmethod compile-selector CSSPseudoClassFn
+  [{:keys [compiles-to arg]}]
+  (str ":" compiles-to "(" (compile-expression arg) ")"))
+
 (defmethod compile-selector CSSCombinator
   [{:keys [compiles-to children]}]
   (->> children (map #(str compiles-to " " %))
@@ -109,7 +113,8 @@
                                                 (sel/id-class-tag? next-selector))
                                             (str "Expected a selector while compiling: " next-selector))
                                     (let [selectors (if (or (instance? CSSPseudoClass next-selector)
-                                                            (instance? CSSPseudoElement next-selector))
+                                                            (instance? CSSPseudoElement next-selector)
+                                                            (instance? CSSPseudoClassFn next-selector))
                                                       selectors
                                                       (util/conjv selectors " "))]
                                       (util/conjv selectors (compile-selector next-selector))))
@@ -270,7 +275,7 @@
                                       (-> (expand-hiccup-list-for-compilation parents-path [] changes)
                                           simplify-prepared-expanded-hiccup
                                           compile-all-selectors-params-combinations
-                                          (str/replace #"\&" "")))
+                                          (str/replace #" \&" "")))
                                     (str/join "\n\n"))]
     (str "@media " compiled-media-rules " {\n" compiled-media-changes "\n}")))
 
