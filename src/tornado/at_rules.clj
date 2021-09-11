@@ -2,11 +2,37 @@
   (:require [tornado.types])
   (:import (tornado.types CSSAtRule)))
 
-(defn at-media [rules & changes]
+(defn at-media
+  "Takes a rules map and any number of media changes and creates a CSSAtRule instance
+  with \"media\" identifier:
+
+  (at-media {:screen    :only
+             :max-width (u/px 600)
+             :min-width (u/px 800}
+             [:& {:margin [[(u/px 15 0 (u/px 15) (u/px 20]]
+             [:.abc #:def {:margin  (u/px 20)
+                           :padding [[(u/px 30) (u/px 15)]]
+               [:span {:background-color (colors/mix :red :green)]]
+             [:footer {:font-size (u/em 1)])
+
+  The :& selector selects the current element.
+  As you can see, you can nest the affected CSS hiccup how you only want.
+  Special rules values: :screen :only => only screen
+                        :screen true  => screen
+                        :screen false => not screen
+
+  {:screen    true
+   :speech    false
+   :max-width (u/px 600)
+   :min-width (u/px 800}
+   => @media screen and not speech and (min-width: 600px) and (max-width: 600px) {..."
+  [rules & changes]
   (CSSAtRule. "media" {:rules   rules
                        :changes changes}))
 
-(defn at-media? [expr]
+(defn at-media?
+  "Returns true if the expression is a CSSAtRule instance with \"media\" identifier,"
+  [expr]
   (and (instance? CSSAtRule expr)
        (= (:identifier expr) "media")))
 

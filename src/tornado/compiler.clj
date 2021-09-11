@@ -11,28 +11,40 @@
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSCombinator CSSAttributeSelector
                           CSSPseudoClass CSSPseudoElement)
-           (clojure.lang Keyword Symbol)))
+           (clojure.lang Keyword Symbol)
+           (java.util Vector)))
 
-(def ^:dynamic media-query-parents
-  "Used for compiling @media to temporarily store parents paths for
-  compiling @media changes."
+(def -indent
+  "General indent used globally for indenting new lines. Double size inside media queries."
+  4)
+
+(def indent
+  "The actual globally used indent in a string form of *X* spaces."
+  (apply str (repeat -indent " ")))
+
+(def ^:dynamic *media-query-parents*
+  "Current parents Used for compiling @media to temporarily store parents
+  paths for compiling @media changes."
   nil)
 
-(def ^:dynamic maybe-at-media-indent
+(def ^:dynamic *maybe-at-media-indent*
   "Extra indentation when nested inside a media query."
   "")
 
-(def ^:dynamic keyframes-context false)
+(def ^:dynamic *keyframes-context* false)
 
 (defmacro with-media-query-parents
-  "Temporarily stores current parents paths for compiling @media changes."
+  "Temporarily stores current parents paths for compiling @media changes and
+  doubles the globally used indent.."
   [*parents* & body]
-  `(binding [~'media-query-parents ~*parents*
-             ~'maybe-at-media-indent "  "]
+  `(binding [~'*media-query-parents* ~*parents*
+             ~'*maybe-at-media-indent* ~indent]
      ~@body))
 
-(defmacro in-keyframes-context [& body]
-  `(let [~'keyframes-context true]
+(defmacro in-keyframes-context
+  "No documentation, since it has no usage yet."
+  [& body]
+  `(let [~'*keyframes-context* true]
      ~@body))
 
 (declare compile-expression
@@ -43,16 +55,20 @@
          compile-all-selectors-params-combinations)
 
 (defn general-parser-fn
-  "A universal compile function for #'tornado.functions/defcssfn."
+  "A universal compile function for #'tornado.functions/defcssfn. Compiles
+  the function to a form <fn-name>(arg1, arg2, arg3, ...),"
   [{:keys [compiles-to args]}]
   (str compiles-to "(" (->> args (map compile-expression)
                             util/str-commajoin) ")"))
 
-(defn conjs [s value]
+(defn conjs
+  "Conj(oin)s to a (potentially empty) set,"
+  [s value]
   (conj (or s #{}) value))
 
 (defmulti compile-selector
-          "Compiles a CSS combinator, attribute selector, pseudoclass or pseudoelement."
+          "Compiles a CSS combinator, attribute selector, pseudoclass or pseudoelement
+          or a selector in a keyword/symbol/string form."
           class)
 
 (defmethod compile-selector Keyword
@@ -84,7 +100,10 @@
   (->> children (map #(str compiles-to " " %))
        util/str-spacejoin))
 
-(defn compile-selectors-sequence [selectors-path]
+(defn compile-selectors-sequence
+  "Given a selectors path, which can contain special selectors, this function
+  generates a CSS string from the selectors."
+  [selectors-path]
   (as-> selectors-path <> (reduce (fn [selectors next-selector]
                                     (assert (or (sel/selector? next-selector)
                                                 (sel/id-class-tag? next-selector))
@@ -98,16 +117,22 @@
         (apply str <>)
         (subs <> 1)))
 
-(defn compile-selectors [selectors-sequences]
-  (let [compiled-selectors (->> (for [selectors-path selectors-sequences]
-                                  (compile-selectors-sequence selectors-path))
+(defn compile-selectors
+  "Given a sequence of selectors paths, e.g. '([:iframe :.abc] [:#def sel/after :.ghi]),
+  this function translates all the selectors paths to CSS and str/joins them with a comma,
+  which is a shorthand that can be used in CSS to give different selectors paths the same
+  parameters. ... => \"iframe .abc, #def::after .ghi\""
+  [selectors-sequences]
+  (let [compiled-selectors (->> selectors-sequences (map compile-selectors-sequence)
                                 util/str-commajoin)]
-    (str maybe-at-media-indent compiled-selectors)))
+    (str *maybe-at-media-indent* compiled-selectors)))
 
 (defmulti compile-color
           "Generates CSS from a color, calls a relevant method to do so depending on the
           color's type:
-          \"rgb\", \"rgba\", \"hsl\", \"hsla\""
+          \"rgb\", \"rgba\", \"hsl\", \"hsla\", keyword, string, keyword (for keywords,
+          tries to get an exact hex-value of the color from colors/default-colors),
+          otherwise prints out a warning and returns a string form of that keyword."
           colors/get-color-type)
 
 (defmethod compile-color Symbol
@@ -151,7 +176,8 @@
     (str "hsla(" hue ", " saturation ", " lightness ", " alpha ")")))
 
 (defmulti compile-css-record
-          "Compiles a CSS record."
+          "Compiles a CSS record (unit, function, at-rule, color). For 4 different types of
+          CSS selectors, there is a different multifunction \"compile-selector\"."
           class)
 
 (defmethod compile-css-record :default
@@ -176,30 +202,29 @@
   (compile-color color-record))
 
 (defn compile-expression
-  "Compilers an expression: a number, string or a record. If the expression is
-  a two-times nested structure (lazy-seq in a vector, vector ain a vector etc.),
-  compile each of these and concatenate them by #(str/join \" \" %)"
+  "Compiles an expression: a number, string, symbol or a record. If the
+  expression is a vector of sequential structures, compiles each of the
+  structures and str/joins them with a space."
   [expr]
   (cond (and (keyword? expr) (get colors/default-colors expr)) (get colors/default-colors expr)
         (util/valid? expr) (name expr)
         (number? expr) (util/int* expr)
         (record? expr) (compile-css-record expr)
-        (and (sequential? expr)
-             (= (count expr) 1)
-             (sequential? (first expr))) (->> expr first (map compile-expression)
-                                              util/str-spacejoin)
+        (and (vector? expr)
+             (every? sequential? expr)) (-> (mapcat #(map compile-expression %) expr)
+                                            util/str-spacejoin)
         :else (throw (IllegalArgumentException.
-                       (str "Not a CSS unit, CSS function, CSS at-rule, nor a string,"
-                            " a number or a double nested sequential structure:\n" expr)))))
+                       (str "Not a CSS unit, CSS function, CSS at-rule, nor a string, a number or"
+                            " a sequential structure of sequential structures:\n" expr)))))
 
-(defmacro cartesian-product [& seqs]
+(defmacro cartesian-product
+  "Given any number of seqs, this function returns a lazy sequence of all possible
+  combinations of taking 1 element from each of the input sequences."
+  [& seqs]
   (let [w-bindings (map #(vector (gensym) %) seqs)
         binding-syms (mapv first w-bindings)
         for-bindings (vec (apply concat w-bindings))]
     `(for ~for-bindings ~binding-syms)))
-
-(defmacro apply-cartesian-product [input-seq]
-  `(cartesian-product ~@input-seq))
 
 (defmulti compile-at-rule
           "Generates CSS from CSSAtRule record: @media, @keyframes, @import, @font-face.
@@ -218,7 +243,10 @@
   (throw (IllegalArgumentException. (str "Unknown at-rule identifier: " identifier))))
 
 (def special-media-rules-map
-  "A special map for generating media queries rules."
+  "A special map for generating media queries rules, e.g.:
+  (tornado.at-rules/at-media {:rules {:screen  :only   -> \"only screen\"
+                                      :screen  false   -> \"not screen\"
+                                      :screen  true    -> \"screen\"} ... "
   {:only (fn [rule] (str "only " (name rule)))
    true  name
    false (fn [rule] (str "not " (name rule)))})
@@ -226,18 +254,17 @@
 (defmethod compile-at-rule
   "media"
   [{:keys [value]}]
-  (let [paths media-query-parents
+  (let [paths *media-query-parents*
         {:keys [rules changes]} value
-        changes-combinations (->> (cartesian-product paths changes) (map #(apply concat %)))
         compiled-media-rules (->> (for [[param value] rules]
                                     (let [param-fn (get special-media-rules-map value)]
-                                      (if (some? param-fn)
-                                        (param-fn param)
+                                      (if (nil? param-fn)
                                         (if-let [compiled-param (util/valid-or-nil param)]
                                           (let [compiled-unit (compile-expression value)]
                                             (str "(" compiled-param ": " compiled-unit ")"))
                                           (throw (IllegalArgumentException.
-                                                   (str "Invalid format of a CSS property: " value)))))))
+                                                   (str "Invalid format of a CSS property: " value))))
+                                        (param-fn param))))
                                   (str/join " and "))
         compiled-media-changes (->> (for [parents-path paths]
                                       (-> (expand-hiccup-list-for-compilation parents-path [] changes)
@@ -247,17 +274,27 @@
                                     (str/join "\n\n"))]
     (str "@media " compiled-media-rules " {\n" compiled-media-changes "\n}")))
 
-(defn compile-attributes-map [attributes-map]
+(defn compile-attributes-map
+  "Compiles an attributes map, returns a sequence of [compiled-attribute compiled-value]."
+  [attributes-map]
   (when attributes-map
     (for [[attribute value] attributes-map]
       [(compile-expression attribute) (compile-expression value)])))
 
-(defn attr-map-to-css [attributes-map]
+(defn attr-map-to-css
+  "Compiles an attributes map and translates the compiled data to CSS:
+  (attr-map-to-css {:width            (units/percent 50)
+                    :margin           [[0 (units/px 15) (units/rem* 3) :auto]]
+                    :background-color (colors/rotate-hue \"#ff0000\" 60)}
+  => width: 50%;
+     margin: 0 15px rem3 auto;
+     background-color: hsl(60 1 0.5);"
+  [attributes-map]
   (when attributes-map
     (->> attributes-map compile-attributes-map
          (map util/str-colonjoin)
-         (map #(str maybe-at-media-indent % ";"))
-         (str/join (str "\n  " (when media-query-parents "  "))))))
+         (map #(str *maybe-at-media-indent* % ";"))
+         (str/join (str "\n" indent (when *media-query-parents* indent))))))
 
 (defn expand-seqs
   "Expands lists and lazy sequences in a nested structure. Always expands the first
@@ -270,7 +307,9 @@
    => ([:a :b]) ... the 2nd element is neither a list nor a lazy-seq -> does not expand it
 
    (expand-seqs [(list :a [:b (map identity [:c :d :e])])])
-   => (:a [:b (:c :d :e)]) ... 2nd element a vector -> does not expand the nested lazy-seq"
+   => (:a [:b (:c :d :e)]) ... 2nd element a vector -> does not expand the nested lazy-seq.
+
+   See clojure.core/flatten. This function just only expands seqs."
   [coll]
   (mapcat (fn [coll]
             (if (seq? coll)
@@ -278,7 +317,15 @@
               (list coll)))
           coll))
 
-(defn selectors-params-children [hiccup]
+(defn selectors-params-children
+  "Given a hiccup vector, this function returns a map with keys :selectors, :params,
+  :children and :at-media, where each of these keys' value is a vector of those
+  elements. Besides :params, which is returned as a map, since there cannot be more
+  than 1 params map.
+  Including incorrect elements or failing to comply the right order of the elements
+  (selector -> & more-selectors -> maybe-params -> & maybe-children & maybe-at-media)
+  will throw a detailed error message."
+  [hiccup]
   (as-> hiccup <> (reduce (fn [{:keys [selectors params children at-media] :as spc-map} hiccup-element]
                             (let [belongs-to (cond (or (sel/id-class-tag? hiccup-element)
                                                        (sel/selector? hiccup-element)) :selectors
@@ -308,11 +355,19 @@
                            :at-media  []} <>)
         (update <> :params first)))
 
-(defn update-unevaluated-hiccup [hiccup path params]
+(defn- update-unevaluated-hiccup
+  "An internal function which adds :path, :params map to current unevaluated hiccup vector."
+  [hiccup path params]
   (util/conjv hiccup {:path   path
                       :params params}))
 
-(defn simplify-prepared-expanded-hiccup [path-params-vector]
+(defn simplify-prepared-expanded-hiccup
+  "Simplifies the expanded hiccup vector: A new map will be created for every unique
+  parameters map or at-media record with {:params {...}, :paths #{...}} (with :at-media
+  instead of :params alternatively), where elements with equal params or at-media record
+  will be inserted to a set behind the :paths key. This function returns a vector of
+  these unique params/at-media maps."
+  [path-params-vector]
   (->> path-params-vector
        (reduce (fn [params->paths-map {:keys [path params at-media]}]
                  (let [known-at-media (get params->paths-map at-media)]
@@ -330,24 +385,21 @@
                [])))
 
 (defn expand-hiccup-vector
-  "<parents> are in a form of a vector of selectors before the current
-             hiccup vector: [:.abc :#def :.ghi ...], can potentially be nil
-
-  <hiccup-vector> is a vector containing selectors, params & children:
-  [*sel1* *sel2* *sel3* ... *optional-params-map*
-    [*child1*]
-    [*child3*]
-    [*child2*]
-       ...]"
+  "Given a (potentially nil) current parents sequence, unevaluated hiccup combinations
+  in a vector the current hiccup vector, which is in a form
+  [sel1 maybe-sel2 maybe-sel3 ... {maybe-params-map} [maybe-child1] [maybe-child2] ... ]
+  where each child is a hiccup vector as well, this function adds all combinations
+  of selectors and descendant children and their selectors together with corresponding
+  parameters (or skips the combination of params are nil) to the unevaluated-hiccup
+  argument, recursively."
   [parents unevaluated-hiccup hiccup-vector]
   (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
         maybe-media (when (seq at-media)
-                      (->> (let [new-selectors (for [selector selectors]
-                                                 (util/conjv parents selector))]
-                             (cartesian-product new-selectors at-media))
-                           (map (fn [[path media-rules]]
-                                  {:path     path
-                                   :at-media media-rules}))))
+                      (as-> selectors <> (map (partial util/conjv parents) <>)
+                            (cartesian-product <> at-media)
+                            (map (fn [[path media-rules]]
+                                   {:path     path
+                                    :at-media media-rules}) <>)))
         unevaluated-hiccup (if maybe-media
                              (reduce conj unevaluated-hiccup maybe-media)
                              unevaluated-hiccup)]
@@ -365,16 +417,29 @@
               selectors))))
 
 (defn compile-selectors-and-params
-  ""
+  "For a current :paths & :params/:at-media map, translates the paths (selectors) which
+  all have the equal params map or at-media record to CSS and str/joins them with a comma
+  (a shorthand which can be used in CSS). Also translates the params map or at-media
+  record to CSS and creates a CSS block from these compiled things, e.g.:
+  (compile-selectors-and-params {:paths  #{[:.abc :#def :iframe] [:td :span sel/hover]}
+                                 :params {:color   :font-black
+                                          :margin  [[(units/px 15) (units/em 2)]]
+                                          :display :flex}}
+  => .abc #def iframe, td span:hover {
+         color: #1A1B1F;
+         margin: 15px 2em;
+         display: flex;
+      }"
   [{:keys [paths params at-media]}]
   (if at-media
     (with-media-query-parents paths (compile-at-rule at-media))
     (when params (let [compiled-selectors (compile-selectors paths)
                        compiled-params (attr-map-to-css params)]
-                   (str compiled-selectors " {\n  " compiled-params "\n" maybe-at-media-indent "}")))))
+                   (str compiled-selectors " {\n" indent compiled-params "\n" *maybe-at-media-indent* "}")))))
 
 (defn compile-all-selectors-params-combinations
-  ""
+  "Given a prepared hiccup vector (with precalculated and simplified combinations of all
+  selectors, children and params, this function generates a CSS string from the data."
   [prepared-hiccup]
   (->> prepared-hiccup (map compile-selectors-and-params)
        (remove nil?)
@@ -384,14 +449,13 @@
   "Given a hiccup element path (parents) and current unevaluated hiccup, this function
   first expands all lists and lazy sequences until it comes across a structure which
   is neither of them. After that, the function recursively goes through all hiccup vectors
-  in the expanded hiccup vectors list: The current vector of unevaluated hiccup
-  combinations is passed to another expanding function to update it. Then, the updated
-  vector is passed to another hiccup vector in that expanded sequence and the another
-  expanding function expands its inner again...
-  The second expanding function calculates cartesian product of all selectors and
-  children in the current vector and attempts to expand all the combinations further,
-  if the children is another nested hiccup. It updates the received current unevaluated
-  hiccup with a map of the current :path and :params."
+  in the expanded hiccup vectors list:
+  The current vector of unevaluated hiccup combinations is passed to another expanding
+  function which recursively calculates all combinations of a current hiccup vector by
+  calling itself and then this function for deeper expanding again - all combinations of
+  its selectors (+ selectors received from parents), params and children. It then
+  inserts all these combinations to the unevaluated hiccup and returns it updated with
+  the combinations inserted."
   [parents unevaluated-hiccup nested-hiccup-vectors-list]
   (let [expanded-list (expand-seqs nested-hiccup-vectors-list)]
     (reduce (fn [current-unevaluated-hiccup hiccup-vector]
@@ -400,7 +464,7 @@
             expanded-list)))
 
 (defn css
-  "Generates CSS from a list of hiccup."
+  "Generates CSS from a list (of lists/lazy-seqs of lists...) of hiccup vectors."
   [css-hiccup-list]
   (->> css-hiccup-list (expand-hiccup-list-for-compilation nil [])
        simplify-prepared-expanded-hiccup
@@ -409,6 +473,10 @@
 (defn compressed-css [css-hiccup-list]
   (->> css-hiccup-list css
        compression/compress))
+
+(defn generate-and-save-css [css-hiccup-list]
+  (->> (css css-hiccup-list)
+       (spit "C:\\Users\\JanSuran\\Documents\\somecss.txt")))
 
 (defn css-time [x]
   (time (let [_ (css x)])))
@@ -443,13 +511,13 @@
                 :background-color :chocolate}
          [:.pqr (sel/adjacent-sibling :#stu) {:height (u/vw 25)
                                               :width  (u/vh 20)}
-          [:.vwx :.yza {:width nil}]]
-         (at-rules/at-media {:min-width "500px"
-                             :max-width "700px"}
+          [:.vwx :.yza {:width (u/px 100)}]]
+         (at-rules/at-media {:min-width (u/px 500)
+                             :max-width (u/px 700)}
                             [:& {:height (u/px 40)}]
-                            [:.abc :#def {:margin-top [[0 "15px" "3rem" "1fr"]]}]
-                            [:.ghi {:margin "20px"}
-                             [:.jkl {:margin "150pc"}]]
+                            [:.abc :#def {:margin-top [[0 (u/px 15) (u/rem* 3) (u/fr 1)]]}]
+                            [:.ghi {:margin (u/px 20)}
+                             [:.jkl {:margin (u/pc 150)}]]
                             [:.mno {:overflow :hidden}])]]]
       [:.something :#something-else :#more-examples! {:width  (u/percent 15)
                                                       :height (u/percent 25)}]

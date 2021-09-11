@@ -1,6 +1,7 @@
 (ns tornado.functions
   (:require [tornado.types]
-            [tornado.compiler :refer [general-parser-fn]])
+            [tornado.compiler :refer [general-parser-fn compile-expression]]
+            [tornado.util :as util])
   (:import (tornado.types CSSFunction)
            (clojure.lang PersistentList)))
 
@@ -75,3 +76,11 @@
 (defcssfn rotateZ)
 (defcssfn rotate3d)
 (defcssfn cubic-bezier)
+(defcssfn calc (fn [{:keys [args]}]
+                 (str "calc(" (->> args (map compile-expression) util/str-spacejoin) ")")))
+
+;; symbols for calc function
+(def add "+")
+(def sub "-")
+(def mul "*")
+(def div "/")

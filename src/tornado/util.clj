@@ -9,28 +9,29 @@
   (->> s butlast (apply str)))
 
 (defn valid?
-  "Returns tue if the argument is a symbol, a keyword or a string."
+  "Returns true if the argument is a symbol, a keyword or a string."
   [x]
   (or (keyword? x)
       (string? x)
       (symbol? x)))
 
 (defn get-valid
-  "If the argument is a symbol, a keyword or a string, return its string form."
+  "If the argument is a symbol, a keyword or a string, returns its string form."
   [x]
   (if (valid? x)
     (name x)
     x))
 
 (defn valid-or-nil
-  "If the argument is valid, return its valid form. Otherwise, return nil."
+  "If the argument is a symbol, a keyword or a string, returns its valid form.
+  Otherwise, return nil."
   [x]
   (when (valid? x)
     (get-valid x)))
 
 (defn int*
-  "Converts a float to an integer if the value would stay the same.
-  A ratio will be converted to a float, or to an integer if possible."
+  "Converts a float to an integer if the value would remain equal. Ratios will
+  be converted to a float, or, again, to an integer if possible."
   [x]
   (let [non-ratio (if (ratio? x)
                     (float x)
@@ -41,8 +42,11 @@
       non-ratio)))
 
 (defn to-percent-float
-  "Parses a percentage from a string \"12%\" or multiplies a number with 100
-  to get a percentage value of it. Returns a numeral form of it."
+  "Parses a percentage from a string or multiplies a number with 100 to get
+  a percentage value of it:
+  (tpf \"12%\") => 12
+  (tpf \"3\") => 300
+  (tpf 8) => 800"
   [value]
   (assert (or (number? value) (string? value))
           (str "Cannot transform to percent int from a value that is none from"
@@ -52,32 +56,27 @@
         :else (-> value Float/parseFloat to-percent-float)))
 
 (defn percent-with-symbol-append
-  "Parses a percentage from a string \"12%\" or multiplies a number with 100
-  to get a percentage value of it. Returns a string form with \"%\" appended."
+  "Multiplies a number with 100 to get a percentage value of it. Returns
+  a string form of it with \"%\" appended. Non-numbers are returned unaffected."
   [value]
   (if (number? value)
     (str (int* (* value 100)) "%")
     value))
 
 (defn percent->number
-  "If the argument is a value in percent, convert it to an integer between 0 and 1.
+  "If the argument is a value in percent, convert it to a corresponding numeral value.
   Throws an exception if the optional 2nd argument has a truthy value and the input
   type is none of string, number or CSSUnit instance. Otherwise thís function does not
   do anything and will return the input.
 
-  Correct value:
-     (percent->int 0.5)
-     => 0.5
+  (percent->int 0.5)
+  => 0.5
 
-  Incorrect (percent-string) value
-     (percent->int \"50%\")   ; can be \"50 %\" as well
-     => 0.5
+  (percent->int \"75%\")   ; can be \"75 %\" as well
+  => 0.75
 
-  Percent unit:
-     (percent->int (tornado.units/percent 35))
-
-  This function does not check, whether a string input is convertible. It would
-  potentially throw an error."
+  (percent->int (tornado.units/percent 35))
+  => 0.35"
   ([value]
    (percent->number value false))
   ([value throw-if-no-match]
@@ -108,7 +107,7 @@
   (->fixed (float x) 4))
 
 (defn- -average
-
+  "Computes the average of 1 or more numbers."
   ([x] x)
   ([x y] (/ (+ x y) 2))
   ([x y & more] (/ (reduce + (+ x y) more)
@@ -125,7 +124,8 @@
   "Alias for \"average\". Takes any number of args, directly, not in a sequence."
   average)
 
-(defn apply-avg "Same as (apply average coll)"
+(defn apply-avg
+  "Same as (apply average coll)"
   [coll]
   (apply average coll))
 
@@ -134,6 +134,7 @@
   [value n1 n2]
   (<= (min n1 n2) value (max n1 n2)))
 
+;; HEXCODE TO DECIMAL NUMBERS CONVERSION, USED FOR HEX->RGBA AND RGBA->HEX COLOR CONVERSIONS
 (def ^:private base16-chars "0123456789ABCDEF")
 (def ^:private lowercase-base16 "abcdef")
 (def ^:private base16-chars-set (set (concat base16-chars lowercase-base16)))
@@ -151,7 +152,7 @@
 
 (def double-hex->base10-map
   "A precalculated map for very fast conversions of hexadecimal strings in format \"xx\"
-  to base10 numbers (more than 10^6 per second)."
+  to base10 numbers."
   (->> (for [i (range 16)
              j (range 16)
              :let [i-th (nth base16-chars i)
@@ -172,14 +173,6 @@
        (let [pairs (->> expr (partition 2) (map #(apply str %)))]
          (every? double-hex->base10-map pairs))))
 
-(defn insert-at
-  "(insert at [:a :b :c :d] 2 :val])
-    => [:a :b :val :c :d]"
-  [vect index value]
-  (concat (subvec vect 0 index)
-          [value]
-          (subvec vect index)))
-
 (defn str-spacejoin
   "str/join with \" \""
   [coll]
@@ -195,12 +188,9 @@
   [coll]
   (str/join ": " coll))
 
-(defn str-semicolonjoin
-  "str/join with \";\n\""
-  [coll]
-  (str/join ";\n" coll))
-
-(defn conjv [vect value]
+(defn conjv
+  "Equal to (conj (vec vect) value)."
+  [vect value]
   (cond (sequential? vect) (conj (if (vector? vect)
                                    vect
                                    (vec vect))
@@ -208,5 +198,8 @@
         (nil? vect) [value]
         :else (throw (IllegalArgumentException. (str "Not sequential, nor `nil`: " vect)))))
 
-(defn in-range [val min-val max-val]
+(defn in-range
+  "If the value is not in range of min-val and max-val, returns the value of the
+  corresponding border which is nearer to the value, otherwise returns the value."
+  [val min-val max-val]
   (min max-val (max val min-val)))
