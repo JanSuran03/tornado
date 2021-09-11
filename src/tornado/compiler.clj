@@ -367,6 +367,10 @@
        simplify-prepared-expanded-hiccup
        compile-all-selectors-params-combinations))
 
+(defn compressed-css [css-hiccup-list]
+  (->> css-hiccup-list css
+       compression/compress))
+
 (defn css-time [x]
   (time (let [_ (css x)])))
 
