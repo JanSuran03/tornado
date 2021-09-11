@@ -107,14 +107,17 @@
   [x]
   (->fixed (float x) 4))
 
-(defn -average
-  "Computes the average of 1 or more numbers. Accepts elements, not a sequence of elements."
+(defn- -average
+
   ([x] x)
   ([x y] (/ (+ x y) 2))
   ([x y & more] (/ (reduce + (+ x y) more)
                    (+ 2 (count more)))))
 
-(defn average [& args]
+(defn average
+  "Computes the average of 1 or more numbers. Accepts elements directly,
+  use apply-avg for a sequence.."
+  [& args]
   (let [avg (apply -average args)]
     (round avg)))
 

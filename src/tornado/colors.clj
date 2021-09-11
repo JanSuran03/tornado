@@ -238,13 +238,16 @@
          (and (= first \#)
               (util/double-hex? (apply str rest))))))
 
-(defn hex-no-alpha? [x]
+(defn non-alpha-hex? [x]
   (and (hex? x)
        (= (count x) 7)))
 
-(defn hex-alpha? [x]
+(defn alpha-hex? [x]
   (and (hex? x)
        (= (count x) 9)))
+
+(defn color? [x]
+  ((some-fn rgb? rgba? hsl? hsla? hex?) x))
 
 (defn rgb->rgba [{:keys [value]}]
   (let [{:keys [red green blue]} value]
@@ -364,62 +367,86 @@
       (hsl H S L)
       (hsla H S L alpha))))
 
-(defn- unknown-color-type [{:keys [type] :as color}]
+(defn- unknown-color-type [{:keys [type] :or {type "undefined"} :as color}]
   (throw (IllegalArgumentException. (str "Unknown color type: " type " of color " color))))
 
-(defn ->rgb [{:keys [type] :as color}]
+(defn- try-keyword-color [color]
+  (if-let [color' (get default-colors color)]
+    color'
+    (unknown-color-type color)))
+
+(defn ->rgb
+  "Converts a color to rgb."
+  [{:keys [type] :as color}]
   (case type "rgb" color
              "rgba" (throw (IllegalArgumentException.
                              (str "Error: an rgba color is not convertible to rgb: " color)))
              "hsl" (hsl->rgb color)
              "hsla" (throw (IllegalArgumentException.
                              (str "Error: an hsla color is not convertible to rgb: " color)))
-             (if (hex-no-alpha? color)
+             (if (non-alpha-hex? color)
                (-> color hex->rgba rgba->rgb)
-               (unknown-color-type color))))
+               (->rgb (try-keyword-color color)))))
 
-(defn ->rgba [{:keys [type] :as color}]
+(defn ->rgba
+  "Converts a color to rgba."
+  [{:keys [type] :as color}]
   (case type "rgb" (rgb->rgba color)
              "rgba" color
              "hsl" (-> color hsl->rgb rgb->rgba)
              "hsla" (hsl->rgb color)
              (if (hex? color)
                (hex->rgba color)
-               (unknown-color-type color))))
-(defn ->hsl [{:keys [type] :as color}]
+               (->rgba (try-keyword-color color)))))
+(defn ->hsl
+  "Converts a color to hsl."
+  [{:keys [type] :as color}]
   (case type "rgb" (rgb->hsl color)
              "rgba" (throw (IllegalArgumentException.
                              (str "Error: an rgba color is not convertible to hsl: " color)))
              "hsl" color
              "hsla" (throw (IllegalArgumentException.
                              (str "Error: an hsla color is not convertible to hsl: " color)))
-             (if (hex-no-alpha? color)
+             (if (non-alpha-hex? color)
                (-> color hex->rgba rgba->rgb rgb->hsl)
-               (unknown-color-type color))))
-(defn ->hsla [{:keys [type] :as color}]
+               (->hsl (try-keyword-color color)))))
+(defn ->hsla
+  "Converts a color to hsla."
+  [{:keys [type] :as color}]
   (case type "rgb" (-> color rgb->hsl hsl->hsla)
              "rgba" (rgb->hsl color)
              "hsl" (hsl->hsla color)
              "hsla" color
              (if (hex? color)
                (-> color hex->rgba rgb->hsl)
-               (unknown-color-type color))))
+               (->hsla (try-keyword-color color)))))
 
-(defn has-alpha? [color]
-  (or (rgb? color) (hsl? color) (hex-no-alpha? color)))
+(defn has-alpha?
+  "Returns true if the color has an alpha parameter."
+  [color]
+  (or (rgba? color) (hsla? color) (alpha-hex? color)))
 
-(defn with-alpha [color]
+(defn with-alpha
+  "Returns the color with alpha = 1 if it does not have an alpha
+  value already. Hex color gets converted to rgba."
+  [color]
   (cond (or (rgb? color) (rgba? color)) (->rgba color)
         (or (hsl? color) (hsla? color)) (->hsla color)
         (hex? color) (hex->rgba color)
         :else (unknown-color-type color)))
 
-(defn ->hsl?a [color]
+(defn ->hsl?a
+  "Converts a color to hsl/hsla, depending on whether the current
+  form has an alpha value."
+  [color]
   (if (has-alpha? color)
-    (->hsl color)
-    (->hsla color)))
+    (->hsla color)
+    (->hsl color)))
 
-(defn- range-0-1 [value]
+(defn- range-0-1
+  "If the given value is below 0, return 0, if below 1,return 1,
+  otherwise return the value."
+  [value]
   (util/in-range value 0 1))
 
 (defn rotate-hue
@@ -427,6 +454,18 @@
   e.g. (rotate-hue \"#00ff00\" 90)"
   [color angle]
   (-> color ->hsl?a (update-in [:value :hue] #(mod (+ % angle) 360))))
+
+(defn triad-next
+  "Rotates a color's hue by 120°."
+  [color] (rotate-hue color 120))
+
+(defn triad-previous
+  "Rotates a color's hue by 240°."
+  [color] (rotate-hue color 240))
+
+(defn opposite-hue
+  "Rotates a color's hue by 180°."
+  [color] (rotate-hue color 180))
 
 (defn saturate
   "Saturates a color by a given value: 0.15, (percent 15), \"15%\" work the same way."
@@ -439,6 +478,10 @@
   [color value]
   (saturate color (- (util/percent->number value))))
 
+(defn scale-saturation
+  "Multiplies a color's saturation by a given value. "
+  [color value] (-> color ->hsl?a (update-in [:value :saturation] #(range-0-1 (* % value)))))
+
 (defn lighten
   "Lightens a color by a given value: 0.15, (percent 15), \"15%\" work the same way."
   [color value]
@@ -450,6 +493,10 @@
   [color value]
   (lighten color (- (util/percent->number value))))
 
+(defn scale-lightness
+  "Multiplies a color's lightness by a given value. "
+  [color value] (-> color ->hsl?a (update-in [:value :lightness] #(range-0-1 (* % value)))))
+
 (defn opacify
   "Opacifies a color by a given value: 0.15, (percent 15), \"15%\" work the same way."
   [color value]
@@ -459,6 +506,10 @@
   "Same as (opacify color value), but the value is subtracted instead."
   [color value]
   (opacify color (- (util/percent->number value))))
+
+(defn scale-alpha
+  "Multiplies a color's alpha by a given value. "
+  [color value] (-> color with-alpha (update-in [:value :alpha] #(range-0-1 (* % value)))))
 
 (defmulti -mix-colors
           "Calls a relevant function to compute the average of more colors."
@@ -510,28 +561,30 @@
                        :alpha      (util/apply-avg alpha-vals)})))
 
 (defn mix-colors
+  "Given any number of colors in any form (alpha-hex, non-alpha-hex, rgb, rgba,
+  hsl, hsla), converts them to the most frequent type amnd mixes them."
   ([color]
-   color)
+   (if (color? color)
+     color
+     (unknown-color-type color)))
   ([color1 & more]
    (let [colors (list* color1 more)
+         colors (map #(cond-> % ((some-fn symbol? string?) %) keyword) colors)
          types (->> colors (map get-color-type) (filter string?) (#(if (seq %) % ["rgba"])))
          colors (map (fn [color]
                        (get default-colors color color)) colors)
-         some-alpha-hex? (some hex-alpha? colors)
-         not-symbols? (not-any? symbol? colors)]
-     (if (and not-symbols?)
-       (let [dominant-type (->> types frequencies (sort-by second >)
-                                (sort-by (fn [[color-type _]]
-                                           (if (= (last color-type) \a)
-                                             1 0)) >)
-                                ffirst)
-             dominant-type (if (and some-alpha-hex? (not (str/ends-with? dominant-type "a")))
-                             (str dominant-type "a")
-                             dominant-type)
-             conversion-fn (case dominant-type "rgb" #'->rgb
-                                               "rgba" #'->rgba
-                                               "hsl" #'->hsl
-                                               "hsla" #'->hsla)
-             converted-colors (map conversion-fn colors)]
-         (-mix-colors dominant-type converted-colors))
-       (throw (IllegalArgumentException. (str "Can't mix colors of different types: " colors)))))))
+         some-alpha-hex? (some alpha-hex? colors)
+         dominant-type (->> types frequencies (sort-by second >)
+                            (sort-by (fn [[color-type _]]
+                                       (if (= (last color-type) \a)
+                                         1 0)) >)
+                            ffirst)
+         dominant-type (if (and some-alpha-hex? (not (str/ends-with? dominant-type "a")))
+                         (str dominant-type "a")
+                         dominant-type)
+         conversion-fn (case dominant-type "rgb" #'->rgb
+                                           "rgba" #'->rgba
+                                           "hsl" #'->hsl
+                                           "hsla" #'->hsla)
+         converted-colors (map conversion-fn colors)]
+     (-mix-colors dominant-type converted-colors))))

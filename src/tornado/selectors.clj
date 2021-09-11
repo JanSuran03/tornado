@@ -7,13 +7,16 @@
 
 (defn make-attribute-selector-fn
   "Creates an attribute selector record."
-  [compiles-to attribute ^String subvalue]
-  (CSSAttributeSelector. compiles-to attribute subvalue))
+  ([compiles-to attribute subvalue]
+   (CSSAttributeSelector. compiles-to nil attribute subvalue))
+  ([compiles-to tag attribute subvalue]
+   (CSSAttributeSelector. compiles-to tag attribute subvalue)))
 
 (defmacro defattributeselector
   "Attribute selectors select all descendant elements containing a given attribute,
   of which the value matches with a given substring. All attribute selectors have
   different conditions for matching. Dashes count as words separators.
+  By attributes, it is meant html attributes, e.g.:    div[class~=\"info\"]
 
   Usage:
      (defattributeselector contains-word \"~=\")
@@ -27,6 +30,11 @@
   [attribute=\"value\"]:
      Selects all descendant elements which have a given parameter with a given value.
      In code: <has-val>
+  - - - - - - - - - - - -
+  With an html tag:
+  a[attribute=\"value\"]:
+     Selects all descendants of a html tag which have a given parameter
+     with a given value.
 
   [attribute~=\"value\"]:
      Selects all descendant elements which have a given parameter with a value
@@ -55,9 +63,13 @@
      not have to be a whole word).
      In code: <contains-subs>"
   [selector-name compiles-to]
-  `(def ~selector-name (partial ~make-attribute-selector-fn ~compiles-to)))
+  `(do (def ~selector-name (partial ~make-attribute-selector-fn ~compiles-to))
+       (alter-meta! #'~selector-name assoc :arglists '([~'attribute ~'subvalue]
+                                                       [~'tag ~'attribute ~'subvalue]))))
 
-(defn has-attr [attr])
+(defn has-attr
+  "An attribute selector which selects all `tag` elements which "
+  [tag attribute])
 (defattributeselector has-val "=")
 (defattributeselector contains-word "~=")
 (defattributeselector starts-with-word "|=")
@@ -65,17 +77,12 @@
 (defattributeselector ends-with "$=")
 (defattributeselector contains-subs "*=")
 
-(defn make-pseudoclass-fn
-  ""
-  [pseudoclass parent]
-  (CSSPseudoClass. pseudoclass))
-
 (defmacro defpseudoclass
   ([pseudoclass]
    (let [compiles-to (str pseudoclass)]
      `(defpseudoclass ~pseudoclass ~compiles-to)))
   ([identifier css-pseudoclass]
-   `(def ~identifier (partial ~make-pseudoclass-fn ~css-pseudoclass))))
+   `(def ~identifier (CSSPseudoClass. ~css-pseudoclass))))
 
 (defpseudoclass active)
 (defpseudoclass checked)
@@ -220,14 +227,15 @@
                    :html-tag/var
                    :html-tag/video
                    :html-tag/wbr})))
-(def ^:private special-sels {:* "A selector for selecting all descendants."})
+(def ^:private special-sels {:* "A selector for selecting all descendants."
+                             :& "A selector for selecting the current element."})
 (def special-selectors (->> special-sels keys (map name) set))
 
 (defn selector? [x]
   (or (instance? CSSAttributeSelector x)
       (instance? CSSCombinator x)
       (instance? CSSPseudoClass x)
-      (instance? CSSPseudoClass x)
+      (instance? CSSPseudoElement x)
       (and (util/valid? x)
            (contains? special-selectors (name x)))))
 
@@ -246,18 +254,13 @@
 (defn id-class-tag? [x]
   ((some-fn css-class? css-id? html-tag?) x))
 
-(defn create-pseudoelement
-  ""
-  [pseudoelement]
-  (CSSPseudoElement. pseudoelement))
-
 (defmacro defpseudoelement
   ""
   ([pseudoelement]
    (let [compiles-to (str pseudoelement)]
      `(defpseudoelement ~pseudoelement ~compiles-to)))
   ([identifier css-pseudoelement]
-   `(def ~identifier (create-pseudoelement ~css-pseudoelement))))
+   `(def ~identifier (CSSPseudoElement. ~css-pseudoelement))))
 
 (defpseudoelement after)
 (defpseudoelement before)

@@ -12,6 +12,8 @@
                           CSSPseudoClass CSSPseudoElement)
            (clojure.lang Keyword Symbol)))
 
+(def ^:private in-media-query-context false)
+(def ^:private in-keyframes-context false)
 
 (declare compile-expression
          expand-at-rule
@@ -30,8 +32,47 @@
           "Compiles a CSS combinator, attribute selector, pseudoclass or pseudoelement."
           class)
 
-#_(defmethod compile-selector CSSCombinator
-    )
+(defmethod compile-selector Keyword
+  [selector]
+  (name selector))
+
+(defmethod compile-selector Symbol
+  [selector]
+  (name selector))
+
+(defmethod compile-selector String
+  [selector]
+  (name selector))
+
+(defmethod compile-selector CSSAttributeSelector
+  [{:keys [compiles-to tag attribute subvalue]}]
+  (str (util/get-valid tag) "[" (util/get-valid attribute) compiles-to \" subvalue \" "]"))
+
+(defmethod compile-selector CSSPseudoClass
+  [{:keys [pseudoclass]}]
+  (str ":" pseudoclass))
+
+(defmethod compile-selector CSSPseudoElement
+  [{:keys [pseudoelement]}]
+  (str "::" pseudoelement))
+
+(defn compile-selectors-sequence [selectors-path]
+  (->> selectors-path (reduce (fn [selectors next-selector]
+                                (assert (or (sel/selector? next-selector)
+                                            (sel/id-class-tag? next-selector))
+                                        (str "Expected a selector while compiling: " next-selector))
+                                (let [selectors (if (or (instance? CSSPseudoClass next-selector)
+                                                        (instance? CSSPseudoElement next-selector))
+                                                  selectors
+                                                  (util/conjv selectors " "))]
+                                  (util/conjv selectors (compile-selector next-selector))))
+                              [])
+       (apply str)))
+
+(defn compile-selectors [selectors-sequences]
+  (->> (for [selectors-path selectors-sequences]
+         (compile-selectors-sequence selectors-path))
+       (str/join ", ")))
 
 (defmulti compile-color
           "Generates CSS from a color, calls a relevant method to do so depending on the
@@ -343,6 +384,9 @@
       [:.something :#something-else :#more-examples! {:width  (u/percent 15)
                                                       :height (u/percent 25)}]
       [:*])))
+
+(def sels [[:#abc :.def sel/after :iframe sel/hover]
+           [:#ghi sel/focus (sel/contains-subs :div :class "info")]])
 
 (def brutal
   (list

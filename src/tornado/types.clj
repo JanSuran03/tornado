@@ -11,7 +11,7 @@
 
 (defrecord CSSCombinator [compiles-to element])
 
-(defrecord CSSAttributeSelector [compiles-to attribute subvalue])
+(defrecord CSSAttributeSelector [compiles-to tag attribute subvalue])
 
 (defrecord CSSPseudoClass [pseudoclass])
 
