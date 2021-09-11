@@ -12,8 +12,8 @@
                           CSSPseudoClass CSSPseudoElement)
            (clojure.lang Keyword Symbol)))
 
-(def ^:private in-media-query-context false)
-(def ^:private in-keyframes-context false)
+(def ^:dynamic in-media-query-context false)
+(def ^:dynamic in-keyframes-context false)
 
 (declare compile-expression
          expand-at-rule
@@ -208,9 +208,8 @@
   (when attributes-map
     (->> attributes-map compile-attributes-map
          (map util/str-colonjoin)
-         util/str-semicolonjoin)))
-
-;(defn selectors-attributes-string)
+         (map #(str % ";"))
+         (str/join "\n  "))))
 
 (defmacro cartesian-product [& seqs]
   (let [w-bindings (map #(vector (gensym) %) seqs)
@@ -270,7 +269,7 @@
                            :at-media  []} <>)
         (update <> :params first)))
 
-(declare -css)
+(declare expand-hiccup-list-for-compilation)
 
 (defn update-unevaluated-hiccup [hiccup path params]
   (util/conjv hiccup {:path   path
@@ -289,7 +288,7 @@
                (transient []))
        persistent!))
 
-(defn --css
+(defn expand-hiccup-vector
   "<parents> are in a form of a vector of selectors before the current
              hiccup vector: [:.abc :#def :.ghi ...], can potentially be nil
 
@@ -298,9 +297,7 @@
     [*child1*]
     [*child3*]
     [*child2*]
-       ...]
-  Since each child is a vector and the 2nd argument passed to this function
-  is a vector as well, we can call this function recursively infinitely."
+       ...]"
   [parents unevaluated-hiccup hiccup-vector]
   (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
         maybe-media (when (seq at-media)
@@ -317,7 +314,7 @@
       (reduce (fn [current-unevaluated-hiccup [selector child]]
                 (let [new-parents (util/conjv parents selector)
                       updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
-                  (-css new-parents updated-hiccup (list child))))
+                  (expand-hiccup-list-for-compilation new-parents updated-hiccup (list child))))
               unevaluated-hiccup
               (cartesian-product selectors children))
       (reduce (fn [current-unevaluated-hiccup selector]
@@ -326,7 +323,7 @@
               unevaluated-hiccup
               selectors))))
 
-(defn -css
+(defn expand-hiccup-list-for-compilation
   "Given a hiccup element path (parents) and current unevaluated hiccup, this function
   first expands all lists and lazy sequences until it comes across a structure which
   is neither of them. After that, the function recursively goes through all hiccup vectors
@@ -342,18 +339,33 @@
   (let [expanded-list (expand-seqs nested-hiccup-vectors-list)
         unevaled-hiccup (or unevaluated-hiccup [])]
     (reduce (fn [current-unevaluated-hiccup hiccup-vector]
-              (--css parents current-unevaluated-hiccup hiccup-vector))
+              (expand-hiccup-vector parents current-unevaluated-hiccup hiccup-vector))
             unevaled-hiccup
             expanded-list)))
 
 (defn save-stylesheet [path stylesheet]
   (spit path stylesheet))
 
+(defn compile-selectors-and-params
+  ""
+  [{:keys [paths params]}]
+  (when params (let [compiled-selectors (compile-selectors paths)
+                     compiled-params (attr-map-to-css params)]
+                 (str compiled-selectors " {\n  " compiled-params "\n}"))))
+
+(defn compile-all-selectors-params-combinations
+  ""
+  [prepared-hiccup]
+  (->> prepared-hiccup (map compile-selectors-and-params)
+       (remove nil?)
+       (str/join "\n\n")))
+
 (defn css
   "Generates CSS from a list of hiccup."
   [css-hiccup-list]
-  (->> css-hiccup-list (-css nil nil)
-       simplify-prepared-expanded-hiccup))
+  (->> css-hiccup-list (expand-hiccup-list-for-compilation nil nil)
+       simplify-prepared-expanded-hiccup
+       compile-all-selectors-params-combinations))
 
 (defn css-time [x]
   (time (let [_ (css x)])))
@@ -361,11 +373,12 @@
 (def styles2
   (list
     (list
-      [:.abc :#mno {:height (u/vw 25)
-                    :width  (u/vh 20)}
-       [:.def :.ghi {:width :something-else}]]
-      [:.jkl (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
-                                                 :height (u/percent 25)}])))
+      [:.someselector
+       [:.abc :#mno {:height (u/vw 25)
+                     :width  (u/vh 20)}
+        [:.def :.ghi {:width :something-else}]]
+       [:.jkl :.kekw (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
+                                                         :height (u/percent 25)}]])))
 
 (def styles
   (list
