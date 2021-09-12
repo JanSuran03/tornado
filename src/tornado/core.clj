@@ -154,7 +154,7 @@
             :arglists '([fn-name]
                         [fn-name css-fn-or-fn-tail]
                         [clojure-fn-name compiles-to compile-fn])}
-  dfefcssfn
+  defcssfn
   [& args]
   `(f/defcssfn ~@args))
 
@@ -389,4 +389,174 @@
                    [tag attribute subvalue])}
   contains-subs sel/contains-subs)
 
-;; pseudoselectors
+;; pseudoclass selectors
+
+(defmacro ^{:doc      "Defines a CSS pseudoclass. A CSS pseudoclass can activate some CSS properties on
+                       a css-class/css-id/html-element based on some current special state of the element.
+
+                       For example, hover: (defpseudoclass hover)
+                       When compiling a selectors sequence, e.g. [:.abc :#def hover], the resulting CSS
+                       selectors sequence will look like this: \".abc #def:hover\".
+
+                       So, what does it even do? We can give the element a special value on hover:
+                       ... [:a hover {:color :blue} ...] - when we hover over a link with our mouse, the
+                       text color of the link will turn blue until we put our mouse away.
+
+                       Defpseudoclass can also take 2 parameters, where the 2nd one will be the translation
+                       to CSS to avoid collisions between Clojure and CSS -
+                       e.g.(defpseudolass css-empty \"empty\")."
+            :arglists '([pseudoclass]
+                        [indetifier css-pseudoclass])}
+  defpseudoclass
+  [& args]
+  `(sel/defpseudoclass ~@args))
+
+(def ^{:doc "Coming soon"}
+  active sel/active)
+
+(def ^{:doc "Coming soon"}
+  checked sel/checked)
+
+(def ^{:doc "Coming soon"}
+  default sel/default)
+
+(def ^{:doc "Coming soon"}
+  disabled sel/disabled)
+
+(def ^{:doc "Coming soon"}
+  css-empty sel/css-empty)
+
+(def ^{:doc "Coming soon"}
+  enabled sel/enabled)
+
+(def ^{:doc "Coming soon"}
+  css-first sel/css-first)
+
+(def ^{:doc "Coming soon"}
+  first-child sel/first-child)
+
+(def ^{:doc "Coming soon"}
+  first-of-type sel/first-of-type)
+
+(def ^{:doc "Coming soon"}
+  fullscreen sel/fullscreen)
+
+(def ^{:doc "Coming soon"}
+  focus sel/focus)
+
+(def ^{:doc "Coming soon"}
+  hover sel/hover)
+
+(def ^{:doc "Coming soon"}
+  indeterminate sel/indeterminate)
+
+(def ^{:doc "Coming soon"}
+  in-range sel/in-range)
+
+(def ^{:doc "Coming soon"}
+  invalid sel/invalid)
+
+(def ^{:doc "Coming soon"}
+  last-child sel/last-child)
+
+(def ^{:doc "Coming soon"}
+  last-of-type sel/last-of-type)
+
+(def ^{:doc "Coming soon"}
+  left sel/left)
+
+(def ^{:doc "Coming soon"}
+  links sel/links)
+
+(def ^{:doc "Coming soon"}
+  only-child sel/only-child)
+
+(def ^{:doc "Coming soon"}
+  only-of-type sel/only-of-type)
+
+(def ^{:doc "Coming soon"}
+  optional sel/optional)
+
+(def ^{:doc "Coming soon"}
+  out-of-range sel/out-of-range)
+
+(def ^{:doc "Coming soon"}
+  read-only sel/read-only)
+
+(def ^{:doc "Coming soon"}
+  read-write sel/read-write)
+
+(def ^{:doc "Coming soon"}
+  required sel/required)
+
+(def ^{:doc "Coming soon"}
+  right sel/right)
+
+(def ^{:doc "Coming soon"}
+  root sel/root)
+
+(def ^{:doc "Coming soon"}
+  scope sel/scope)
+
+(def ^{:doc "Coming soon"}
+  target sel/target)
+
+(def ^{:doc "Coming soon"}
+  valid sel/valid)
+
+(def ^{:doc "Coming soon"}
+  visited sel/visited)
+
+(defmacro ^{:doc      "Creates a special CSS pseudoclass function, which compiles similarly as a standard
+                       CSS pseudoclass, but it is pseudoclass function with an argument.
+
+                       For example. if you wanted to only select every n-th argument:
+                       (defpseudoclassfn nth-child)
+                       (nth-child :odd)     ... compiles to   \"<parent>:nth-child(odd)\"
+                       (nth-child \"3n+1\")   ... compiles to   \"<parent>:nth-child(3n+1)\"
+
+                       Or if you wanted to show something based on the current language of the browser:
+                       (defpseudoclass lang)
+                       (lang \"en\") ... compiles to   \"<parent>:lang(en)\"
+
+                       To avoid collisions with some Clojure functions, you can give a second argument
+                       to defpseudoclassfn for a different translation to CSS:
+                       (defpseudoclass css-not \"not\")
+                       (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
+                       not a paragraph."
+            :arglists '([])}
+  defpseudoclassfn
+  [& args]
+  `(sel/defpseudoclassfn ~@args))
+
+(def ^{:doc      "Coming soon"
+       :arglists '([arg])}
+  lang sel/lang)
+
+(def ^{:doc      "Coming soon"
+       :arglists '([arg])}
+  css-not sel/css-not)
+
+(def ^{:doc      "Coming soon"
+       :arglists '([arg])}
+  nth-child sel/nth-child)
+
+(def ^{:doc      "Coming soon"
+       :arglists '([arg])}
+  nth-last-child sel/nth-last-child)
+
+(def ^{:doc      "Coming soon"
+       :arglists '([arg])}
+  nth-last-of-type sel/nth-last-of-type)
+
+(def ^{:doc      "Coming soon"
+       :arglists '([arg])}
+  nth-of-type sel/nth-of-type)
+
+(def ^{:doc      "Coming soon"
+       :arglists '([arg])}
+  nth-of-type sel/nth-of-type)
+
+(def ^{:doc      "Coming soon"
+       :arglists '([arg])}
+  nth-of-type sel/nth-of-type)

@@ -81,6 +81,20 @@
 (defattributeselector contains-subs "*=")
 
 (defmacro defpseudoclass
+  "Defines a CSS pseudoclass. A CSS pseudoclass can activate some CSS properties on
+  a css-class/css-id/html-element based on some current special state of the element.
+
+  For example, hover: (defpseudoclass hover)
+  When compiling a selectors sequence, e.g. [:.abc :#def hover], the resulting CSS
+  selectors sequence will look like this: \".abc #def:hover\".
+
+  So, what does it even do? We can give the element a special value on hover:
+  ... [:a hover {:color :blue} ...] - when we hover over a link with our mouse, the
+  text color of the link will turn blue until we put our mouse away.
+
+  Defpseudoclass can also take 2 parameters, where the 2nd one will be the translation
+  to CSS to avoid collisions between Clojure and CSS -
+  e.g.(defpseudolass css-empty \"empty\")."
   ([pseudoclass]
    (let [compiles-to (str pseudoclass)]
      `(defpseudoclass ~pseudoclass ~compiles-to)))
@@ -91,9 +105,9 @@
 (defpseudoclass checked)
 (defpseudoclass default)
 (defpseudoclass disabled)
-(defpseudoclass empty* "empty")
+(defpseudoclass css-empty "empty")
 (defpseudoclass enabled)
-(defpseudoclass first* "first")
+(defpseudoclass css-first "first")
 (defpseudoclass first-child)
 (defpseudoclass first-of-type)
 (defpseudoclass fullscreen)
@@ -120,21 +134,38 @@
 (defpseudoclass valid)
 (defpseudoclass visited)
 
-(defn make-pseudoclassfn-fn
-  ""
-  [pseudoclass arg]
-  (CSSPseudoClassFn. pseudoclass arg))
+(defn create-pseudoclassfn-record
+  "Given a CSS pseudoclass for compilation and an argument, creates a CSSPseudoclassFn
+  record with the pseudoclass and argument."
+  [pseudoclass argument]
+  (CSSPseudoClassFn. pseudoclass argument))
 
 (defmacro defpseudoclassfn
-  ""
+  "Creates a special CSS pseudoclass function, which compiles similarly as a standard
+  CSS pseudoclass, but it is pseudoclass function with an argument.
+
+  For example. if you wanted to only select every n-th argument:
+  (defpseudoclassfn nth-child)
+  (nth-child :odd)     ... compiles to   \"<parent>:nth-child(odd)\"
+  (nth-child \"3n+1\")   ... compiles to   \"<parent>:nth-child(3n+1)\"
+
+  Or if you wanted to show something based on the current language of the browser:
+  (defpseudoclass lang)
+  (lang \"en\") ... compiles to   \"<parent>:lang(en)\"
+
+  To avoid collisions with some Clojure functions, you can give a second argument
+  to defpseudoclassfn for a different translation to CSS:
+  (defpseudoclass css-not \"not\")
+  (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
+  not a paragraph."
   ([pseudoclass]
    (let [compiles-to (str pseudoclass)]
      `(defpseudoclassfn ~pseudoclass ~compiles-to)))
   ([pseudoclass compiles-to]
-   `(def ~pseudoclass (partial ~make-pseudoclassfn-fn ~compiles-to))))
+   `(def ~pseudoclass (partial ~create-pseudoclassfn-record ~compiles-to))))
 
 (defpseudoclassfn lang)
-(defpseudoclassfn not* "not")
+(defpseudoclassfn css-not "not")
 (defpseudoclassfn nth-child)
 (defpseudoclassfn nth-last-child)
 (defpseudoclassfn nth-last-of-type)
