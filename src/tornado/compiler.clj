@@ -187,8 +187,14 @@
   [{:keys [value compiles-to]}]
   (str (util/int* value) compiles-to))
 
+(defn commajoin
+  "Redefining functions/commajoin because there would be a cyclic dependency otherwise."
+  [{:keys [compiles-to args]}]
+  (str compiles-to "(" (->> args (map compile-expression)
+                            util/str-commajoin) ")"))
+
 (defmethod compile-css-record CSSFunction
-  [{:keys [compile-fn] :as CSSFn-record}]
+  [{:keys [compile-fn] :or {compile-fn commajoin} :as CSSFn-record}]
   (compile-fn CSSFn-record))
 
 (defmethod compile-css-record CSSAtRule

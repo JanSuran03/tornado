@@ -41,44 +41,39 @@
         (alter-meta! #'~identifier assoc :doc ~doc))))
 
 ;; absolute size units
-(defunit px "px" "An absolute length unit, \"pixel\".")
-(defunit pt "pt" "An absolute length unit, \"point\".")
-(defunit pc "pc" "An absolute length unit, \"pica\".")
-(defunit in "in" "An absolute length unit, \"inch\"")
-(defunit cm "cm" "An absolute length unit, \"centimeter\".")
-(defunit mm "mm" "An absolute length unit, \"millimeter\".")
+(defunit px)
+(defunit pt)
+(defunit pc)
+(defunit in)
+(defunit cm)
+(defunit mm)
 
 ;; relative size units
-(defunit percent "%" "An absolute length unit, \"percent\", can also\nbe used as color alpha in this library.")
-(defunit css-rem "rem" "A relative length unit, \"rem\", depending\non the size of the root element")
-(defunit em "em" "A relative length unit, \"em\", depending\non the size of the parent element.")
-(defunit fr "fr" "A relative length unit, \"fraction\", depending\non the size of the parent element. Accepts values 0-1.")
-(defunit vw "vw" "A relative length unit, \"viewport width\", based on\nthe width of the window. Accepts values 0-100.")
-(defunit vh "vh" "A relative length unit, \"viewport height\", based on\nthe height of the window. Accepts values 0-100.")
-(defunit vmin "vmin" "A relative length unit, minimum of vw and vh.\nAccepts values 0-100.")
-(defunit vmax "vmax" "A relative length unit, maximum of vw and vh.\nAccepts values 0-100.")
-(defunit lh "lh" "A relative length unit, equal to the line height.")
+(defunit percent "%")
+(defunit css-rem "rem")
+(defunit em)
+(defunit fr)
+(defunit vw)
+(defunit vh)
+(defunit vmin)
+(defunit vmax)
+(defunit lh)
 
 ;; time units
-(defunit s "s" "A time unit, \"second\".")
-(defunit ms "ms" "A time unit, \"millisecond\".")
+(defunit s)
+(defunit ms)
 
 ;; angular units
-(defunit deg "deg" "An angular unit, \"degree\".")
-(defunit rad "rad" "An angular unit, \"radian\". Equal to 360°/2π")
-(defunit grad "grad" "An angular unit, \"gradian\". 100 gradians\nare equal to 90 degrees.")
-(defunit turn "turn" "An angular unit, \"turn\". Represents one\n whole turn, equal to 360 degrees.")
+(defunit deg)
+(defunit rad)
+(defunit grad)
+(defunit turn)
 
 ;; frequency units
-(defunit Hz "Hz" "A frequency unit, \"Hertz.")
-(defunit kHz "kHz" "A frequency unit, \"kiloHertz.")
+(defunit Hz)
+(defunit kHz)
 
 ;; resolution units
-(defunit dpi "dpi" "A resolution unit, \"dots per inches\".")
-(defunit dppx "dppx" "A resolution unit, \"dots per pixels\".")
-(defunit dpcm "dpcm" "A resolution unit, \"dots per centimeter\".")
-
-(defn unit?
-  "Returns true if the argument is a CSSUnit instance."
-  [x]
-  (instance? CSSUnit x))
+(defunit dpi)
+(defunit dppx)
+(defunit dpcm)
