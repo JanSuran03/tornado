@@ -50,7 +50,7 @@
 
 ;; relative size units
 (defunit percent "%" "An absolute length unit, \"percent\", can also\nbe used as color alpha in this library.")
-(defunit rem* "rem" "A relative length unit, \"rem\", depending\non the size of the root element")
+(defunit css-rem "rem" "A relative length unit, \"rem\", depending\non the size of the root element")
 (defunit em "em" "A relative length unit, \"em\", depending\non the size of the parent element.")
 (defunit fr "fr" "A relative length unit, \"fraction\", depending\non the size of the parent element. Accepts values 0-1.")
 (defunit vw "vw" "A relative length unit, \"viewport width\", based on\nthe width of the window. Accepts values 0-100.")

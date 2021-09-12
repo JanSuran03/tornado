@@ -54,13 +54,6 @@
          simplify-prepared-expanded-hiccup
          compile-all-selectors-params-combinations)
 
-(defn general-parser-fn
-  "A universal compile function for #'tornado.functions/defcssfn. Compiles
-  the function to a form <fn-name>(arg1, arg2, arg3, ...),"
-  [{:keys [compiles-to args]}]
-  (str compiles-to "(" (->> args (map compile-expression)
-                            util/str-commajoin) ")"))
-
 (defn conjs
   "Conj(oin)s to a (potentially empty) set,"
   [s value]
@@ -195,7 +188,7 @@
   (str (util/int* value) compiles-to))
 
 (defmethod compile-css-record CSSFunction
-  [{:keys [compile-fn] :or {compile-fn #'general-parser-fn} :as CSSFn-record}]
+  [{:keys [compile-fn] :as CSSFn-record}]
   (compile-fn CSSFn-record))
 
 (defmethod compile-css-record CSSAtRule
@@ -510,7 +503,7 @@
       [:.something
        [:.abc :#def {:width      (u/px 15)
                      :height     (u/percent 20)
-                     :margin-top [[(u/px 15) 0 (u/px 20) (u/rem* 3)]]}
+                     :margin-top [[(u/px 15) 0 (u/px 20) (u/css-rem 3)]]}
         [:.ghi :#jkl {:height (u/fr 15)}]
         [:.mno {:height           (u/px 20)
                 :background-color :chocolate}
@@ -520,7 +513,7 @@
          (at-rules/at-media {:min-width (u/px 500)
                              :max-width (u/px 700)}
                             [:& {:height (u/px 40)}]
-                            [:.abc :#def {:margin-top [[0 (u/px 15) (u/rem* 3) (u/fr 1)]]}]
+                            [:.abc :#def {:margin-top [[0 (u/px 15) (u/css-rem 3) (u/fr 1)]]}]
                             [:.ghi {:margin (u/px 20)}
                              [:.jkl {:margin (u/pc 150)}]]
                             [:.mno {:overflow :hidden}])]]]

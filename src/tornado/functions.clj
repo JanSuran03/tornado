@@ -1,9 +1,9 @@
 (ns tornado.functions
   (:require [tornado.types]
-            [tornado.compiler :refer [general-parser-fn compile-expression]]
+            [tornado.compiler :refer [compile-expression]]
             [tornado.util :as util])
   (:import (tornado.types CSSFunction)
-           (clojure.lang PersistentList)))
+           (clojure.lang PersistentList IFn)))
 
 (defn- make-cssfn-record
   "An internal CSSFunction function which takes the \"compiles-to\"
@@ -55,6 +55,8 @@
    (condp instance? css-fn-or-fn-tail String `(defcssfn ~fn-name ~css-fn-or-fn-tail nil)
                                       PersistentList (let [compiles-to (str fn-name)]
                                                        `(defcssfn ~fn-name ~compiles-to ~css-fn-or-fn-tail))
+                                      IFn (let [compiles-to (str fn-name)]
+                                            `(defcssfn ~fn-name ~compiles-to ~css-fn-or-fn-tail))
                                       (throw (IllegalArgumentException.
                                                (str "Error defining a CSS function " fn-name " with arity(2):"
                                                     "\nThe second argument " css-fn-or-fn-tail " is"
@@ -62,22 +64,84 @@
   ([clojure-fn-name compiles-to compile-fn]
    `(def ~clojure-fn-name (partial ~make-cssfn-record ~compiles-to ~compile-fn))))
 
-(defcssfn translate)
-(defcssfn translate3d)
-(defcssfn translateX)
-(defcssfn translateY)
-(defcssfn translateZ)
-(defcssfn scale)
-(defcssfn min* "min")
-(defcssfn max* "max")
-(defcssfn rotate)
-(defcssfn rotateX)
-(defcssfn rotateY)
-(defcssfn rotateZ)
-(defcssfn rotate3d)
-(defcssfn cubic-bezier)
-(defcssfn calc (fn [{:keys [args]}]
-                 (str "calc(" (->> args (map compile-expression) util/str-spacejoin) ")")))
+(defn commajoin
+  "A CSSFunction util/str-commajoin compile function. Compiles the
+  function to a form <fn-name>(arg1, arg2, arg3, ...),"
+  [{:keys [compiles-to args]}]
+  (str compiles-to "(" (->> args (map compile-expression)
+                            util/str-commajoin) ")"))
+
+(defn spacejoin
+  "A CSSFunction util/str-spacejoin compile function. Compiles the
+  function to a form <fn-name>(arg1 arg2 arg3 ...),"
+  [{:keys [compiles-to args]}]
+  (str compiles-to "(" (->> args (map compile-expression)
+                            util/str-spacejoin) ")"))
+
+(defn single-arg
+  "A CSSFunction compile function. Presumes that only one arg is given.
+  If not, calls commajoin function above and gives us a warning instead."
+  [{:keys [compiles-to args] :as cssfn}]
+  (if (= (count args) 1)
+    (str compiles-to "(" (-> args first compile-expression) ")")
+    (do (println (str "Warning: A CSSFunction \"" compiles-to "\" expects to have"
+                      " 1 argument, instead got arguments: " args))
+        (commajoin cssfn))))
+
+; https://www.quackit.com/css/functions/
+
+(defcssfn attr commajoin)
+(defcssfn blur single-arg)
+(defcssfn brightness single-arg)
+(defcssfn calc spacejoin)
+(defcssfn circle spacejoin)
+(defcssfn contrast single-arg)
+(defcssfn counter commajoin)
+(defcssfn counters commajoin)
+(defcssfn cubic-bezier commajoin)
+(defcssfn drop-shadow spacejoin)
+(defcssfn ellipse spacejoin)
+(defcssfn css-filter "filter" commajoin)
+(defcssfn grayscale single-arg)
+(defcssfn hue-rotate single-arg)
+(defcssfn hwb commajoin)
+(defcssfn image spacejoin)
+(defcssfn inset spacejoin)
+(defcssfn invert single-arg)
+(defcssfn linear-gradient commajoin)
+(defcssfn matrix commajoin)
+(defcssfn matrix3d commajoin)
+(defcssfn css-max "max" commajoin)
+(defcssfn css-min "min" commajoin)
+(defcssfn opacity single-arg)
+(defcssfn perspective single-arg)
+(defcssfn polygon commajoin)
+(defcssfn radial-gradient commajoin)
+(defcssfn repeating-linear-gradient commajoin)
+(defcssfn repeating-radial-gradient commajoin)
+(defcssfn rotate single-arg)
+(defcssfn rotate3d commajoin)
+(defcssfn rotateX single-arg)
+(defcssfn rotateY single-arg)
+(defcssfn rotateZ single-arg)
+(defcssfn saturate single-arg)
+(defcssfn sepia single-arg)
+(defcssfn scale commajoin)
+(defcssfn scale3d commajoin)
+(defcssfn scaleX single-arg)
+(defcssfn scaleY single-arg)
+(defcssfn scaleZ single-arg)
+(defcssfn skew commajoin)
+(defcssfn skewX single-arg)
+(defcssfn skewY single-arg)
+(defcssfn symbols spacejoin)
+(defcssfn translate commajoin)
+(defcssfn translate3d commajoin)
+(defcssfn translateX single-arg)
+(defcssfn translateY single-arg)
+(defcssfn translateZ single-arg)
+(defcssfn url commajoin)
+(defcssfn css-var "var" commajoin)
 
 ;; symbols for calc function
 (def add "+")

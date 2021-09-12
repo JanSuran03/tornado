@@ -1,6 +1,6 @@
 (ns tornado.core
   (:require [tornado.types]
-            [tornado.units :as units]
+            [tornado.units :as u]
             [tornado.compiler]
             [tornado.colors :as colors]
             [tornado.selectors :as sel]
@@ -9,114 +9,45 @@
   (:import (tornado.types CSSAtRule CSSFunction CSSUnit
                           CSSPseudoClass CSSPseudoElement CSSColor)))
 
-;; cannot refer macros: units/defunit, functions/defcssfn, defpseudoclass
+;; cannot refer macros: units/defunit, functions/defcssfn, defpseudoclass etc.
+;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+;; UNITS
 
-;; tornado.units
-(defmacro defunit [& args]
-  `(units/defunit ~@args))
-(def px units/px)
-(def pt units/pt)
-(def pc units/pc)
-(def in units/in)
-(def cm units/cm)
-(def mm units/mm)
-(def percent units/percent)
-(def rem* units/rem*)
-(def em units/em)
-(def fr units/fr)
-(def vw units/vw)
-(def vh units/vh)
-(def vmin units/vmin)
-(def vmax units/vmax)
-(def lh units/lh)
-(def s units/s)
-(def ms units/ms)
-(def deg units/deg)
-(def rad units/rad)
-(def grad units/grad)
-(def turn units/turn)
-(def Hz units/Hz)
-(def kHz units/kHz)
-(def dpi units/dpi)
-(def dppx units/dppx)
-(def dpcm units/dpcm)
+;; absolute size units
+(def px "An absolute length unit, \"pixel\"." u/px)
+(def pt "An absolute length unit, \"point\"." u/pt)
+(def pc "An absolute length unit, \"pica\"." u/pc)
+(def in "An absolute length unit, \"inch\"" u/in)
+(def cm "An absolute length unit, \"centimeter\"." u/cm)
+(def mm "An absolute length unit, \"millimeter\"." u/mm)
 
+;; relative size units
+(def percent "An absolute length unit, \"percent\", can also be used as color alpha in this library." u/percent)
+(def css-rem "A relative length unit, \"rem\", depending on the size of the root element" u/css-rem)
+(def em "A relative length unit, \"em\", depending on the size of the parent element." u/em)
+(def fr "A relative length unit, \"fraction\", depending on the size of the parent element." u/fr)
+(def vw "A relative length unit, \"viewport width\", based on the width of the window." u/vw)
+(def vh "A relative length unit, \"viewport height\", based on the height of the window." u/vh)
+(def vmin "A relative length unit, minimum of vw and vh." u/vmin)
+(def vmax "A relative length unit, maximum of vw and vh." u/vmax)
+(def lh "A relative length unit, equal to the line height." u/lh)
 
-;; tornado.colors
-(def rgb colors/rgb)
-(def rgba colors/rgba)
-(def hsl colors/hsl)
-(def hsla colors/hsla)
-(def hex->rgba colors/hex->rgba)
-(def rgb?a->hex colors/rgb->hex)
-(def mix-colors colors/mix-colors)
+;; time units
+(def s "A time unit, \"second\"." u/s)
+(def ms "A time unit, \"millisecond\"." u/ms)
 
+;; angular units
+(def deg "An angular unit, \"degree\"." u/deg)
+(def rad "An angular unit, \"radian\". Equal to 360°/2π" u/rad)
+(def grad "An angular unit, \"gradian\". 100 gradians are equal to 90 degrees." u/grad)
+(def turn "An angular unit, \"turn\". Represents one whole turn, equal to 360 degrees." u/turn)
 
-;; tornado.selectors
-(defmacro defpseudoclass [& args]
-  `(sel/defpseudoclass ~@args))
-(defmacro defpseudoelement [& args]
-  `(sel/defpseudoelement ~@args))
-(def active sel/active)
-(def checked sel/checked)
-(def default sel/default)
-(def disabled sel/disabled)
-(def empty* sel/empty*)
-(def enabled sel/enabled)
-(def first* sel/first*)
-(def first-child sel/first-child)
-(def first-of-type sel/first-of-type)
-(def fullscreen sel/fullscreen)
-(def focus sel/focus)
-(def hover sel/hover)
-(def indeterminate sel/indeterminate)
-(def in-range sel/in-range)
-(def invalid sel/invalid)
-(def last-child sel/last-child)
-(def last-of-type sel/last-of-type)
-(def left sel/left)
-(def links sel/links)
-(def only-child sel/only-child)
-(def only-of-type sel/only-of-type)
-(def optional sel/optional)
-(def out-of-range sel/out-of-range)
-(def read-only sel/read-only)
-(def read-write sel/read-write)
-(def required sel/required)
-(def right sel/right)
-(def root sel/root)
-(def scope sel/scope)
-(def target sel/target)
-(def valid sel/valid)
-(def visited sel/visited)
-(def after sel/after)
-(def before sel/before)
-(def first-letter sel/first-letter)
-(def first-line sel/first-line)
-(def selection sel/selection)
+;; frequency units
 
+(def Hz "A frequency unit, \"Hertz." u/Hz)
+(def kHz "A frequency unit, \"kiloHertz." u/kHz)
 
-;; tornado.functions
-(defmacro defcssfn [& args]
-  `(functions/defcssfn ~@args))
-(def translate functions/translate)
-(def translate3d functions/translate3d)
-(def translateX functions/translateX)
-(def translateY functions/translateY)
-(def translateZ functions/translateZ)
-(def scale functions/scale)
-(def min* functions/min*)
-(def max* functions/max*)
-(def rotate functions/rotate)
-(def rotateX functions/rotateX)
-(def rotateY functions/rotateY)
-(def rotateZ functions/rotateZ)
-(def rotate3d functions/rotate3d)
-(def cubic-bezier functions/cubic-bezier)
-
-
-;; tornado.at-rules
-(defmacro defkeyframes [& args]
-  `(at-rules/defkeyframes ~@args))
-(def at-media at-rules/at-media)
-(def at-font-face at-rules/at-font-face)
+;; resolution units
+(def dpi "A resolution unit, \"dots per inches\"." u/dpi)
+(def dppx "A resolution unit, \"dots per pixels\"." u/dppx)
+(def dpcm "A resolution unit, \"dots per centimeter\"." u/dpcm)
