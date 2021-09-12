@@ -343,14 +343,13 @@
                                                         (map? hiccup-element)) :params
                                                    (vector? hiccup-element) :children
                                                    (at-rules/at-media? hiccup-element) :at-media
-                                                   (at-rules/at-font-face? hiccup-element) :at-font-face
                                                    :else (throw (IllegalArgumentException.
                                                                   (str "Invalid hiccup element: " hiccup-element "\nin"
                                                                        " hiccup: " hiccup "\nNone from a class, id,"
                                                                        " selector, child-vector, at-media CSSAtRule"
                                                                        " instance or a params map."))))]
                               (if (or (and (not= belongs-to :selectors)
-                                           (empty? selectors) (not= belongs-to :at-font-face))
+                                           (empty? selectors))
                                       (and (= belongs-to :selectors)
                                            (or (seq params) (seq children) (seq at-media)))
                                       (and (= belongs-to :params)
@@ -362,11 +361,10 @@
                                               " than one parameters map. At-font-face can be included anywhere in the"
                                               " hiccup vector.\nHiccup received: " hiccup)))
                                 (update spc-map belongs-to conj hiccup-element))))
-                          {:selectors    []
-                           :params       []
-                           :children     []
-                           :at-media     []
-                           :at-font-face []} <>)
+                          {:selectors []
+                           :params    []
+                           :children  []
+                           :at-media  []} <>)
         (update <> :params first)))
 
 (defn- update-unevaluated-hiccup
@@ -413,29 +411,30 @@
   parameters (or skips the combination of params are nil) to the unevaluated-hiccup
   argument, recursively."
   [parents unevaluated-hiccup hiccup-vector]
-  (let [{:keys [selectors params children at-media at-font-face]} (selectors-params-children hiccup-vector)
-        maybe-at-media (when (seq at-media)
-                         (as-> selectors <> (map (partial util/conjv parents) <>)
-                               (cartesian-product <> at-media)
-                               (map (fn [[path media-rules]]
-                                      {:path     path
-                                       :at-media media-rules}) <>)))
-        maybe-at-font-face (when (seq at-font-face)
-                             (map #(do {:at-font-face %}) at-font-face))
-        unevaluated-hiccup (cond->> unevaluated-hiccup maybe-at-media (reduce-invert conj maybe-at-media)
-                                    maybe-at-font-face (reduce-invert conj maybe-at-font-face))]
-    (if (seq children)
-      (reduce (fn [current-unevaluated-hiccup [selector child]]
-                (let [new-parents (util/conjv parents selector)
-                      updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
-                  (expand-hiccup-list-for-compilation new-parents updated-hiccup (list child))))
-              unevaluated-hiccup
-              (cartesian-product selectors children))
-      (reduce (fn [current-unevaluated-hiccup selector]
-                (let [new-parents (util/conjv parents selector)]
-                  (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)))
-              unevaluated-hiccup
-              selectors))))
+  (if (at-rules/at-font-face? hiccup-vector)
+    (conj unevaluated-hiccup {:at-font-face hiccup-vector})
+    (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
+          maybe-at-media (when (seq at-media)
+                           (as-> selectors <> (map (partial util/conjv parents) <>)
+                                 (cartesian-product <> at-media)
+                                 (map (fn [[path media-rules]]
+                                        {:path     path
+                                         :at-media media-rules}) <>)))
+          unevaluated-hiccup (if maybe-at-media
+                               (reduce conj unevaluated-hiccup maybe-at-media)
+                               unevaluated-hiccup)]
+      (if (seq children)
+        (reduce (fn [current-unevaluated-hiccup [selector child]]
+                  (let [new-parents (util/conjv parents selector)
+                        updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
+                    (expand-hiccup-list-for-compilation new-parents updated-hiccup (list child))))
+                unevaluated-hiccup
+                (cartesian-product selectors children))
+        (reduce (fn [current-unevaluated-hiccup selector]
+                  (let [new-parents (util/conjv parents selector)]
+                    (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)))
+                unevaluated-hiccup
+                selectors)))))
 
 (defn compile-selectors-and-params
   "For a current :paths & :params/:at-media map, translates the paths (selectors) which
@@ -518,11 +517,11 @@
                           [:.jkl {:margin "150pc"}]])]
      [:.jkl :.kekw (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
                                                        :height (u/percent 25)}]]
-    [(at-rules/at-font-face {:src         "url(https://webfonts-xyz.org)"
-                             :font-family "Source Sans Pro VF"}
-                            {:src         "url(https://webfonts-api.com)"
-                             :font-weight [[400 500 600 700 800 900]]}
-                            {:font-family "Roboto"})]))
+    (at-rules/at-font-face {:src         "url(https://webfonts-xyz.org)"
+                            :font-family "Source Sans Pro VF"}
+                           {:src         "url(https://webfonts-api.com)"
+                            :font-weight [[400 500 600 700 800 900]]}
+                           {:font-family "Roboto"})))
 
 (def styles
   (list
@@ -547,7 +546,3 @@
       [:.something :#something-else :#more-examples! {:width  (u/percent 15)
                                                       :height (u/percent 25)}]
       [:*])))
-
-(def sels [[:#abc :.def sel/after :iframe sel/hover]
-           [:#ghi sel/focus (sel/contains-subs :div :class "info")]
-           [:.jkl (sel/child-selector :div :p :iframe) :#mno]])
