@@ -507,6 +507,8 @@
 (def ^{:doc "Coming soon"}
   visited sel/visited)
 
+;; pseudoclass selectors functions
+
 (defmacro ^{:doc      "Creates a special CSS pseudoclass function, which compiles similarly as a standard
                        CSS pseudoclass, but it is pseudoclass function with an argument.
 
@@ -562,6 +564,8 @@
        :arglists '([arg])}
   nth-of-type sel/nth-of-type)
 
+;; pseudoelement selectors
+
 (defmacro ^{:doc      "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
                       a special part of a css-class/css-id/html-element.
 
@@ -592,3 +596,37 @@
 
 (def ^{:doc "Coming soon"}
   selection sel/selection)
+
+;; combinator selectors
+
+(defmacro ^{:doc      "Defines a combinator selector function which describes relationships between its
+                       arguments depending on the selector type:
+
+                      :#abc :.def is the default combinator selector - descendant selector. Affects all
+                       children with a class .def.
+
+                       child-selector \">\": is active when the given selectors are every of them a direct
+                       child of the previous one.
+
+                       adjacent-sibling (selector) \"+\": is active when the given html blocks elements or
+                       elements with a given class/id connected with the \"+\" sign are adjacent siblings.
+
+                       general-sibling (selector) \"~\" is active when the given selectors are on the same
+                       level of nesting; they do not have to be adjacent necessarily.
+
+                       Usage: [:.abc
+                                [:.def (child-selector :p :#ghi)]]
+                       compiles to   \".abc .def, .abc > p > #ghi\""
+            :arglists '([selector-name compiles-to])}
+  defcombinatorselector
+  [& args]
+  `(sel/defcombinatorselector ~@args))
+
+(def ^{:doc      "Coming soon"
+       :arglists '([& selectors])} child-selector sel/child-selector)
+
+(def ^{:doc      "Coming soon"
+       :arglists '([& selectors])} adjacent-sibling sel/adjacent-sibling)
+
+(def ^{:doc      "Coming soon"
+       :arglists '([& selectors])} general-sibling sel/general-sibling)

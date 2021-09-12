@@ -367,7 +367,11 @@
   elements with a given class/id connected with the \"+\" sign are adjacent siblings.
 
   general-sibling (selector) \"~\" is active when the given selectors are on the same
-  level of nesting; they do not have to be adjacent necessarily."
+  level of nesting; they do not have to be adjacent necessarily.
+
+  Usage: [:.abc
+           [:.def (child-selector :p :#ghi)]]
+  compiles to   \".abc .def, .abc > p > #ghi\""
   [selector-name compiles-to]
   `(def ~selector-name (partial ~make-combinator-fn ~compiles-to)))
 
