@@ -30,12 +30,6 @@
   (CSSAtRule. "media" {:rules   rules
                        :changes changes}))
 
-(defn at-media?
-  "Returns true if the expression is a CSSAtRule instance with \"media\" identifier,"
-  [expr]
-  (and (instance? CSSAtRule expr)
-       (= (:identifier expr) "media")))
-
 (defn at-font-face
   "(at-font-face {:font-family \"Source Sans Pro\"
                   :src [\"url1
@@ -45,13 +39,23 @@
   [& props-maps]
   (CSSAtRule. "font-face" props-maps))
 
-(defn at-font-face?
-  "Returns true if the expression is a CSSAtRule instance with \"font-face\" identifier,"
-  [expr]
-  (and (instance? CSSAtRule expr)
-       (= (:identifier expr) "font-face")))
-
 (defmacro defkeyframes
+  "Doc"
   [animation-name & frames]
   `(def ~animation-name (CSSAtRule. "keyframes" {:anim-name (str '~animation-name)
                                                  :frames    (list ~@frames)})))
+
+(defn at-media?
+  "Returns true if the expression is a CSSAtRule instance with \"media\" identifier."
+  [expr] (and (instance? CSSAtRule expr)
+              (= (:identifier expr) "media")))
+
+(defn at-font-face?
+  "Returns true if the expression is a CSSAtRule instance with \"font-face\" identifier."
+  [expr] (and (instance? CSSAtRule expr)
+              (= (:identifier expr) "font-face")))
+
+(defn at-keyframes?
+  "Returns true if the expression is a CSSAtRule instance with \"keyframes\" identifier."
+  [expr] (and (instance? CSSAtRule expr)
+              (= (:identifier expr) "keyframes")))

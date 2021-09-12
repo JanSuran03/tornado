@@ -31,20 +31,29 @@
   "Extra indentation when nested inside a media query."
   "")
 
-(def ^:dynamic *keyframes-context* false)
+(def ^:dynamic *extra-keyframes-indent*
+  "Extra indentation when nested inside keyframes."
+  "")
+
+(def ^:dynamic *in-params-context* false)
 
 (defmacro with-media-query-parents
-  "Temporarily stores current parents paths for compiling @media changes and
-  doubles the globally used indent.."
-  [*parents* & body]
-  `(binding [~'*media-query-parents* ~*parents*
+  "Temporarily stores current parents paths for compiling @media and adds
+ + 1* globally used indent."
+  [-parents- & body]
+  `(binding [~'*media-query-parents* ~-parents-
              ~'*maybe-at-media-indent* ~indent]
      ~@body))
 
 (defmacro in-keyframes-context
-  "No documentation, since it has no usage yet."
+  "Temporarily adds extra + 1* globally used indent for compiling @keyframes."
   [& body]
-  `(let [~'*keyframes-context* true]
+  `(binding [~'*extra-keyframes-indent* ~indent]
+     ~@body))
+
+(defmacro in-params-context
+  [& body]
+  `(binding [~'*in-params-context* true]
      ~@body))
 
 (declare compile-expression
@@ -235,7 +244,7 @@
   [attributes-map]
   (when attributes-map
     (for [[attribute value] attributes-map]
-      [(compile-expression attribute) (compile-expression value)])))
+      [(compile-expression attribute) (in-params-context (compile-expression value))])))
 
 (defn attr-map-to-css
   "Compiles an attributes map and translates the compiled data to CSS:
@@ -249,8 +258,9 @@
   (when attributes-map
     (->> attributes-map compile-attributes-map
          (map util/str-colonjoin)
-         (map #(str *maybe-at-media-indent* % ";"))
-         (str/join (str "\n" indent (when *media-query-parents* indent))))))
+         (map #(str *extra-keyframes-indent* *maybe-at-media-indent* % ";"))
+         (str/join (str "\n" indent *maybe-at-media-indent*))
+         (str *extra-keyframes-indent*))))
 
 (defmulti compile-at-rule
           "Generates CSS from CSSAtRule record: @media, @keyframes, @import, @font-face.
@@ -305,6 +315,21 @@
   (let [compiled-params (->> value (map attr-map-to-css)
                              (str/join (str "\n" indent)))]
     (str "@font-face {\n" indent compiled-params "\n}")))
+
+(defmethod compile-at-rule "keyframes"
+  [{:keys [value]}]
+  (let [{:keys [anim-name frames]} value]
+    (if *in-params-context*
+      (str anim-name)
+      (in-keyframes-context
+        (let [compiled-frames (->> frames (map (fn [[progress params]]
+                                                 (let [compiled-progress (compile-expression progress)
+                                                       compiled-params (attr-map-to-css params)]
+                                                   (str compiled-progress " {\n"
+                                                        compiled-params "\n" *extra-keyframes-indent* "}"))))
+                                   (str/join (str "\n" *extra-keyframes-indent*))
+                                   (str *extra-keyframes-indent*))]
+          (str "@keyframes " anim-name " {\n" compiled-frames "\n}"))))))
 
 (defn expand-seqs
   "Expands lists and lazy sequences in a nested structure. Always expands the first
@@ -381,9 +406,10 @@
   these unique params/at-media maps."
   [path-params-vector]
   (->> path-params-vector
-       (reduce (fn [params->paths-map {:keys [path params at-media at-font-face]}]
+       (reduce (fn [params->paths-map {:keys [path params at-media at-font-face at-keyframes]}]
                  (let [known-at-media (get params->paths-map at-media)]
-                   (cond at-font-face (update params->paths-map :font-faces-set conjs at-font-face)
+                   (cond at-keyframes (update params->paths-map :keyframes-set conj at-keyframes)
+                         at-font-face (update params->paths-map :font-faces-set conjs at-font-face)
                          (and at-media known-at-media) (update params->paths-map at-media conjs path)
                          (and at-media (not known-at-media)) (assoc params->paths-map at-media #{path})
                          (get params->paths-map params) (update params->paths-map params conjs path)
@@ -392,6 +418,7 @@
        (reduce (fn [final-expanded-hiccup [params selectors-set]]
                  (cond (at-rules/at-media? params) (conj final-expanded-hiccup {:paths    (vec selectors-set)
                                                                                 :at-media params})
+                       (= :keyframes-set params) (reduce #(conj % {:at-keyframes %2}) final-expanded-hiccup selectors-set)
                        (= :font-faces-set params) (reduce #(conj %1 {:at-font-face %2}) final-expanded-hiccup selectors-set)
                        :else (conj final-expanded-hiccup {:paths  (vec selectors-set)
                                                           :params params})))
@@ -411,30 +438,30 @@
   parameters (or skips the combination of params are nil) to the unevaluated-hiccup
   argument, recursively."
   [parents unevaluated-hiccup hiccup-vector]
-  (if (at-rules/at-font-face? hiccup-vector)
-    (conj unevaluated-hiccup {:at-font-face hiccup-vector})
-    (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
-          maybe-at-media (when (seq at-media)
-                           (as-> selectors <> (map (partial util/conjv parents) <>)
-                                 (cartesian-product <> at-media)
-                                 (map (fn [[path media-rules]]
-                                        {:path     path
-                                         :at-media media-rules}) <>)))
-          unevaluated-hiccup (if maybe-at-media
-                               (reduce conj unevaluated-hiccup maybe-at-media)
-                               unevaluated-hiccup)]
-      (if (seq children)
-        (reduce (fn [current-unevaluated-hiccup [selector child]]
-                  (let [new-parents (util/conjv parents selector)
-                        updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
-                    (expand-hiccup-list-for-compilation new-parents updated-hiccup (list child))))
-                unevaluated-hiccup
-                (cartesian-product selectors children))
-        (reduce (fn [current-unevaluated-hiccup selector]
-                  (let [new-parents (util/conjv parents selector)]
-                    (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)))
-                unevaluated-hiccup
-                selectors)))))
+  (cond (at-rules/at-font-face? hiccup-vector) (conj unevaluated-hiccup {:at-font-face hiccup-vector})
+        (at-rules/at-keyframes? hiccup-vector) (conj unevaluated-hiccup {:at-keyframes hiccup-vector})
+        :else (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
+                    maybe-at-media (when (seq at-media)
+                                     (as-> selectors <> (map (partial util/conjv parents) <>)
+                                           (cartesian-product <> at-media)
+                                           (map (fn [[path media-rules]]
+                                                  {:path     path
+                                                   :at-media media-rules}) <>)))
+                    unevaluated-hiccup (if maybe-at-media
+                                         (reduce conj unevaluated-hiccup maybe-at-media)
+                                         unevaluated-hiccup)]
+                (if (seq children)
+                  (reduce (fn [current-unevaluated-hiccup [selector child]]
+                            (let [new-parents (util/conjv parents selector)
+                                  updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
+                              (expand-hiccup-list-for-compilation new-parents updated-hiccup (list child))))
+                          unevaluated-hiccup
+                          (cartesian-product selectors children))
+                  (reduce (fn [current-unevaluated-hiccup selector]
+                            (let [new-parents (util/conjv parents selector)]
+                              (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)))
+                          unevaluated-hiccup
+                          selectors)))))
 
 (defn compile-selectors-and-params
   "For a current :paths & :params/:at-media map, translates the paths (selectors) which
@@ -450,9 +477,10 @@
          margin: 15px 2em;
          display: flex;
       }"
-  [{:keys [paths params at-media at-font-face]}]
+  [{:keys [paths params at-media at-font-face at-keyframes]}]
   (cond at-media (with-media-query-parents paths (compile-at-rule at-media))
         at-font-face (compile-css-record at-font-face)
+        at-keyframes (compile-css-record at-keyframes)
         :else (when params (let [compiled-selectors (compile-selectors paths)
                                  compiled-params (attr-map-to-css params)]
                              (str compiled-selectors " {\n" indent compiled-params "\n" *maybe-at-media-indent* "}")))))
@@ -504,24 +532,46 @@
 (defn css-time* [x]
   (time (let [_ (compressed-css x)])))
 
+(at-rules/defkeyframes blink
+                       [(u/percent 0) {:opacity                   0
+                                       :animation-timing-function "cubic-bezier(.4,.0,.8,.8)"
+                                       :animation-direction       :reverse}]
+                       [(u/percent 10) {:opacity 1}]
+                       [(u/percent 50) {:opacity                   1
+                                        :animation-timing-function "cubic-bezier(.4,.0,.8,.8)"}]
+                       [(u/percent 60) {:opacity 0}]
+                       [(u/percent 100) {:opacity 0}])
+
+(at-rules/defkeyframes fade
+                       [(u/percent 0) {:opacity                   0
+                                       :animation-timing-function "cubic-bezier(.4,.0,.8,.8)"
+                                       :animation-direction       :reverse}]
+                       [(u/percent 50) {:opacity                   1
+                                        :animation-timing-function "cubic-bezier(.4,.0,.8,.8)"}]
+                       [(u/percent 100) {:opacity 0}])
+
 (def styles2
   (list
-    [:.someselector
-     [:.abc :#mno {:height (u/vw 25)
-                   :width  (u/vh 20)}
-      [:.def :.ghi {:width :something-else}]
-      (at-rules/at-media {:min-width (u/px 500)
-                          :max-width (u/px 1000)}
-                         [:& {:margin-top (u/px 15)}]
-                         [:.ghi {:margin "20px"}
-                          [:.jkl {:margin "150pc"}]])]
-     [:.jkl :.kekw (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
-                                                       :height (u/percent 25)}]]
     (at-rules/at-font-face {:src         "url(https://webfonts-xyz.org)"
                             :font-family "Source Sans Pro VF"}
                            {:src         "url(https://webfonts-api.com)"
                             :font-weight [[400 500 600 700 800 900]]}
-                           {:font-family "Roboto"})))
+                           {:font-family "Roboto"})
+    blink
+    fade
+    [:.someselector
+     [:.abc :#mno {:height         (u/vw 25)
+                   :width          (u/vh 20)
+                   :animation-name fade}
+      [:.def :.ghi {:width :something-else}]
+      (at-rules/at-media {:min-width (u/px 500)
+                          :max-width (u/px 1000)}
+                         [:& {:margin-top     (u/px 15)
+                              :animation-name blink}]
+                         [:.ghi {:margin "20px"}
+                          [:.jkl {:margin "150pc"}]])]
+     [:.jkl :.kekw (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
+                                                       :height (u/percent 25)}]]))
 
 (def styles
   (list

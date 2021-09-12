@@ -10,8 +10,8 @@
           "All grid areas must be sequences of symbols, keywords or strings.")
   (let [length (count first-row)]
     (if (every? #(= length (count %)) more)
-      (map (fn [row]
-             (let [row-str (str/join " " (map name row))]
-               (str "\"" row-str "\""))) all-rows)
+      (->> all-rows (map (fn [row]
+                           (let [row-str (str/join " " (map name row))]
+                             (str "\"" row-str "\"")))))
       (throw (IllegalArgumentException.
                (str "Vectors in all grid rows must have the same length: " all-rows))))))
