@@ -69,7 +69,8 @@
 
 (defn has-attr
   "An attribute selector which selects all `tag` elements which "
-  [tag attribute])
+  ([attribute] (CSSAttributeSelector. nil nil attribute nil))
+  ([tag attribute] (CSSAttributeSelector. nil tag attribute nil)))
 (defattributeselector has-val "=")
 (defattributeselector contains-word "~=")
 (defattributeselector starts-with-word "|=")

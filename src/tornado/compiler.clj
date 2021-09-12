@@ -78,7 +78,8 @@
 
 (defmethod compile-selector CSSAttributeSelector
   [{:keys [compiles-to tag attribute subvalue]}]
-  (str (util/get-valid tag) "[" (util/get-valid attribute) compiles-to \" subvalue \" "]"))
+  (let [maybe-subvalue (when subvalue (str "\"" subvalue "\""))]
+    (str (util/get-valid tag) "[" (util/get-valid attribute) compiles-to maybe-subvalue "]")))
 
 (defmethod compile-selector CSSPseudoClass
   [{:keys [pseudoclass]}]
