@@ -5,8 +5,8 @@
   (:import (tornado.types CSSPseudoClass CSSPseudoElement
                           CSSAttributeSelector CSSCombinator CSSPseudoClassFn)))
 
-(defn make-attribute-selector-fn
-  "Creates an attribute selector record."
+(defn attribute-selector-fn
+  "Creates a CSSAttributeSelector record."
   ([compiles-to attribute subvalue]
    (CSSAttributeSelector. compiles-to nil attribute subvalue))
   ([compiles-to tag attribute subvalue]
@@ -14,7 +14,7 @@
 
 (defmacro defattributeselector
   "Attribute selectors select all descendant elements containing a given attribute,
-  of which the value matches with a given substring. All attribute selectors have
+  of which the value matches a given substring. All attribute selectors have
   different conditions for matching. Dashes count as words separators.
   By attributes, it is meant html attributes, e.g.:    div[class~=\"info\"]
 
@@ -63,12 +63,14 @@
      not have to be a whole word).
      In code: <contains-subs>"
   [selector-name compiles-to]
-  `(do (def ~selector-name (partial ~make-attribute-selector-fn ~compiles-to))
+  `(do (def ~selector-name (partial ~attribute-selector-fn ~compiles-to))
        (alter-meta! #'~selector-name assoc :arglists '([~'attribute ~'subvalue]
                                                        [~'tag ~'attribute ~'subvalue]))))
 
 (defn has-attr
-  "An attribute selector which selects all `tag` elements which "
+  "An attribute selector which selects all elements which have a given
+  attribute with any value, or all html elements on/below the current
+  nested selectors level which have a given attribute with any value."
   ([attribute] (CSSAttributeSelector. nil nil attribute nil))
   ([tag attribute] (CSSAttributeSelector. nil tag attribute nil)))
 (defattributeselector has-val "=")
@@ -294,12 +296,25 @@
 (defpseudoelement selection)
 
 (defn make-combinator-fn
-  ""
+  "Creates a CSSCombinator record."
   [compiles-to & children]
   (CSSCombinator. compiles-to children))
 
 (defmacro defcombinatorselector
-  ""
+  "Defines a combinator selector function which describes relationships between its
+  arguments depending on the selector type:
+
+  :#abc :.def is the default combinator selector - descendant selector. Affects all
+  children with a class .def.
+
+  child-selector \">\": is active when the given selectors are every of them a direct
+  child of the previous one.
+
+  adjacent-sibling (selector) \"+\": is active when the given html blocks elements or
+  elements with a given class/id connected with the \"+\" sign are adjacent siblings.
+
+  general-sibling (selector) \"~\" is active when the given selectors are on the same
+  level of nesting; they do not have to be adjacent necessarily."
   [selector-name compiles-to]
   `(def ~selector-name (partial ~make-combinator-fn ~compiles-to)))
 
