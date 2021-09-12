@@ -15,10 +15,13 @@
                        compilation. Defunit can either take 1 arg: (defunit px), 2 args: (defunit percent \"%\")
                        or 3 args: (defunit hs \"hs\" \"A time unit, halfsecond.\") (optional doc, but the 2nd arg
                        has to be given like in this case as well.
+
                        Usage of the defined units: (px 15)      ... compiles to \"15px\"
                                                    (percent 33) ... compiles to \"33%\"
+
                        CSSUnits can be added, subtracted, multiplied or divided by using function calc (and
                        maybe these 4 symbols, where they are defined just for better search after them in code:
+
                        add, sub, mul, div, e.g. (calc (px 500) add 3 mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"."
             :arglists '([unit]
                         [identifier css-unit]
@@ -630,3 +633,104 @@
 
 (def ^{:doc      "Coming soon"
        :arglists '([& selectors])} general-sibling sel/general-sibling)
+
+;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+;; COLORS
+
+(def ^{:doc "Creates an rgb color."
+       :arglists '([red green blue]
+                   [[red green blue]])}
+  rgb colors/rgb)
+
+(def ^{:doc "Creates an rgba color."
+       :arglists '([red green blue]
+                   [red green blue alpha]
+                   [[red green blue]]
+                   [[red green blue alpha]])}
+  rgba colors/rgba)
+
+(def ^{:doc      "Creates an hsl color."
+       :arglists '([hue saturation lightness]
+                   [[hue saturation lightness]])}
+  hsl colors/hsl)
+
+(def ^{:doc      "Creates an hsla color."
+       :arglists '([hue saturation lightness]
+                   [hue saturation lightness alpha]
+                   [[hue saturation lightness]]
+                   [[hue saturation lightness alpha]])}
+  hsla colors/hsla)
+
+(def ^{:doc "Transforms a color to hsl/hsla and rotates its hue by an angle."
+       :arglists '([color angle])}
+  rotate-hue colors/rotate-hue)
+
+(def ^{:doc "Transforms a color to hsl/hsla and rotates its hue by a third clockwise."
+       :arglists '([color])}
+  triad-next colors/triad-next)
+
+(def ^{:doc "Transforms a color to hsl/hsla and rotates its hue by a third counterclockwise."
+       :arglists '([color])}
+  triad-previous colors/triad-previous)
+
+(def ^{:doc "Transforms a color to hsl/hsla and rotates its hue by a half."
+       :arglists '([color])}
+  opposite-hue colors/opposite-hue)
+
+(def ^{:doc "Transforms a color to hsl/hsla and adds an absolute saturation to it.
+             E.g.: (saturate (rgb 50 100 150) \"15%\"),
+             (saturate :gray 0.35), (saturate \"#123456\" (percent 50))"
+       :arglists '([color value])}
+  saturate colors/saturate)
+
+(def ^{:doc "Transforms a color to hsl/hsla and subtracts an absolute saturation from it.
+             E.g.: (desaturate (rgb 50 100 150) \"15%\"),
+             (desaturate :gray 0.35), (desaturate \"#123456\" (percent 50))"
+       :arglists '([color value])}
+  desaturate colors/desaturate)
+
+(def ^{:doc "Transforms a color to hsl/hsla and adds multiplies its saturation with
+             a numeric value.  E.g.: (saturate (rgb 50 100 150) \"15%\"),
+             (saturate :gray 0.35), (saturate \"#123456\" (percent 50))"
+       :arglists '([color value])}
+  scale-saturation colors/scale-saturation)
+
+(def ^{:doc "Transforms a color to hsl/hsla and adds an absolute lightness to it.
+             E.g.: (lighten (rgb 50 100 150) \"15%\"),
+             (lighten :gray 0.35), (lighten \"#123456\" (percent 50))"
+       :arglists '([color value])}
+  lighten colors/lighten)
+
+(def ^{:doc "Transforms a color to hsl/hsla and subtracts an absolute lightness from it. E.g.:
+             (darken (rgb 50 100 150) \"15%\"), (darken :gray 0.35), (darken \"#123456\" (percent 50))"
+       :arglists '([color value])}
+  darken colors/darken)
+
+(def ^{:doc "Transforms a color to hsl/hsla and adds multiplies its lightness with
+             a numeric value.  E.g.: (scale-lightness (rgb 50 100 150) \"15%\"),
+             (scale-lightness :gray 0.35), (scale-lightness \"#123456\" (percent 50))"
+       :arglists '([color value])}
+  scale-lightness colors/scale-lightness)
+
+(def ^{:doc "Transforms a color to its with-alpha form and adds an absolute alpha to it.
+             E.g.: (opacify(rgb 50 100 150) \"15%\"),
+             (opacify :gray 0.35), (opacify \"#123456\" (percent 50))"
+       :arglists '([color value])}
+  opacify colors/opacify)
+
+(def ^{:doc "Transforms a color to its with-alpha form and subtracts an absolute alpha from it.
+             E.g.: (transparentize (rgb 50 100 150) \"15%\"),
+             (transparentize :gray 0.35), (transparentize \"#123456\" (percent 50))"
+       :arglists '([color value])}
+  transparentize colors/transparentize)
+
+(def ^{:doc "Transforms a color to its with-alpha form and adds multiplies its alpha with
+             a numeric value.  E.g.: (scale-alpha (rgb 50 100 150) \"15%\"),
+             (scale-alpha :gray 0.35), (scale-alpha \"#123456\" (percent 50))"
+       :arglists '([color value])}
+  scale-alpha colors/scale-alpha)
+
+(def ^{:doc "Given any number of colors in any form (alpha-hex, non-alpha-hex, rgb, rgba,
+             hsl, hsla), converts them to the most frequent type and mixes them."
+       :arglists '([color & more])}
+  mix-colors colors/mix-colors)

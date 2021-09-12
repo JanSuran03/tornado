@@ -249,7 +249,9 @@
 (defn color? [x]
   ((some-fn rgb? rgba? hsl? hsla? hex?) x))
 
-(defn rgb->rgba [{:keys [value]}]
+(defn rgb->rgba
+  "Rgb with alpha 1."
+  [{:keys [value]}]
   (let [{:keys [red green blue]} value]
     (rgba [red green blue 1])))
 
@@ -260,7 +262,9 @@
   (let [{:keys [red green blue]} value]
     (rgb [red green blue])))
 
-(defn hsl->hsla [{:keys [value]}]
+(defn hsl->hsla
+  "Hsl with alpha 1."
+  [{:keys [value]}]
   (let [{:keys [hue saturation lightness]} value]
     (hsla [hue saturation lightness 1])))
 
@@ -562,7 +566,7 @@
 
 (defn mix-colors
   "Given any number of colors in any form (alpha-hex, non-alpha-hex, rgb, rgba,
-  hsl, hsla), converts them to the most frequent type amnd mixes them."
+  hsl, hsla), converts them to the most frequent type and mixes them."
   ([color]
    (if (color? color)
      color
