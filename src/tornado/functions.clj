@@ -87,6 +87,7 @@
 (defcssfn blur single-arg)
 (defcssfn brightness single-arg)
 (defcssfn contrast single-arg)
+(defcssfn css-format "format" single-arg)
 (defcssfn grayscale single-arg)
 (defcssfn hue-rotate single-arg)
 (defcssfn invert single-arg)

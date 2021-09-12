@@ -42,8 +42,14 @@
                         \"url2
                         ...]
                   :font-weight :bold})"
-  [props-map]
-  (CSSAtRule. "font-face" props-map))
+  [& props-maps]
+  (CSSAtRule. "font-face" props-maps))
+
+(defn at-font-face?
+  "Returns true if the expression is a CSSAtRule instance with \"font-face\" identifier,"
+  [expr]
+  (and (instance? CSSAtRule expr)
+       (= (:identifier expr) "font-face")))
 
 (defmacro defkeyframes
   [animation-name & frames]

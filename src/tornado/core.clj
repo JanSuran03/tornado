@@ -1,7 +1,7 @@
 (ns tornado.core
   (:require [tornado.types]
             [tornado.units :as u]
-            [tornado.compiler]
+            [tornado.compiler :refer [compile-expression]]
             [tornado.colors :as colors]
             [tornado.selectors :as sel]
             [tornado.functions :as f]
@@ -174,6 +174,9 @@
 
 (def ^{:doc      "Coming soon"
        :arglists '([arg])} contrast f/contrast)
+
+(def ^{:dpc "A special function for @font-face."
+       :arglists '([arg])} css-format f/css-format)
 
 (def ^{:doc      "Coming soon"
        :arglists '([arg])} grayscale f/grayscale)
@@ -734,3 +737,34 @@
              hsl, hsla), converts them to the most frequent type and mixes them."
        :arglists '([color & more])}
   mix-colors colors/mix-colors)
+
+;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+;; AT-RULES: @media, @font-face, @keyframes, @import. @feature
+
+(def ^{:doc "Takes a rules map and any number of media changes and creates a CSSAtRule instance
+             with \"media\" identifier:
+
+             (at-media {:screen    :only
+                        :max-width (u/px 600)
+                        :min-width (u/px 800}
+                        [:& {:margin [[(u/px 15 0 (u/px 15) (u/px 20]]
+                        [:.abc #:def {:margin  (u/px 20)
+                                      :padding [[(u/px 30) (u/px 15)]]
+                          [:span {:background-color (colors/mix :red :green)]]
+                        [:footer {:font-size (u/em 1)])
+
+             The :& selector selects the current element.
+             As you can see, you can nest the affected CSS hiccup how you only want.
+             Special rules values: :screen :only => only screen
+                                   :screen true  => screen
+                                   :screen false => not screen
+
+             {:screen    true
+              :speech    false
+              :max-width (u/px 600)
+              :min-width (u/px 800}
+              => @media screen and not speech and (min-width: 600px) and (max-width: 600px) {..."
+       :arglists '([rules & changes])}
+  at-media at-rules/at-media)
+
+(def at-font-face at-rules/at-font-face)

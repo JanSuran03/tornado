@@ -181,8 +181,7 @@
 
 (defmethod compile-css-record :default
   [record]
-  (println record)
-  (throw (IllegalArgumentException. (str "Not a valid tornado record: " (class record)))))
+  (throw (IllegalArgumentException. (str "Not a valid tornado record: " record " with a class: " (class record)))))
 
 (defmethod compile-css-record CSSUnit
   [{:keys [value compiles-to]}]
@@ -231,54 +230,6 @@
         for-bindings (vec (apply concat w-bindings))]
     `(for ~for-bindings ~binding-syms)))
 
-(defmulti compile-at-rule
-          "Generates CSS from CSSAtRule record: @media, @keyframes, @import, @font-face.
-
-          E.g.:
-          #tornado.types.CSSAtRule{:identifier \"media\"
-                                   :value      {:rules   {:min-width \"500px\"
-                                                           :max-width \"700px\"}
-                                                :changes [:.abc {:margin-top \"20px\"}]}}
-
-          Depending on the :identifier (\"media\" in this case), a relevant method is called."
-          :identifier)
-
-(defmethod compile-at-rule :default
-  [{:keys [identifier]}]
-  (throw (IllegalArgumentException. (str "Unknown at-rule identifier: " identifier))))
-
-(def special-media-rules-map
-  "A special map for generating media queries rules, e.g.:
-  (tornado.at-rules/at-media {:rules {:screen  :only   -> \"only screen\"
-                                      :screen  false   -> \"not screen\"
-                                      :screen  true    -> \"screen\"} ... "
-  {:only (fn [rule] (str "only " (name rule)))
-   true  name
-   false (fn [rule] (str "not " (name rule)))})
-
-(defmethod compile-at-rule
-  "media"
-  [{:keys [value]}]
-  (let [paths *media-query-parents*
-        {:keys [rules changes]} value
-        compiled-media-rules (->> (for [[param value] rules]
-                                    (let [param-fn (get special-media-rules-map value)]
-                                      (if (nil? param-fn)
-                                        (if-let [compiled-param (util/valid-or-nil param)]
-                                          (let [compiled-unit (compile-expression value)]
-                                            (str "(" compiled-param ": " compiled-unit ")"))
-                                          (throw (IllegalArgumentException.
-                                                   (str "Invalid format of a CSS property: " value))))
-                                        (param-fn param))))
-                                  (str/join " and "))
-        compiled-media-changes (->> (for [parents-path paths]
-                                      (-> (expand-hiccup-list-for-compilation parents-path [] changes)
-                                          simplify-prepared-expanded-hiccup
-                                          compile-all-selectors-params-combinations
-                                          (str/replace #" \&" "")))
-                                    (str/join "\n\n"))]
-    (str "@media " compiled-media-rules " {\n" compiled-media-changes "\n}")))
-
 (defn compile-attributes-map
   "Compiles an attributes map, returns a sequence of [compiled-attribute compiled-value]."
   [attributes-map]
@@ -300,6 +251,60 @@
          (map util/str-colonjoin)
          (map #(str *maybe-at-media-indent* % ";"))
          (str/join (str "\n" indent (when *media-query-parents* indent))))))
+
+(defmulti compile-at-rule
+          "Generates CSS from CSSAtRule record: @media, @keyframes, @import, @font-face.
+
+          E.g.:
+          #tornado.types.CSSAtRule{:identifier \"media\"
+                                   :value      {:rules   {:min-width \"500px\"
+                                                           :max-width \"700px\"}
+                                                :changes [:.abc {:margin-top \"20px\"}]}}
+
+          Depending on the :identifier (\"media\" in this case), a relevant method is called."
+          :identifier)
+
+(defmethod compile-at-rule :default
+  [{:keys [identifier] :as at-rule}]
+  (throw (IllegalArgumentException. (str "Unknown at-rule identifier: " identifier " of at-rule: " at-rule))))
+
+(def special-media-rules-map
+  "A special map for generating media queries rules, e.g.:
+  (tornado.at-rules/at-media {:rules {:screen  :only   -> \"only screen\"
+                                      :screen  false   -> \"not screen\"
+                                      :screen  true    -> \"screen\"} ... "
+  {:only (fn [rule] (str "only " (name rule)))
+   true  name
+   false (fn [rule] (str "not " (name rule)))})
+
+(defmethod compile-at-rule "media"
+  [{:keys [value] :as at-media}]
+  (let [paths *media-query-parents*
+        {:keys [rules changes]} value
+        compiled-media-rules (->> (for [[param value] rules]
+                                    (let [param-fn (get special-media-rules-map value)]
+                                      (if (nil? param-fn)
+                                        (if-let [compiled-param (util/valid-or-nil param)]
+                                          (let [compiled-unit (compile-expression value)]
+                                            (str "(" compiled-param ": " compiled-unit ")"))
+                                          (throw (IllegalArgumentException.
+                                                   (str "Invalid format of a CSS property: " value " in a map of rules:"
+                                                        rules " in at-media compilation of at-media: " at-media))))
+                                        (param-fn param))))
+                                  (str/join " and "))
+        compiled-media-changes (->> (for [parents-path paths]
+                                      (-> (expand-hiccup-list-for-compilation parents-path [] changes)
+                                          simplify-prepared-expanded-hiccup
+                                          compile-all-selectors-params-combinations
+                                          (str/replace #" \&" "")))
+                                    (str/join "\n\n"))]
+    (str "@media " compiled-media-rules " {\n" compiled-media-changes "\n}")))
+
+(defmethod compile-at-rule "font-face"
+  [{:keys [value]}]
+  (let [compiled-params (->> value (map attr-map-to-css)
+                             (str/join (str "\n" indent)))]
+    (str "@font-face {\n" indent compiled-params "\n}")))
 
 (defn expand-seqs
   "Expands lists and lazy sequences in a nested structure. Always expands the first
@@ -338,12 +343,14 @@
                                                         (map? hiccup-element)) :params
                                                    (vector? hiccup-element) :children
                                                    (at-rules/at-media? hiccup-element) :at-media
+                                                   (at-rules/at-font-face? hiccup-element) :at-font-face
                                                    :else (throw (IllegalArgumentException.
-                                                                  (str "Invalid hiccup element: " hiccup-element "\nNone"
-                                                                       " from a class, id, selector, child-vector, "
-                                                                       "at-media CSSAtRule instance or a params map."))))]
+                                                                  (str "Invalid hiccup element: " hiccup-element "\nin"
+                                                                       " hiccup: " hiccup "\nNone from a class, id,"
+                                                                       " selector, child-vector, at-media CSSAtRule"
+                                                                       " instance or a params map."))))]
                               (if (or (and (not= belongs-to :selectors)
-                                           (empty? selectors))
+                                           (empty? selectors) (not= belongs-to :at-font-face))
                                       (and (= belongs-to :selectors)
                                            (or (seq params) (seq children) (seq at-media)))
                                       (and (= belongs-to :params)
@@ -352,12 +359,14 @@
                                          (str "Error: Hiccup rules:\nYou have to include at least one selector before"
                                               " params or children.\nIf you include any of params or children, the order"
                                               " has to be selectors -> params -> children.\nYou also cannot include more"
-                                              " than one parameters map.")))
+                                              " than one parameters map. At-font-face can be included anywhere in the"
+                                              " hiccup vector.\nHiccup received: " hiccup)))
                                 (update spc-map belongs-to conj hiccup-element))))
-                          {:selectors []
-                           :params    []
-                           :children  []
-                           :at-media  []} <>)
+                          {:selectors    []
+                           :params       []
+                           :children     []
+                           :at-media     []
+                           :at-font-face []} <>)
         (update <> :params first)))
 
 (defn- update-unevaluated-hiccup
@@ -374,20 +383,26 @@
   these unique params/at-media maps."
   [path-params-vector]
   (->> path-params-vector
-       (reduce (fn [params->paths-map {:keys [path params at-media]}]
+       (reduce (fn [params->paths-map {:keys [path params at-media at-font-face]}]
                  (let [known-at-media (get params->paths-map at-media)]
-                   (cond (and at-media known-at-media) (update params->paths-map at-media conjs path)
+                   (cond at-font-face (update params->paths-map :font-faces-set conjs at-font-face)
+                         (and at-media known-at-media) (update params->paths-map at-media conjs path)
                          (and at-media (not known-at-media)) (assoc params->paths-map at-media #{path})
                          (get params->paths-map params) (update params->paths-map params conjs path)
                          :else (assoc params->paths-map params #{path}))))
                {})
        (reduce (fn [final-expanded-hiccup [params selectors-set]]
-                 (if (at-rules/at-media? params)
-                   (conj final-expanded-hiccup {:paths    (vec selectors-set)
-                                                :at-media params})
-                   (conj final-expanded-hiccup {:paths  (vec selectors-set)
-                                                :params params})))
+                 (cond (at-rules/at-media? params) (conj final-expanded-hiccup {:paths    (vec selectors-set)
+                                                                                :at-media params})
+                       (= :font-faces-set params) (reduce #(conj %1 {:at-font-face %2}) final-expanded-hiccup selectors-set)
+                       :else (conj final-expanded-hiccup {:paths  (vec selectors-set)
+                                                          :params params})))
                [])))
+
+(defn reduce-invert
+  "Reduce where there is passed [f coll val] instead of [f val coll]."
+  [f coll val]
+  (reduce f val coll))
 
 (defn expand-hiccup-vector
   "Given a (potentially nil) current parents sequence, unevaluated hiccup combinations
@@ -398,16 +413,17 @@
   parameters (or skips the combination of params are nil) to the unevaluated-hiccup
   argument, recursively."
   [parents unevaluated-hiccup hiccup-vector]
-  (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
-        maybe-media (when (seq at-media)
-                      (as-> selectors <> (map (partial util/conjv parents) <>)
-                            (cartesian-product <> at-media)
-                            (map (fn [[path media-rules]]
-                                   {:path     path
-                                    :at-media media-rules}) <>)))
-        unevaluated-hiccup (if maybe-media
-                             (reduce conj unevaluated-hiccup maybe-media)
-                             unevaluated-hiccup)]
+  (let [{:keys [selectors params children at-media at-font-face]} (selectors-params-children hiccup-vector)
+        maybe-at-media (when (seq at-media)
+                         (as-> selectors <> (map (partial util/conjv parents) <>)
+                               (cartesian-product <> at-media)
+                               (map (fn [[path media-rules]]
+                                      {:path     path
+                                       :at-media media-rules}) <>)))
+        maybe-at-font-face (when (seq at-font-face)
+                             (map #(do {:at-font-face %}) at-font-face))
+        unevaluated-hiccup (cond->> unevaluated-hiccup maybe-at-media (reduce-invert conj maybe-at-media)
+                                    maybe-at-font-face (reduce-invert conj maybe-at-font-face))]
     (if (seq children)
       (reduce (fn [current-unevaluated-hiccup [selector child]]
                 (let [new-parents (util/conjv parents selector)
@@ -435,12 +451,12 @@
          margin: 15px 2em;
          display: flex;
       }"
-  [{:keys [paths params at-media]}]
-  (if at-media
-    (with-media-query-parents paths (compile-at-rule at-media))
-    (when params (let [compiled-selectors (compile-selectors paths)
-                       compiled-params (attr-map-to-css params)]
-                   (str compiled-selectors " {\n" indent compiled-params "\n" *maybe-at-media-indent* "}")))))
+  [{:keys [paths params at-media at-font-face]}]
+  (cond at-media (with-media-query-parents paths (compile-at-rule at-media))
+        at-font-face (compile-css-record at-font-face)
+        :else (when params (let [compiled-selectors (compile-selectors paths)
+                                 compiled-params (attr-map-to-css params)]
+                             (str compiled-selectors " {\n" indent compiled-params "\n" *maybe-at-media-indent* "}")))))
 
 (defn compile-all-selectors-params-combinations
   "Given a prepared hiccup vector (with precalculated and simplified combinations of all
@@ -491,18 +507,22 @@
 
 (def styles2
   (list
-    (repeat 1
-            [:.someselector
-             [:.abc :#mno {:height (u/vw 25)
-                           :width  (u/vh 20)}
-              [:.def :.ghi {:width :something-else}]
-              (at-rules/at-media {:min-width (u/px 500)
-                                  :max-width (u/px 1000)}
-                                 [:& {:margin-top (u/px 15)}]
-                                 [:.ghi {:margin "20px"}
-                                  [:.jkl {:margin "150pc"}]])]
-             [:.jkl :.kekw (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
-                                                               :height (u/percent 25)}]])))
+    [:.someselector
+     [:.abc :#mno {:height (u/vw 25)
+                   :width  (u/vh 20)}
+      [:.def :.ghi {:width :something-else}]
+      (at-rules/at-media {:min-width (u/px 500)
+                          :max-width (u/px 1000)}
+                         [:& {:margin-top (u/px 15)}]
+                         [:.ghi {:margin "20px"}
+                          [:.jkl {:margin "150pc"}]])]
+     [:.jkl :.kekw (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
+                                                       :height (u/percent 25)}]]
+    [(at-rules/at-font-face {:src         "url(https://webfonts-xyz.org)"
+                             :font-family "Source Sans Pro VF"}
+                            {:src         "url(https://webfonts-api.com)"
+                             :font-weight [[400 500 600 700 800 900]]}
+                            {:font-family "Roboto"})]))
 
 (def styles
   (list

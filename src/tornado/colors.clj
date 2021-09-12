@@ -572,7 +572,7 @@
      color
      (unknown-color-type color)))
   ([color1 & more]
-   (let [colors (list* color1 more)
+   (let [colors (cons color1 more)
          colors (map #(cond-> % ((some-fn symbol? string?) %) keyword) colors)
          types (->> colors (map get-color-type) (filter string?) (#(if (seq %) % ["rgba"])))
          colors (map (fn [color]
