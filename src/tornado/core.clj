@@ -524,7 +524,8 @@
                        (defpseudoclass css-not \"not\")
                        (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
                        not a paragraph."
-            :arglists '([])}
+            :arglists '([pseudoclass]
+                        [pseudoclass compiles-to])}
   defpseudoclassfn
   [& args]
   `(sel/defpseudoclassfn ~@args))
@@ -560,3 +561,34 @@
 (def ^{:doc      "Coming soon"
        :arglists '([arg])}
   nth-of-type sel/nth-of-type)
+
+(defmacro ^{:doc      "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
+                      a special part of a css-class/css-id/html-element.
+
+                      For example, first-letter: (defpseudoclass first-letter)
+                      When compiling a selectors sequence, e.g. [:.abc :#def first-letter], the resulting CSS
+                      selectors sequence will look like this: \".abc #def::first-letter\".
+
+                      So, what does it even do? We can give the first letter of an element a special value:
+                      ... [:.abc :p first-letter {:font-size (u/px 60)} ...] - this causes the first letter
+                      of every paragraph in an element with class .abc to have the first letter significantly
+                      bigger than the rest of the paragraph."
+            :arglists '([pseudoelement])}
+  defpseudoelement
+  [& args]
+  `(sel/defpseudoelement ~@args))
+
+(def ^{:doc "Coming soon"}
+  after sel/after)
+
+(def ^{:doc "Coming soon"}
+  before sel/before)
+
+(def ^{:doc "Coming soon"}
+  first-letter sel/first-letter)
+
+(def ^{:doc "Coming soon"}
+  first-line sel/first-line)
+
+(def ^{:doc "Coming soon"}
+  selection sel/selection)

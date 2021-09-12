@@ -288,37 +288,59 @@
                              :& "A selector for selecting the current element."})
 (def special-selectors (->> special-sels keys (map name) set))
 
-(defn selector? [x]
+(defn selector?
+  "Returns true if x is a selector of any kind (attribute, combinator, pseudoclass,
+  pseudoclassfn, pseudoelement, special selector"
+  [x]
   (or (instance? CSSAttributeSelector x)
       (instance? CSSCombinator x)
       (instance? CSSPseudoClass x)
-      (instance? CSSPseudoElement x)
       (instance? CSSPseudoClassFn x)
+      (instance? CSSPseudoElement x)
       (and (util/valid? x)
            (contains? special-selectors (name x)))))
 
-(defn css-class? [x]
-  (and (util/valid? x)
-       (-> x util/get-valid (str/starts-with? "."))))
+(defn css-class?
+  "Returns true if the argument is a keyword, a string or a symbol
+  and (name argument) starts with \".\"."
+  [x]
+  (and (-> x util/valid-or-nil (or "") (str/starts-with? "."))
+       (> (count (name x)) 1)))
 
-(defn css-id? [x]
-  (and (util/valid? x)
-       (-> x util/get-valid (str/starts-with? "#"))))
+(defn css-id?
+  "Returns true if the argument is a keyword, a string or a symbol
+  and (name argument) starts with \"#\"."
+  [x]
+  (and (-> x util/valid-or-nil (or "") (str/starts-with? "#"))
+       (> (count (name x)) 1)))
 
-(defn html-tag? [x]
-  (and (util/valid? x)
-       (->> x util/get-valid (contains? html-tags))))
+(defn html-tag?
+  "Returns true if the argument is a keyword, a string or a symbol
+  and represents an existing html tag."
+  [x]
+  (->> x util/get-valid (contains? html-tags)))
 
-(defn id-class-tag? [x]
+(defn id-class-tag?
+  "Returns true if the argument is a keyword, a string or a symbol
+  and represents some of a css-class, css-id or an html-tag."
+  [x]
   ((some-fn css-class? css-id? html-tag?) x))
 
 (defmacro defpseudoelement
-  ""
+  "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
+  a special part of a css-class/css-id/html-element.
+
+  For example, first-letter: (defpseudoclass first-letter)
+  When compiling a selectors sequence, e.g. [:.abc :#def first-letter], the resulting CSS
+  selectors sequence will look like this: \".abc #def::first-letter\".
+
+  So, what does it even do? We can give the first letter of an element a special value:
+  ... [:.abc :p first-letter {:font-size (u/px 60)} ...] - this causes the first letter
+  of every paragraph in an element with class .abc to have the first letter significantly
+  bigger than the rest of the paragraph."
   ([pseudoelement]
    (let [compiles-to (str pseudoelement)]
-     `(defpseudoelement ~pseudoelement ~compiles-to)))
-  ([identifier css-pseudoelement]
-   `(def ~identifier (CSSPseudoElement. ~css-pseudoelement))))
+     `(def ~pseudoelement (CSSPseudoElement. ~compiles-to)))))
 
 (defpseudoelement after)
 (defpseudoelement before)
