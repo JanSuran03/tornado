@@ -5,7 +5,8 @@
             [tornado.colors :as colors]
             [tornado.selectors :as sel]
             [tornado.functions :as f]
-            [tornado.at-rules :as at-rules])
+            [tornado.at-rules :as at-rules]
+            [tornado.util :as util])
   (:import (tornado.types CSSAtRule CSSFunction CSSUnit
                           CSSPseudoClass CSSPseudoElement CSSColor)))
 
@@ -768,3 +769,18 @@
   at-media at-rules/at-media)
 
 (def at-font-face at-rules/at-font-face)
+
+;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+;; UTILITY FUNCTIONS
+
+(def ^{:doc "A special utility function for compilation: all the arguments will be str/joined
+             with \", \" during the compilation.
+
+             Example usage:
+             (with-comma
+                [[(url \"/fonts/OpenSans-Regular-webfont.woff2\") (css-format :woff2)]]
+                [[(url \"/fonts/OpenSans-Regular-webfont.woff\") (css-format :woff)]])}
+
+             => \"url(/fonts/OpenSans-Regular-webfont.woff2) format(\"woff2\"),\n
+                 url(/fonts/OpenSans-Regular-webfont.woff) format(\"woff\")\""
+       :arglists '([& args])} with-comma util/with-comma)

@@ -10,7 +10,7 @@
             [clojure.pprint :as pp])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSCombinator CSSAttributeSelector
-                          CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
+                          CSSPseudoClass CSSPseudoElement CSSPseudoClassFn CSScomma-join)
            (clojure.lang Keyword Symbol)
            (java.util Vector)))
 
@@ -214,6 +214,10 @@
   [color-record]
   (compile-color color-record))
 
+(defmethod compile-css-record CSScomma-join
+  [{:keys [args]}]
+  (->> args (map compile-expression) util/str-commajoin))
+
 (defn compile-expression
   "Compiles an expression: a number, string, symbol or a record. If the
   expression is a vector of sequential structures, compiles each of the
@@ -229,15 +233,6 @@
         :else (throw (IllegalArgumentException.
                        (str "Not a CSS unit, CSS function, CSS at-rule, nor a string, a number or"
                             " a sequential structure of sequential structures:\n" expr)))))
-
-(defmacro cartesian-product
-  "Given any number of seqs, this function returns a lazy sequence of all possible
-  combinations of taking 1 element from each of the input sequences."
-  [& seqs]
-  (let [w-bindings (map #(vector (gensym) %) seqs)
-        binding-syms (mapv first w-bindings)
-        for-bindings (vec (apply concat w-bindings))]
-    `(for ~for-bindings ~binding-syms)))
 
 (defn compile-attributes-map
   "Compiles an attributes map, returns a sequence of [compiled-attribute compiled-value]."
@@ -443,7 +438,7 @@
         :else (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
                     maybe-at-media (when (seq at-media)
                                      (as-> selectors <> (map (partial util/conjv parents) <>)
-                                           (cartesian-product <> at-media)
+                                           (util/cartesian-product <> at-media)
                                            (map (fn [[path media-rules]]
                                                   {:path     path
                                                    :at-media media-rules}) <>)))
@@ -456,7 +451,7 @@
                                   updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
                               (expand-hiccup-list-for-compilation new-parents updated-hiccup (list child))))
                           unevaluated-hiccup
-                          (cartesian-product selectors children))
+                          (util/cartesian-product selectors children))
                   (reduce (fn [current-unevaluated-hiccup selector]
                             (let [new-parents (util/conjv parents selector)]
                               (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)))

@@ -74,6 +74,16 @@
                       " 1 argument, instead got arguments: " args))
         (commajoin cssfn))))
 
+(defn css-format-fn
+  "A special function for css-format which also puts additional quotes around
+  the parameter to enable usage of keywords."
+  [{:keys [args] :as cssfn}]
+  (if (= (count args) 1)
+    (str "format(\"" (-> args first compile-expression) "\")")
+    (do (println (str "Warning: A CSSFunction \"css-format\" expects to have"
+                      " 1 argument, instead got arguments: " args))
+        (commajoin cssfn))))
+
 ; https://www.quackit.com/css/functions/
 
 ;; symbols for calc function
@@ -87,7 +97,7 @@
 (defcssfn blur single-arg)
 (defcssfn brightness single-arg)
 (defcssfn contrast single-arg)
-(defcssfn css-format "format" single-arg)
+(defcssfn css-format "format" css-format-fn)
 (defcssfn grayscale single-arg)
 (defcssfn hue-rotate single-arg)
 (defcssfn invert single-arg)

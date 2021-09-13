@@ -3,7 +3,7 @@
             [clojure.edn :as edn]
             [clojure.set :as set]
             [clojure.string :as str])
-  (:import (tornado.types CSSUnit)))
+  (:import (tornado.types CSSUnit CSScomma-join)))
 
 (defn str-butlast [s]
   (->> s butlast (apply str)))
@@ -203,3 +203,26 @@
   corresponding border which is nearer to the value, otherwise returns the value."
   [val min-val max-val]
   (min max-val (max val min-val)))
+
+(defmacro cartesian-product
+  "Given any number of seqs, this function returns a lazy sequence of all possible
+  combinations of taking 1 element from each of the input sequences."
+  [& seqs]
+  (let [w-bindings (map #(vector (gensym) %) seqs)
+        binding-syms (mapv first w-bindings)
+        for-bindings (vec (apply concat w-bindings))]
+    `(for ~for-bindings ~binding-syms)))
+
+(defn with-comma
+  "A special utility function for compilation: all the arguments will be str/joined
+  with \", \" during the compilation.
+
+  Example usage:
+  {:src (with-comma
+           [[(f/url \"/fonts/OpenSans-Regular-webfont.woff2\") (f/css-format :woff2)]]
+           [[(f/url \"/fonts/OpenSans-Regular-webfont.woff\") (f/css-format :woff)]])}
+
+  => \"url(/fonts/OpenSans-Regular-webfont.woff2\") format(woff2),\n
+      url(/fonts/OpenSans-Regular-webfont.woff) format(woff\");"
+  [& args]
+  (CSScomma-join. args))
