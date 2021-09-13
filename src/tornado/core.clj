@@ -769,7 +769,7 @@
        :arglists '([rules & changes])}
   at-media at-rules/at-media)
 
-(def ^{:doc "Can be used for more convenient describing of @font-face. This is how example
+(def ^{:doc      "Can be used for more convenient describing of @font-face. This is how example
              props-maps look like:
 
              {:src         (with-comma
@@ -789,6 +789,43 @@
                             :font-style  :italic}"
        :arglists '([& props-maps])}
   at-font-face at-rules/at-font-face)
+
+(defmacro ^{:doc "Defines a CSS @keyframes animation. The animation name should have a unique symbol
+                  for later reference to it and then animation frames in a format [progress params]:
+
+                  (defkeyframes fade-in-opacity
+                                [(u/percent 0) {:opacity 0}]
+                                [(u/percent 25) {:opacity 0.1}]
+                                [(u/percent 50) {:opacity 0.25}]
+                                [(u/percent 75) {:opacity 0.5}]
+                                [(u/percent 100) {:opacity 1}])
+
+                  Then, insert it to the CSS hiccup list to make tornado compile it for later usage:
+
+                  (def styles
+                     (list
+                        fade-in-opacity
+                        ...))
+
+                  After that, you can assign this animation to whatever element you want:
+
+                  (def styles
+                     (list
+                        fade-in-opacity
+                        [:.some-element {:animation-duration (ms 500)
+                                         :animation-name     fade-in-opacity)}]
+                        [:#another-element {:animation-name  fade-in-opacity
+                                            :animation-delay (s 1.5)}]))
+
+                  You can also define from & to progress animations:
+
+                  (defkeyframes translate-animation
+                                [:from {:transform (translate (px 100) (px 200)}]
+                                [:to {:transform (translate (px 200) (px 400)}])"
+            :arglists '([animation-name & frames])}
+  defkeyframes
+  [& args]
+  `(at-rules/defkeyframes ~@args))
 
 ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ;; COMMON UTILITY FUNCTIONS

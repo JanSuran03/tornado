@@ -53,7 +53,38 @@
   (CSSAtRule. "font-face" props-maps))
 
 (defmacro defkeyframes
-  "Doc"
+  "Defines a CSS @keyframes animation. The animation name should have a unique symbol
+  for later reference to it and then animation frames in a format [progress params]:
+
+  (defkeyframes fade-in-opacity
+                [(u/percent 0) {:opacity 0}]
+                [(u/percent 25) {:opacity 0.1}]
+                [(u/percent 50) {:opacity 0.25}]
+                [(u/percent 75) {:opacity 0.5}]
+                [(u/percent 100) {:opacity 1}])
+
+  Then, refer it the CSS hiccup list to make tornado compile it for later usage:
+
+  (def styles
+     (list
+        fade-in-opacity
+        ...))
+
+  After that, you can assign this animation to whatever element you want:
+
+  (def styles
+     (list
+        fade-in-opacity
+        [:.some-element {:animation-duration (u/ms 500)
+                         :animation-name     fade-in-opacity)}]
+        [:#another-element {:animation-name  fade-in-opacity
+                            :animation-delay (u/s 1.5)}]))
+
+  With defkeyframes you can also define from & to progress animations:
+
+  (defkeyframes translate-animation
+                [:from {:transform (f/translate (u/px 100) (u/px 200)}]
+                [:to {:transform (f/translate (u/px 200) (u/px 400)}])"
   [animation-name & frames]
   `(def ~animation-name (CSSAtRule. "keyframes" {:anim-name (str '~animation-name)
                                                  :frames    (list ~@frames)})))
