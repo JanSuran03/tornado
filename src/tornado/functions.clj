@@ -86,12 +86,6 @@
 
 ; https://www.quackit.com/css/functions/
 
-;; symbols for calc function
-(def add "+")
-(def sub "-")
-(def mul "*")
-(def div "/")
-
 ;; single arg functions
 
 (defcssfn blur single-arg)

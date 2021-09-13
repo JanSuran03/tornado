@@ -12,12 +12,12 @@ The Tornado library is not designed to work in ClojureScript.
 
 If you are familiar with [garden](https://github.com/noprompt/garden), this library has similar syntax.
 
-First, you have to define a list of hiccup vectors that should be compiled. Refer [repl-css] from tornado.compiler which
-pretty-prints the compiled-css in REPL. Define some example CSS like below and run (repl-css ~your-stylesheet~):
+First, you have to define a list of hiccup vectors that should be compiled. Refer a namespace tornado.core, where you
+have available literally everything useful in this library. Define some example CSS like below and run
+(repl-css ~your-stylesheet~):
 
 ```clojure
-(require '[tornado.core :refer :all]
-         '[tornado.compiler :refer [repl-css]])
+(require '[tornado.core :refer :all])
 => nil
 
 (def styles
@@ -54,7 +54,7 @@ You can also nest the selectors as you please or even make cartesian product of 
 => nil
 ```
 
-This is how you can use more advanced selectors (pseudoclass selectors):
+This is how you can use more advanced selectors (pseudoclass selectors in this case, but for pseudoelement selectors, you can use the same syntax):
 
 ```clojure
 (-> (list [:#some-id {:padding (px 10)}
@@ -107,24 +107,67 @@ Here is an example usage of @media:
 }
 ```
 
+An example usage of @font-face:
+
 ```clojure
-(-> (list (at-font-face {:src         [[(url "webfonts/woff2/roboto.woff2") (css-format :woff2)]]}
-                        {:src         [[(url "webfonts/woff/roboto.woff") (css-format :woff)]]
+(-> (list (at-font-face {:src         [[(url "webfonts/woff2/roboto.woff2") (css-format :woff2)]
+                                       [(url "webfonts/woff/roboto.woff") (css-format :woff)]]
                          :font-weight :normal})
           [:.somesel {:someparam :someval}])
     repl-css)
 
 @font-face {
-    src: url(webfonts/woff2/roboto.woff2) format("woff2");
-    src: url(webfonts/woff/roboto.woff) format("woff");
+    src: url(webfonts/woff2/roboto.woff2) format("woff2")\n
+         url(webfonts/woff/roboto.woff) format("woff");
     font-weight: normal;
 }
 
 .somesel {
     someparam: someval;
 }
+
+;; Note that the double-nested vector given to :src key first compiles every element of each of the vectors 
+;; and str-spacejoins them. After that, it str-commajoins each string created by str-spacejoining the individual
+;; vectors. The outer sequence must be a vector, while the inner sequences can be sequences of any type.
 ```
 
+Here is how you can use some special pseudoclass selectors, which take a parameter:
+
+```clojure
+(-> (list [:.abc {:display               :grid
+                  :grid-template-columns [[:auto :auto]]}
+           [:*
+            [(nth-child :odd) {:justify-self :right}]
+            [(nth-child :even) {:justify-self :left}]]])
+    repl-css)
+
+.abc {
+    display: grid;
+    grid-template-columns: auto auto;
+}
+
+.abc *:nth-child(odd) {
+    justify-self: right;
+}
+
+.abc *:nth-child(even) {
+    justify-self: left;
+}
+
+=> nil
+```
+
+Here is an example how you can do arithmetics with units:
+
+```clojure
+(-> (calc (px 5) :add (vw 3) :mul 5)
+    compile-expression)
+
+=> "calc(5px + 3vw * 5)"
+
+;; Ah yes, compile-expression, another useful function to have!
+;; Available special keywords: :add, :sub, :mul, :div
+```
 ## Contact
 
 Although there are more ways to contact me, for now, suran (dot) orgpad (at) gmail (dot) com is the easiest way. I will

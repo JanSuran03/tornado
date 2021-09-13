@@ -234,6 +234,13 @@
   [{:keys [args]}]
   (->> args (map compile-expression) util/str-commajoin))
 
+(def calc-keywords
+  "A special map for calc keywords"
+  {:add "+"
+   :sub "-"
+   :mul "*"
+   :div "/"})
+
 (defn compile-expression
   "Compiles an expression: a number, string, symbol or a record. If the expression is
   a vector of sequential structures, compiles each of the structures and str/joins them
@@ -244,6 +251,7 @@
  => \"15px 20%, #FF0000 #D2691E\""
   [expr]
   (cond (get colors/default-colors expr) (get colors/default-colors expr)
+        (get calc-keywords expr) (get calc-keywords expr)
         (util/valid? expr) (name expr)
         (number? expr) (util/int* expr)
         (record? expr) (compile-css-record expr)

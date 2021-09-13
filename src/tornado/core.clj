@@ -2,12 +2,20 @@
   (:require [tornado.types]
             [tornado.units :as u]
             [tornado.colors :as colors]
+            [tornado.compiler :as compiler]
             [tornado.selectors :as sel]
             [tornado.functions :as f]
             [tornado.at-rules :as at-rules]
             [tornado.common :as common])
   (:import (tornado.types CSSAtRule CSSFunction CSSUnit
                           CSSPseudoClass CSSPseudoElement CSSColor)))
+
+;; COMPILER FUNCTIONS
+(def compile-expression compiler/compile-expression)
+(def css compiler/css)
+(def repl-css compiler/repl-css)
+
+; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 ;; UNITS
 
@@ -20,9 +28,10 @@
                                                    (percent 33) ... compiles to \"33%\"
 
                        CSSUnits can be added, subtracted, multiplied or divided by using function calc (you can
-                       also use these 4 symbols - they are defined just for better search in code:
+                       also use these 4 keywords - they are defined just for better search in code:
+                       :add, :sub, :mul, :div
 
-                       add, sub, mul, div, e.g. (calc (px 500) add 3 mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"."
+                       E.g. (calc (px 500) :add 3 :mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"."
             :arglists '([unit]
                         [identifier css-unit]
                         [identifier css-unit doc])}
