@@ -137,7 +137,6 @@
 ;; HEXCODE TO DECIMAL NUMBERS CONVERSION, USED FOR HEX->RGBA AND RGBA->HEX COLOR CONVERSIONS
 (def ^:private base16-chars "0123456789ABCDEF")
 (def ^:private lowercase-base16 "abcdef")
-(def ^:private base16-chars-set (set (concat base16-chars lowercase-base16)))
 (def ^:private uppercase-base16-set (set "ABCDEF"))
 (def ^:private lowercase-uppercase-difference (- (int \a) (int \A)))
 (defn- toLower [c]
@@ -146,9 +145,6 @@
     c))
 (def base16->base10-map (merge (zipmap base16-chars (range 16))
                                (zipmap lowercase-base16 (range 10 16))))
-(def base10->base64-map (set/map-invert (reduce dissoc
-                                                base16->base10-map
-                                                lowercase-base16)))
 
 (def double-hex->base10-map
   "A precalculated map for very fast conversions of hexadecimal strings in format \"xx\"

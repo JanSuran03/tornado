@@ -534,3 +534,12 @@
                                  true compile-all-selectors-params-combinations
                                  (not pretty-print?) compression/compress
                                  output-to (spit output-to))))))
+
+(defn repl-css
+  [css-hiccup-list]
+  (let [compiled-and-split (->> css-hiccup-list (expand-hiccup-list-for-compilation nil [])
+                                simplify-prepared-expanded-hiccup
+                                compile-all-selectors-params-combinations
+                                str/split-lines)]
+    (doseq [line compiled-and-split]
+      (println line))))
