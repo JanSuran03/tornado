@@ -5,20 +5,38 @@
             [clojure.string :as str]
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
-            [tornado.units :as u]
             [tornado.compression :as compression])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSCombinator CSSAttributeSelector
                           CSSPseudoClass CSSPseudoElement CSSPseudoClassFn CSScomma-join)
            (clojure.lang Keyword Symbol)))
 
-(def -indent
-  "General indent used globally for indenting new lines. Double size inside media queries."
-  4)
+(def ^{:dynamic true
+       :doc     "The current flags for a tornado build compilation:
 
-(def indent
+             :indent-length - Specifies, how many indentation spaces should be in the compiled
+                              CSS file after any nesting in @rule or params map. Defaults to 4.
+
+             :pretty-print? - Specifies, whether the compiled CSS should be pretty printed.
+                              Defaults to true. If set to false, the CSS file will be compressed
+                              after compilation (removal of unnecessary characters like spaces
+                              and newlines) to make the CSS file a bit smaller.
+
+             :output-to     - Specifies, where the compiled CSS file should be saved.
+             "}
+  *flags* {:indent-length 4
+           :pretty-print? true
+           :output-to     nil})
+
+(defmacro with-custom-flags
+  [flags & body]
+  `(binding [*flags* (merge *flags* ~flags)]
+     ~@body))
+
+(defn indent
   "The actual globally used indent in a string form of *X* spaces."
-  (apply str (repeat -indent " ")))
+  []
+  (apply str (repeat (:indent-length *flags*) " ")))
 
 (def ^:dynamic *media-query-parents*
   "Current parents Used for compiling @media to temporarily store parents
@@ -39,19 +57,19 @@
   "Temporarily stores current parents paths for compiling @media and adds
  + 1* globally used indent."
   [-parents- & body]
-  `(binding [~'*media-query-parents* ~-parents-
-             ~'*maybe-at-media-indent* ~indent]
+  `(binding [*media-query-parents* ~-parents-
+             *maybe-at-media-indent* ~(indent)]
      ~@body))
 
 (defmacro in-keyframes-context
   "Temporarily adds extra + 1* globally used indent for compiling @keyframes."
   [& body]
-  `(binding [~'*extra-keyframes-indent* ~indent]
+  `(binding [*extra-keyframes-indent* ~(indent)]
      ~@body))
 
 (defmacro in-params-context
   [& body]
-  `(binding [~'*in-params-context* true]
+  `(binding [*in-params-context* true]
      ~@body))
 
 (declare compile-expression
@@ -252,7 +270,7 @@
     (->> attributes-map compile-attributes-map
          (map util/str-colonjoin)
          (map #(str *extra-keyframes-indent* *maybe-at-media-indent* % ";"))
-         (str/join (str "\n" indent *maybe-at-media-indent*))
+         (str/join (str "\n" (indent) *maybe-at-media-indent*))
          (str *extra-keyframes-indent*))))
 
 (defmulti compile-at-rule
@@ -307,8 +325,8 @@
 (defmethod compile-at-rule "font-face"
   [{:keys [value]}]
   (let [compiled-params (->> value (map attr-map-to-css)
-                             (str/join (str "\n" indent)))]
-    (str "@font-face {\n" indent compiled-params "\n}")))
+                             (str/join (str "\n" (indent))))]
+    (str "@font-face {\n" (indent) compiled-params "\n}")))
 
 (defmethod compile-at-rule "keyframes"
   [{:keys [value]}]
@@ -472,7 +490,7 @@
         at-keyframes (compile-css-record at-keyframes)
         :else (when params (let [compiled-selectors (compile-selectors paths)
                                  compiled-params (attr-map-to-css params)]
-                             (str compiled-selectors " {\n" indent compiled-params "\n" *maybe-at-media-indent* "}")))))
+                             (str compiled-selectors " {\n" (indent) compiled-params "\n" *maybe-at-media-indent* "}")))))
 
 (defn compile-all-selectors-params-combinations
   "Given a prepared hiccup vector (with precalculated and simplified combinations of all
@@ -501,87 +519,18 @@
             expanded-list)))
 
 (defn css
-  "Generates CSS from a list (of lists/lazy-seqs of lists...) of hiccup vectors."
-  [css-hiccup-list]
-  (->> css-hiccup-list (expand-hiccup-list-for-compilation nil [])
-       simplify-prepared-expanded-hiccup
-       compile-all-selectors-params-combinations))
+  "Generates CSS from a hiccup vectors list. If pretty-print? is set to false,
+  compresses it as well. Then saves the compiled CSS string to a given file path.
 
-(defn compressed-css [css-hiccup-list]
-  (->> css-hiccup-list css
-       compression/compress))
-
-(defn generate-and-save-css [css-hiccup-list]
-  (->> (css css-hiccup-list)
-       (spit "C:\\Users\\JanSuran\\Documents\\somecss.txt")))
-
-(defn css-time [x]
-  (time (let [_ (css x)])))
-
-(defn css-time* [x]
-  (time (let [_ (compressed-css x)])))
-
-(at-rules/defkeyframes blink
-                       [(u/percent 0) {:opacity                   0
-                                       :animation-timing-function "cubic-bezier(.4,.0,.8,.8)"
-                                       :animation-direction       :reverse}]
-                       [(u/percent 10) {:opacity 1}]
-                       [(u/percent 50) {:opacity                   1
-                                        :animation-timing-function "cubic-bezier(.4,.0,.8,.8)"}]
-                       [(u/percent 60) {:opacity 0}]
-                       [(u/percent 100) {:opacity 0}])
-
-(at-rules/defkeyframes fade
-                       [(u/percent 0) {:opacity                   0
-                                       :animation-timing-function "cubic-bezier(.4,.0,.8,.8)"
-                                       :animation-direction       :reverse}]
-                       [(u/percent 50) {:opacity                   1
-                                        :animation-timing-function "cubic-bezier(.4,.0,.8,.8)"}]
-                       [(u/percent 100) {:opacity 0}])
-
-(def styles2
-  (list
-    (at-rules/at-font-face {:src         "url(https://webfonts-xyz.org)"
-                            :font-family "Source Sans Pro VF"}
-                           {:src         "url(https://webfonts-api.com)"
-                            :font-weight [[400 500 600 700 800 900]]}
-                           {:font-family "Roboto"})
-    blink
-    fade
-    [:.someselector
-     [:.abc :#mno {:height         (u/vw 25)
-                   :width          (u/vh 20)
-                   :animation-name fade}
-      [:.def :.ghi {:width :something-else}]
-      (at-rules/at-media {:min-width (u/px 500)
-                          :max-width (u/px 1000)}
-                         [:& {:margin-top     (u/px 15)
-                              :animation-name blink}]
-                         [:.ghi {:margin "20px"}
-                          [:.jkl {:margin "150pc"}]])]
-     [:.jkl :.kekw (sel/adjacent-sibling :#stu) :#pqr {:width  (u/percent 15)
-                                                       :height (u/percent 25)}]]))
-
-(def styles
-  (list
-    (list
-      [:.something
-       [:.abc :#def {:width      (u/px 15)
-                     :height     (u/percent 20)
-                     :margin-top [[(u/px 15) 0 (u/px 20) (u/css-rem 3)]]}
-        [:.ghi :#jkl {:height (u/fr 15)}]
-        [:.mno {:height           (u/px 20)
-                :background-color :chocolate}
-         [:.pqr (sel/adjacent-sibling :#stu) {:height (u/vw 25)
-                                              :width  (u/vh 20)}
-          [:.vwx :.yza {:width (u/px 100)}]]
-         (at-rules/at-media {:min-width (u/px 500)
-                             :max-width (u/px 700)}
-                            [:& {:height (u/px 40)}]
-                            [:.abc :#def {:margin-top [[0 (u/px 15) (u/css-rem 3) (u/fr 1)]]}]
-                            [:.ghi {:margin (u/px 20)}
-                             [:.jkl {:margin (u/pc 150)}]]
-                            [:.mno {:overflow :hidden}])]]]
-      [:.something :#something-else :#more-examples! {:width  (u/percent 15)
-                                                      :height (u/percent 25)}]
-      [:*])))
+  You can also call this function without flags whenever you want to to just get
+  the compiled CSS string printed out."
+  ([css-hiccup-list]
+   (css nil css-hiccup-list))
+  ([flags css-hiccup-list]
+   (with-custom-flags flags
+                      (let [{:keys [pretty-print? output-to]} *flags*]
+                        (cond->> css-hiccup-list true (expand-hiccup-list-for-compilation nil [])
+                                 true simplify-prepared-expanded-hiccup
+                                 true compile-all-selectors-params-combinations
+                                 (not pretty-print?) compression/compress
+                                 output-to (spit output-to))))))

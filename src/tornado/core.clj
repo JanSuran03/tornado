@@ -849,10 +849,10 @@
 (def ^{:doc      "A utility function for compilation: all its arguments will be str/joined
                   with \", \" during the compilation.
 
-                  Might be useful for at-rules/at-font-face:
+                  Might be useful for at-font-face:
                   (with-comma
-                     [[(f/url \"/fonts/OpenSans-Regular-webfont.woff2\") (f/css-format :woff2)]]
-                     [[(f/url \"/fonts/OpenSans-Regular-webfont.woff\") (f/css-format :woff)]])
+                     [[(url \"/fonts/OpenSans-Regular-webfont.woff2\") (css-format :woff2)]]
+                     [[(url \"/fonts/OpenSans-Regular-webfont.woff\") (css-format :woff)]])
                   =>
                   \"url(/fonts/OpenSans-Regular-webfont.woff2\") format(\"woff2\"),\n
                    url(/fonts/OpenSans-Regular-webfont.woff) format(\"woff\");"
