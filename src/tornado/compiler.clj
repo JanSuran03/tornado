@@ -235,17 +235,22 @@
   (->> args (map compile-expression) util/str-commajoin))
 
 (defn compile-expression
-  "Compiles an expression: a number, string, symbol or a record. If the
-  expression is a vector of sequential structures, compiles each of the
-  structures and str/joins them with a space."
+  "Compiles an expression: a number, string, symbol or a record. If the expression is
+  a vector of sequential structures, compiles each of the structures and str/joins them
+ with a space. Then, str/joins all these str/spacejoined structures with a comma.
+
+ E.g.:
+ (compile-expression [[(u/px 15) (u/percent 20)] [:red :chocolate]])
+ => \"15px 20%, #FF0000 #D2691E\""
   [expr]
   (cond (get colors/default-colors expr) (get colors/default-colors expr)
         (util/valid? expr) (name expr)
         (number? expr) (util/int* expr)
         (record? expr) (compile-css-record expr)
         (and (vector? expr)
-             (every? sequential? expr)) (->> expr (mapcat #(map compile-expression %))
-                                             util/str-spacejoin)
+             (every? sequential? expr)) (->> expr (map #(->> % (map compile-expression)
+                                                             util/str-spacejoin))
+                                             util/str-commajoin)
         :else (throw (IllegalArgumentException.
                        (str "Not a CSS unit, CSS function, CSS at-rule, nor a string, a number or"
                             " a sequential structure of sequential structures:\n" expr)))))
@@ -537,9 +542,11 @@
 
 (defn repl-css
   [css-hiccup-list]
-  (let [compiled-and-split (->> css-hiccup-list (expand-hiccup-list-for-compilation nil [])
-                                simplify-prepared-expanded-hiccup
-                                compile-all-selectors-params-combinations
-                                str/split-lines)]
-    (doseq [line compiled-and-split]
-      (println line))))
+  (let [compiled-and-split-css-string (->> css-hiccup-list (expand-hiccup-list-for-compilation nil [])
+                                           simplify-prepared-expanded-hiccup
+                                           compile-all-selectors-params-combinations
+                                           str/split-lines)]
+    (println)
+    (doseq [line compiled-and-split-css-string]
+      (println line))
+    (println)))

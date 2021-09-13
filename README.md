@@ -33,10 +33,11 @@ pretty-prints the compiled-css in REPL. Define some example CSS like below and r
     color: #1A1B1F;
     background-color: rgb(100, 150, 200);
 }
+
 => nil
 ```
 
-You can also nest the selectors as you please or even make cartesian product of all combinations:
+You can also nest the selectors as you please or even make cartesian product of all given combinations:
 
 ```clojure
 (-> (list [:#id-1 :#id-2 {:width  (px 500)
@@ -49,6 +50,7 @@ You can also nest the selectors as you please or even make cartesian product of 
     height: 50% !important;
     display: flex;
 }
+
 => nil
 ```
 
@@ -102,6 +104,24 @@ Here is an example usage of @media:
 
 #some-id .some-class {
     margin: 5pt;
+}
+```
+
+```clojure
+(-> (list (at-font-face {:src         [[(url "webfonts/woff2/roboto.woff2") (css-format :woff2)]]}
+                        {:src         [[(url "webfonts/woff/roboto.woff") (css-format :woff)]]
+                         :font-weight :normal})
+          [:.somesel {:someparam :someval}])
+    repl-css)
+
+@font-face {
+    src: url(webfonts/woff2/roboto.woff2) format("woff2");
+    src: url(webfonts/woff/roboto.woff) format("woff");
+    font-weight: normal;
+}
+
+.somesel {
+    someparam: someval;
 }
 ```
 

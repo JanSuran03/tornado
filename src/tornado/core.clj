@@ -1,7 +1,6 @@
 (ns tornado.core
   (:require [tornado.types]
             [tornado.units :as u]
-            [tornado.compiler :refer [compile-expression]]
             [tornado.colors :as colors]
             [tornado.selectors :as sel]
             [tornado.functions :as f]
@@ -845,16 +844,3 @@
                  (important \"yellow\"   =>   \"yellow !important\""
        :arglists '([expr])}
   important common/important)
-
-(def ^{:doc      "A utility function for compilation: all its arguments will be str/joined
-                  with \", \" during the compilation.
-
-                  Might be useful for at-font-face:
-                  (with-comma
-                     [[(url \"/fonts/OpenSans-Regular-webfont.woff2\") (css-format :woff2)]]
-                     [[(url \"/fonts/OpenSans-Regular-webfont.woff\") (css-format :woff)]])
-                  =>
-                  \"url(/fonts/OpenSans-Regular-webfont.woff2\") format(\"woff2\"),\n
-                   url(/fonts/OpenSans-Regular-webfont.woff) format(\"woff\");"
-       :arglists '([& args])}
-  with-comma common/with-comma)
