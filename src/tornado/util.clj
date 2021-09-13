@@ -3,7 +3,7 @@
             [clojure.edn :as edn]
             [clojure.set :as set]
             [clojure.string :as str])
-  (:import (tornado.types CSSUnit CSScomma-join)))
+  (:import (tornado.types CSSUnit)))
 
 (defn str-butlast [s]
   (->> s butlast (apply str)))
@@ -212,17 +212,3 @@
         binding-syms (mapv first w-bindings)
         for-bindings (vec (apply concat w-bindings))]
     `(for ~for-bindings ~binding-syms)))
-
-(defn with-comma
-  "A special utility function for compilation: all the arguments will be str/joined
-  with \", \" during the compilation.
-
-  Example usage:
-  {:src (with-comma
-           [[(f/url \"/fonts/OpenSans-Regular-webfont.woff2\") (f/css-format :woff2)]]
-           [[(f/url \"/fonts/OpenSans-Regular-webfont.woff\") (f/css-format :woff)]])}
-
-  => \"url(/fonts/OpenSans-Regular-webfont.woff2\") format(woff2),\n
-      url(/fonts/OpenSans-Regular-webfont.woff) format(woff\");"
-  [& args]
-  (CSScomma-join. args))

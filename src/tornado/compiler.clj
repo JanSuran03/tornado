@@ -6,13 +6,11 @@
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
             [tornado.units :as u]
-            [tornado.compression :as compression]
-            [clojure.pprint :as pp])
+            [tornado.compression :as compression])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSCombinator CSSAttributeSelector
                           CSSPseudoClass CSSPseudoElement CSSPseudoClassFn CSScomma-join)
-           (clojure.lang Keyword Symbol)
-           (java.util Vector)))
+           (clojure.lang Keyword Symbol)))
 
 (def -indent
   "General indent used globally for indenting new lines. Double size inside media queries."
@@ -223,13 +221,13 @@
   expression is a vector of sequential structures, compiles each of the
   structures and str/joins them with a space."
   [expr]
-  (cond (and (keyword? expr) (get colors/default-colors expr)) (get colors/default-colors expr)
+  (cond (get colors/default-colors expr) (get colors/default-colors expr)
         (util/valid? expr) (name expr)
         (number? expr) (util/int* expr)
         (record? expr) (compile-css-record expr)
         (and (vector? expr)
-             (every? sequential? expr)) (-> (mapcat #(map compile-expression %) expr)
-                                            util/str-spacejoin)
+             (every? sequential? expr)) (->> expr (mapcat #(map compile-expression %))
+                                             util/str-spacejoin)
         :else (throw (IllegalArgumentException.
                        (str "Not a CSS unit, CSS function, CSS at-rule, nor a string, a number or"
                             " a sequential structure of sequential structures:\n" expr)))))
@@ -258,7 +256,8 @@
          (str *extra-keyframes-indent*))))
 
 (defmulti compile-at-rule
-          "Generates CSS from CSSAtRule record: @media, @keyframes, @import, @font-face.
+          "Generates CSS from a CSSAtRule record, at the moment, these are available:
+          @media, @keyframes, @font-face.
 
           E.g.:
           #tornado.types.CSSAtRule{:identifier \"media\"
@@ -418,11 +417,6 @@
                        :else (conj final-expanded-hiccup {:paths  (vec selectors-set)
                                                           :params params})))
                [])))
-
-(defn reduce-invert
-  "Reduce where there is passed [f coll val] instead of [f val coll]."
-  [f coll val]
-  (reduce f val coll))
 
 (defn expand-hiccup-vector
   "Given a (potentially nil) current parents sequence, unevaluated hiccup combinations

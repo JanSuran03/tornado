@@ -6,7 +6,7 @@
             [tornado.selectors :as sel]
             [tornado.functions :as f]
             [tornado.at-rules :as at-rules]
-            [tornado.util :as util])
+            [tornado.common :as common])
   (:import (tornado.types CSSAtRule CSSFunction CSSUnit
                           CSSPseudoClass CSSPseudoElement CSSColor)))
 
@@ -20,8 +20,8 @@
                        Usage of the defined units: (px 15)      ... compiles to \"15px\"
                                                    (percent 33) ... compiles to \"33%\"
 
-                       CSSUnits can be added, subtracted, multiplied or divided by using function calc (and
-                       maybe these 4 symbols, where they are defined just for better search after them in code:
+                       CSSUnits can be added, subtracted, multiplied or divided by using function calc (you can
+                       also use these 4 symbols - they are defined just for better search in code:
 
                        add, sub, mul, div, e.g. (calc (px 500) add 3 mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"."
             :arglists '([unit]
@@ -176,7 +176,7 @@
 (def ^{:doc      "Coming soon"
        :arglists '([arg])} contrast f/contrast)
 
-(def ^{:dpc "A special function for @font-face."
+(def ^{:dpc      "A special function for @font-face."
        :arglists '([arg])} css-format f/css-format)
 
 (def ^{:doc      "Coming soon"
@@ -641,12 +641,12 @@
 ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ;; COLORS
 
-(def ^{:doc "Creates an rgb color."
+(def ^{:doc      "Creates an rgb color."
        :arglists '([red green blue]
                    [[red green blue]])}
   rgb colors/rgb)
 
-(def ^{:doc "Creates an rgba color."
+(def ^{:doc      "Creates an rgba color."
        :arglists '([red green blue]
                    [red green blue alpha]
                    [[red green blue]]
@@ -665,122 +665,159 @@
                    [[hue saturation lightness alpha]])}
   hsla colors/hsla)
 
-(def ^{:doc "Transforms a color to hsl/hsla and rotates its hue by an angle."
+(def ^{:doc      "Transforms a color to hsl/hsla and rotates its hue by an angle."
        :arglists '([color angle])}
   rotate-hue colors/rotate-hue)
 
-(def ^{:doc "Transforms a color to hsl/hsla and rotates its hue by a third clockwise."
+(def ^{:doc      "Transforms a color to hsl/hsla and rotates its hue by a third clockwise."
        :arglists '([color])}
   triad-next colors/triad-next)
 
-(def ^{:doc "Transforms a color to hsl/hsla and rotates its hue by a third counterclockwise."
+(def ^{:doc      "Transforms a color to hsl/hsla and rotates its hue by a third counterclockwise."
        :arglists '([color])}
   triad-previous colors/triad-previous)
 
-(def ^{:doc "Transforms a color to hsl/hsla and rotates its hue by a half."
+(def ^{:doc      "Transforms a color to hsl/hsla and rotates its hue by a half."
        :arglists '([color])}
   opposite-hue colors/opposite-hue)
 
-(def ^{:doc "Transforms a color to hsl/hsla and adds an absolute saturation to it.
-             E.g.: (saturate (rgb 50 100 150) \"15%\"),
-             (saturate :gray 0.35), (saturate \"#123456\" (percent 50))"
+(def ^{:doc      "Transforms a color to hsl/hsla and adds an absolute saturation to it.
+                  E.g.: (saturate (rgb 50 100 150) \"15%\"),
+                  (saturate :gray 0.35), (saturate \"#123456\" (percent 50))"
        :arglists '([color value])}
   saturate colors/saturate)
 
-(def ^{:doc "Transforms a color to hsl/hsla and subtracts an absolute saturation from it.
-             E.g.: (desaturate (rgb 50 100 150) \"15%\"),
-             (desaturate :gray 0.35), (desaturate \"#123456\" (percent 50))"
+(def ^{:doc      "Transforms a color to hsl/hsla and subtracts an absolute saturation from it.
+                  E.g.: (desaturate (rgb 50 100 150) \"15%\"),
+                  (desaturate :gray 0.35), (desaturate \"#123456\" (percent 50))"
        :arglists '([color value])}
   desaturate colors/desaturate)
 
-(def ^{:doc "Transforms a color to hsl/hsla and adds multiplies its saturation with
-             a numeric value.  E.g.: (saturate (rgb 50 100 150) \"15%\"),
-             (saturate :gray 0.35), (saturate \"#123456\" (percent 50))"
+(def ^{:doc      "Transforms a color to hsl/hsla and adds multiplies its saturation with
+                  a numeric value.  E.g.: (saturate (rgb 50 100 150) \"15%\"),
+                  (saturate :gray 0.35), (saturate \"#123456\" (percent 50))"
        :arglists '([color value])}
   scale-saturation colors/scale-saturation)
 
-(def ^{:doc "Transforms a color to hsl/hsla and adds an absolute lightness to it.
-             E.g.: (lighten (rgb 50 100 150) \"15%\"),
-             (lighten :gray 0.35), (lighten \"#123456\" (percent 50))"
+(def ^{:doc      "Transforms a color to hsl/hsla and adds an absolute lightness to it.
+                  E.g.: (lighten (rgb 50 100 150) \"15%\"),
+                  (lighten :gray 0.35), (lighten \"#123456\" (percent 50))"
        :arglists '([color value])}
   lighten colors/lighten)
 
-(def ^{:doc "Transforms a color to hsl/hsla and subtracts an absolute lightness from it. E.g.:
-             (darken (rgb 50 100 150) \"15%\"), (darken :gray 0.35), (darken \"#123456\" (percent 50))"
+(def ^{:doc      "Transforms a color to hsl/hsla and subtracts an absolute lightness from it. E.g.:
+                  (darken (rgb 50 100 150) \"15%\"), (darken :gray 0.35), (darken \"#123456\" (percent 50))"
        :arglists '([color value])}
   darken colors/darken)
 
-(def ^{:doc "Transforms a color to hsl/hsla and adds multiplies its lightness with
-             a numeric value.  E.g.: (scale-lightness (rgb 50 100 150) \"15%\"),
-             (scale-lightness :gray 0.35), (scale-lightness \"#123456\" (percent 50))"
+(def ^{:doc      "Transforms a color to hsl/hsla and adds multiplies its lightness with
+                  a numeric value.  E.g.: (scale-lightness (rgb 50 100 150) \"15%\"),
+                  (scale-lightness :gray 0.35), (scale-lightness \"#123456\" (percent 50))"
        :arglists '([color value])}
   scale-lightness colors/scale-lightness)
 
-(def ^{:doc "Transforms a color to its with-alpha form and adds an absolute alpha to it.
-             E.g.: (opacify(rgb 50 100 150) \"15%\"),
-             (opacify :gray 0.35), (opacify \"#123456\" (percent 50))"
+(def ^{:doc      "Transforms a color to its with-alpha form and adds an absolute alpha to it.
+                  E.g.: (opacify(rgb 50 100 150) \"15%\"),
+                  (opacify :gray 0.35), (opacify \"#123456\" (percent 50))"
        :arglists '([color value])}
   opacify colors/opacify)
 
-(def ^{:doc "Transforms a color to its with-alpha form and subtracts an absolute alpha from it.
-             E.g.: (transparentize (rgb 50 100 150) \"15%\"),
-             (transparentize :gray 0.35), (transparentize \"#123456\" (percent 50))"
+(def ^{:doc      "Transforms a color to its with-alpha form and subtracts an absolute alpha from it.
+                  E.g.: (transparentize (rgb 50 100 150) \"15%\"),
+                  (transparentize :gray 0.35), (transparentize \"#123456\" (percent 50))"
        :arglists '([color value])}
   transparentize colors/transparentize)
 
-(def ^{:doc "Transforms a color to its with-alpha form and adds multiplies its alpha with
-             a numeric value.  E.g.: (scale-alpha (rgb 50 100 150) \"15%\"),
-             (scale-alpha :gray 0.35), (scale-alpha \"#123456\" (percent 50))"
+(def ^{:doc      "Transforms a color to its with-alpha form and adds multiplies its alpha with
+                  a numeric value.  E.g.: (scale-alpha (rgb 50 100 150) \"15%\"),
+                  (scale-alpha :gray 0.35), (scale-alpha \"#123456\" (percent 50))"
        :arglists '([color value])}
   scale-alpha colors/scale-alpha)
 
-(def ^{:doc "Given any number of colors in any form (alpha-hex, non-alpha-hex, rgb, rgba,
-             hsl, hsla), converts them to the most frequent type and mixes them."
+(def ^{:doc      "Given any number of colors in any form (alpha-hex, non-alpha-hex, rgb, rgba,
+                  hsl, hsla), converts them to the most frequent type and mixes them."
        :arglists '([color & more])}
   mix-colors colors/mix-colors)
 
 ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-;; AT-RULES: @media, @font-face, @keyframes, @import. @feature
+;; AT-RULES: at the moment, these are available:
+;;           @media, @font-face, @keyframes
 
-(def ^{:doc "Takes a rules map and any number of media changes and creates a CSSAtRule instance
-             with \"media\" identifier:
+(def ^{:doc      "Takes a rules map and any number of media changes and creates a CSSAtRule instance
+                  with \"media\" identifier:
 
-             (at-media {:screen    :only
-                        :max-width (u/px 600)
-                        :min-width (u/px 800}
-                        [:& {:margin [[(u/px 15 0 (u/px 15) (u/px 20]]
-                        [:.abc #:def {:margin  (u/px 20)
-                                      :padding [[(u/px 30) (u/px 15)]]
-                          [:span {:background-color (colors/mix :red :green)]]
-                        [:footer {:font-size (u/em 1)])
+                  (at-media {:screen    :only
+                           :max-width (u/px 600)
+                           :min-width (u/px 800}
+                           [:& {:margin [[(u/px 15 0 (u/px 15) (u/px 20]]
+                           [:.abc #:def {:margin  (u/px 20)
+                                         :padding [[(u/px 30) (u/px 15)]]
+                             [:span {:background-color (colors/mix :red :green)]]
+                           [:footer {:font-size (u/em 1)])
 
-             The :& selector selects the current element.
-             As you can see, you can nest the affected CSS hiccup how you only want.
-             Special rules values: :screen :only => only screen
+                  The :& selector selects the current element.
+                  As you can see, you can nest the affected CSS hiccup how you only want.
+                  Special rules values: :screen :only => only screen
                                    :screen true  => screen
                                    :screen false => not screen
 
-             {:screen    true
-              :speech    false
-              :max-width (u/px 600)
-              :min-width (u/px 800}
-              => @media screen and not speech and (min-width: 600px) and (max-width: 600px) {..."
+                  {:screen    true
+                   :speech    false
+                   :max-width (u/px 600)
+                   :min-width (u/px 800}
+                   => @media screen and not speech and (min-width: 600px) and (max-width: 800px) {..."
        :arglists '([rules & changes])}
   at-media at-rules/at-media)
 
-(def at-font-face at-rules/at-font-face)
+(def ^{:doc "Can be used for more convenient describing of @font-face. This is how example
+             props-maps look like:
+
+             {:src         (with-comma
+                              [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]]
+                              [[(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]])
+              :font-family \"Roboto\"
+              :font-weight :normal
+              :font-style  :italic}
+
+              This function can receive any number of props maps so that you can also write
+              the example above this way:
+
+              {:src         [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]]}
+              {:src         [[(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]]
+                            :font-family \"Roboto\"
+                            :font-weight :normal
+                            :font-style  :italic}"
+       :arglists '([& props-maps])}
+  at-font-face at-rules/at-font-face)
 
 ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-;; UTILITY FUNCTIONS
+;; COMMON UTILITY FUNCTIONS
 
-(def ^{:doc "A special utility function for compilation: all the arguments will be str/joined
-             with \", \" during the compilation.
+(def ^{:doc      "Given a sequence of grid-rows sequences, where each the element is represented by
+                  a keyword, a string or a symbol, return a grid-areas string:
 
-             Example usage:
-             (with-comma
-                [[(url \"/fonts/OpenSans-Regular-webfont.woff2\") (css-format :woff2)]]
-                [[(url \"/fonts/OpenSans-Regular-webfont.woff\") (css-format :woff)]])}
+                  (grid-areas [(repeat 3 :header) [:. :content :.] (repeat 3 :footer)])
+                  Output CSS string: ``\"header header header\" \". content .\" \"footer footer footer\"``"
+       :arglists '([[first-row & more :as all-rows]])}
+  grid-areas common/grid-areas)
 
-             => \"url(/fonts/OpenSans-Regular-webfont.woff2) format(\"woff2\"),\n
-                 url(/fonts/OpenSans-Regular-webfont.woff) format(\"woff\")\""
-       :arglists '([& args])} with-comma util/with-comma)
+(def ^{:doc      "When the expression is compiled, \" !important\" is appended to it:
+
+                 (important [(repeat 3 :auto)])   =>   \"auto auto auto !important\"
+                 (important :none   =>   \"none !important\"
+                 (important \"yellow\"   =>   \"yellow !important\""
+       :arglists '([expr])}
+  important common/important)
+
+(def ^{:doc      "A utility function for compilation: all its arguments will be str/joined
+                  with \", \" during the compilation.
+
+                  Might be useful for at-rules/at-font-face:
+                  (with-comma
+                     [[(f/url \"/fonts/OpenSans-Regular-webfont.woff2\") (f/css-format :woff2)]]
+                     [[(f/url \"/fonts/OpenSans-Regular-webfont.woff\") (f/css-format :woff)]])
+                  =>
+                  \"url(/fonts/OpenSans-Regular-webfont.woff2\") format(\"woff2\"),\n
+                   url(/fonts/OpenSans-Regular-webfont.woff) format(\"woff\");"
+       :arglists '([& args])}
+  with-comma common/with-comma)

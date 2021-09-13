@@ -25,17 +25,30 @@
    :speech    false
    :max-width (u/px 600)
    :min-width (u/px 800}
-   => @media screen and not speech and (min-width: 600px) and (max-width: 600px) {..."
+   => @media screen and not speech and (min-width: 600px) and (max-width: 800px) {..."
   [rules & changes]
   (CSSAtRule. "media" {:rules   rules
                        :changes changes}))
 
 (defn at-font-face
-  "(at-font-face {:font-family \"Source Sans Pro\"
-                  :src [\"url1
-                        \"url2
-                        ...]
-                  :font-weight :bold})"
+  "Can be used for more convenient describing of @font-face. This is how example
+  props-maps look like:
+
+  {:src         (common/with-comma
+                   [[(f/url \"../webfonts/woff2/roboto.woff2\") (f/css-format :woff2)]]
+                   [[(f/url \"../webfonts/woff/roboto.woff\") (f/css-format :woff)]])
+   :font-family \"Roboto\"
+   :font-weight :normal
+   :font-style  :italic}
+
+  This function can receive any number of props maps so that you can also write
+  the example above this way:
+
+  {:src         [[(f/url \"../webfonts/woff2/roboto.woff2\") (f/css-format :woff2)]]}
+  {:src         [[(f/url \"../webfonts/woff/roboto.woff\") (f/css-format :woff)]]
+   :font-family \"Roboto\"
+   :font-weight :normal
+   :font-style  :italic}"
   [& props-maps]
   (CSSAtRule. "font-face" props-maps))
 
