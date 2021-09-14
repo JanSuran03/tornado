@@ -35,9 +35,8 @@
   "Can be used for more convenient describing of @font-face. This is how example
   props-maps look like:
 
-  {:src         (common/with-comma
-                   [[(f/url \"../webfonts/woff2/roboto.woff2\") (f/css-format :woff2)]]
-                   [[(f/url \"../webfonts/woff/roboto.woff\") (f/css-format :woff)]])
+  {:src         [[(f/url \"../webfonts/woff2/roboto.woff2\") (f/css-format :woff2)]
+                 [(f/url \"../webfonts/woff/roboto.woff\") (f/css-format :woff)]])
    :font-family \"Roboto\"
    :font-weight :normal
    :font-style  :italic}

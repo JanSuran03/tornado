@@ -131,8 +131,9 @@ An example usage of @font-face:
 ```
 
 If you look at the previous example,
-Note that you can put more items of tornado hiccup to a list and the compiler will evaluate each item of
+Note that you can put more items of Tornado hiccup to a list and the compiler will evaluate each item of
 the list. Does not work for items nested in vectors, but it works if above are only lists and sequences.
+
 => You can create a separate namespace, e.g. my-project.css.core, where you can refer all the CSS hiccups:
 (def styles (list ns1/styles ns2/styles ns3/styles ...))   => This makes managing all the CSS much simpler.
 
@@ -172,6 +173,52 @@ Here is an example how you can do arithmetics with units:
 
 ;; Ah yes, compile-expression, another useful function to have!
 ;; Available special keywords: :add, :sub, :mul, :div
+```
+
+Example of CSS keyframes in Tornado:
+
+```clojure
+(defkeyframes fade-in-opacity
+              [(percent 0) {:opacity 0}]
+              [(percent 25) {:opacity 0.1}]
+              [(percent 50) {:opacity 0.25}]
+              [(percent 75) {:opacity 0.5}]
+              [(percent 100) {:opacity 1}])
+
+=> #'user/fade-in-opacity
+
+(-> (list fade-in-opacity
+          [:.abc {:width (px 100)}
+           [:#def {:animation-name  fade-in-opacity
+                   :animation-delay (ms 300)}]])
+    repl-css)
+
+@keyframes fade-in-opacity {
+    0% {
+       opacity: 0;
+    }
+    25% {
+         opacity: 0.1;
+    }
+    50% {
+        opacity: 0.25;
+    }
+    75% {
+        opacity: 0.5;
+    }
+    100% {
+         opacity: 1;
+    }
+}
+
+.abc {
+    width: 100px;
+}
+
+.abc #def {
+    animation-name: fade-in-opacity;
+    animation-delay: 300ms;
+}
 ```
 
 ***More examples coming very soon!***

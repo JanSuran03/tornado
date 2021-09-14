@@ -367,17 +367,23 @@
                   (= Cmax R') (* 60 (mod (/ (- G' B') Crange) 6))
                   (= Cmax G') (* 60 (+ (/ (- B' R') Crange) 2))
                   :else (* 60 (+ (/ (- R' G') Crange) 4)))
-        lightness (util/avg Cmax Cmin)
+        lightness (util/average Cmax Cmin)
         saturation (if (zero? Crange) 0 (/ Crange (- 1 (Math/abs (float (- (* 2 lightness) 1))))))
         [H S L] [(Math/round (float hue)) (util/round saturation) (util/round lightness)]]
     (if (rgb? rgb-color)
       (hsl H S L)
       (hsla H S L alpha))))
 
-(defn- unknown-color-type [{:keys [type] :or {type "undefined"} :as color}]
+(defn- unknown-color-type
+  "Throws an exception when the color type is not supported."
+  [{:keys [type] :or {type "undefined"} :as color}]
   (throw (IllegalArgumentException. (str "Unknown color type: " type " of color " color))))
 
-(defn- try-keyword-color [color]
+(defn- try-keyword-color
+  "Tries to get a hex-code color from default-colors map under the given key. If it does
+  not find the color, throws an expception. Otherwise, this function returns the color
+  in hex code."
+  [color]
   (if-let [color' (get default-colors color)]
     color'
     (unknown-color-type color)))
@@ -519,7 +525,8 @@
   [color value] (-> color with-alpha (update-in [:value :alpha] #(range-0-1 (* % value)))))
 
 (defmulti -mix-colors
-          "Calls a relevant function to compute the average of more colors."
+          "Calls a relevant function to compute the average of more colors. Presumes that
+          the colors are converted to the same type by a function 'mix-colors'"
           (fn [color-type _]
             color-type))
 

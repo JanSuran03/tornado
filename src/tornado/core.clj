@@ -842,9 +842,8 @@
 (def ^{:doc      "Can be used for more convenient describing of @font-face. This is how example
              props-maps look like:
 
-             {:src         (with-comma
-                              [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]]
-                              [[(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]])
+             {:src         [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]
+                            [(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]]
               :font-family \"Roboto\"
               :font-weight :normal
               :font-style  :italic}

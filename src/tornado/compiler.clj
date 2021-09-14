@@ -31,6 +31,8 @@
            :output-to     nil})
 
 (defmacro with-custom-flags
+  "Given custom-flags & body, temporarily merges default *flags* with the given flags
+  and executes the body."
   [flags & body]
   `(binding [*flags* (merge *flags* ~flags)]
      ~@body))
@@ -70,6 +72,8 @@
      ~@body))
 
 (defmacro in-params-context
+  "A macro to bind *in-params-context* to true, which causes a css at-rule keyframes
+  record to be compiled to {:anim-name} (assuming it is for :animation-name)"
   [& body]
   `(binding [*in-params-context* true]
      ~@body))

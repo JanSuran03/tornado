@@ -32,7 +32,7 @@
   (defcssfn calc spacejoin)
   (calc (u/px 200) add 3 mul (u/percent 20))   ... compiles to   \"calc(200px + 3 * 20%)\"
 
-  The arity(3) can be used like this:
+  The arity(3) can be used like this to combine both previous features of the arity(2):
   (defcssfn my-clj-fn \"css-fn\" spacejoin)
   (my-clj-fn (u/s 20) (u/ms 500))   ... compiles to   \"css-fn(20s 500ms)\""
   ([fn-name]

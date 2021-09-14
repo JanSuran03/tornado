@@ -6,8 +6,10 @@
             [clojure.string :as str])
   (:import (tornado.types CSSUnit)))
 
-(defn str-butlast [s]
-  (->> s butlast (apply str)))
+(defn str-butlast
+  "Returns the given string without the last character."
+  [s]
+  (subs s 0 (dec (count s))))
 
 (defn valid?
   "Returns true if the argument is a symbol, a keyword or a string."
@@ -121,10 +123,6 @@
   (let [avg (apply -average args)]
     (round avg)))
 
-(def avg
-  "Alias for \"average\". Takes any number of args, directly, not in a sequence."
-  average)
-
 (defn apply-avg
   "Same as (apply average coll)"
   [coll]
@@ -136,10 +134,13 @@
   (<= (min n1 n2) value (max n1 n2)))
 
 ;; HEXCODE TO DECIMAL NUMBERS CONVERSION, USED FOR HEX->RGBA AND RGBA->HEX COLOR CONVERSIONS
+
 (def ^:private base16-chars "0123456789ABCDEF")
 (def ^:private uppercase-base16-set (set "ABCDEF"))
 (def ^:private lowercase-uppercase-difference (- (int \a) (int \A)))
-(defn- toLower [c]
+(defn- toLower
+  "Characters [A-F] will be transformed to [a-f], other chars will be returned unchanged."
+  [c]
   (if (contains? uppercase-base16-set c)
     (char (+ (int c) lowercase-uppercase-difference))
     c))
@@ -162,9 +163,12 @@
 
 (def base10->double-hex-map (set/map-invert double-hex->base10-map))
 
-(defn double-hex? [expr]
-  (and (even? (count expr))
-       (let [pairs (->> expr (partition 2) (map #(apply str %)))]
+(defn double-hex?
+  "Returns true if every 2-characters substring of the given string expression
+  matches to the hexadecimal characters."
+  [str-expr]
+  (and (even? (count str-expr))
+       (let [pairs (->> str-expr (partition 2) (map #(apply str %)))]
          (every? double-hex->base10-map pairs))))
 
 (defn str-spacejoin
