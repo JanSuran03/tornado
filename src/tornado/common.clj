@@ -1,7 +1,6 @@
 (ns tornado.common
   (:require [clojure.string :as str]
-            [tornado.util :as util])
-  (:import (tornado.types CSScomma-join)))
+            [tornado.util :as util]))
 
 (defn grid-areas
   "Given a sequence of grid-rows sequences, where each the element is represented by

@@ -43,11 +43,11 @@
   paths for compiling @media changes."
   nil)
 
-(def ^:dynamic *maybe-at-media-indent*
+(def ^:dynamic *at-media-indent*
   "Extra indentation when nested inside a media query."
   "")
 
-(def ^:dynamic *extra-keyframes-indent*
+(def ^:dynamic *keyframes-indent*
   "Extra indentation when nested inside keyframes."
   "")
 
@@ -58,13 +58,13 @@
  + 1* globally used indent."
   [-parents- & body]
   `(binding [*media-query-parents* ~-parents-
-             *maybe-at-media-indent* ~(indent)]
+             *at-media-indent* ~(indent)]
      ~@body))
 
 (defmacro in-keyframes-context
   "Temporarily adds extra + 1* globally used indent for compiling @keyframes."
   [& body]
-  `(binding [*extra-keyframes-indent* ~(indent)]
+  `(binding [*keyframes-indent* ~(indent)]
      ~@body))
 
 (defmacro in-params-context
@@ -148,7 +148,7 @@
   [selectors-sequences]
   (let [compiled-selectors (->> selectors-sequences (map compile-selectors-sequence)
                                 util/str-commajoin)]
-    (str *maybe-at-media-indent* compiled-selectors)))
+    (str *at-media-indent* compiled-selectors)))
 
 (defmulti compile-color
           "Generates CSS from a color, calls a relevant method to do so depending on the
@@ -281,9 +281,9 @@
   (when attributes-map
     (->> attributes-map compile-attributes-map
          (map util/str-colonjoin)
-         (map #(str *extra-keyframes-indent* *maybe-at-media-indent* % ";"))
-         (str/join (str "\n" (indent) *maybe-at-media-indent*))
-         (str *extra-keyframes-indent*))))
+         (map #(str *keyframes-indent* *at-media-indent* % ";"))
+         (str/join (str "\n" (indent) *at-media-indent*))
+         (str *keyframes-indent*))))
 
 (defmulti compile-at-rule
           "Generates CSS from a CSSAtRule record, at the moment, these are available:
@@ -350,9 +350,9 @@
                                                  (let [compiled-progress (compile-expression progress)
                                                        compiled-params (attr-map-to-css params)]
                                                    (str compiled-progress " {\n"
-                                                        compiled-params "\n" *extra-keyframes-indent* "}"))))
-                                   (str/join (str "\n" *extra-keyframes-indent*))
-                                   (str *extra-keyframes-indent*))]
+                                                        compiled-params "\n" *keyframes-indent* "}"))))
+                                   (str/join (str "\n" *keyframes-indent*))
+                                   (str *keyframes-indent*))]
           (str "@keyframes " anim-name " {\n" compiled-frames "\n}"))))))
 
 (defn expand-seqs
@@ -502,7 +502,7 @@
         at-keyframes (compile-css-record at-keyframes)
         :else (when params (let [compiled-selectors (compile-selectors paths)
                                  compiled-params (attr-map-to-css params)]
-                             (str compiled-selectors " {\n" (indent) compiled-params "\n" *maybe-at-media-indent* "}")))))
+                             (str compiled-selectors " {\n" (indent) compiled-params "\n" *at-media-indent* "}")))))
 
 (defn compile-all-selectors-params-combinations
   "Given a prepared hiccup vector (with precalculated and simplified combinations of all
