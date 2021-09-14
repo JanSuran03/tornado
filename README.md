@@ -12,9 +12,8 @@ The Tornado library is not designed to work in ClojureScript.
 
 If you are familiar with [garden](https://github.com/noprompt/garden), this library has similar syntax.
 
-First, you have to define a list of hiccup vectors that should be compiled. Refer a namespace tornado.core, where you
-have available literally everything useful in this library. Define some example CSS like below and run
-(repl-css ~your-stylesheet~):
+First, you have to create a list of hiccup-like CSS structure that will be compiled. Refer a namespace ***tornado.core***, where you
+have available everything useful in this library. Define some example CSS like below and run it with a function "repl-css":
 
 ```clojure
 (require '[tornado.core :refer :all])
@@ -175,15 +174,14 @@ Here is an example how you can do arithmetics with units:
 ;; Available special keywords: :add, :sub, :mul, :div
 ```
 
-```clojure
-more examples coming soon
-```
+***More examples coming very soon!***
 
 # Plans for the future
 
-Currently, I am working on a hot-code reloading plugin, similar to [lein-garden](https://github.com/noprompt/lein-garden).
+Since this library already has a lot of features, but it is not too practical for a project where you should recompile
+the hiccup every few seconds, I will now be working on a hot-code reloading plugin, similar to [lein-garden](https://github.com/noprompt/lein-garden).
 More detailed and better documentations are coming later. Everything takes time, especially when I want the documentations
-to be simple, clear and useful.
+and the whole library to be simple, clear, flexible and comfortable.
 
 ## Contact
 
@@ -194,4 +192,4 @@ always try to reply as soon as possible.
 
 Copyright © 2021 Jan Šuráň
 
-Distributed under the [Eclipse Public License](#http://www.eclipse.org/legal/epl-2.0.)
+Distributed under the [Eclipse Public License](#http://www.eclipse.org/legal/epl-2.0.) (same as Clojure)

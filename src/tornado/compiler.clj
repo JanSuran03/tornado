@@ -1,4 +1,6 @@
 (ns tornado.compiler
+  "The Tornado compiler, where you should only care about these 3 functions:
+  css, repl-css, compile-expression."
   (:require [tornado.types]
             [tornado.at-rules :as at-rules]
             [tornado.util :as util]

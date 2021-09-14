@@ -1,4 +1,5 @@
 (ns tornado.units
+  "A namespace for defining CSS units."
   (:require [tornado.types])
   (:import (tornado.types CSSUnit)))
 

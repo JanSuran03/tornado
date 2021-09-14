@@ -1,4 +1,5 @@
 (ns tornado.functions
+  "Everything related to CSS functions."
   (:require [tornado.types]
             [tornado.util :as util]
             [tornado.compiler :refer [compile-expression]])

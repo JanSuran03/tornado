@@ -1,4 +1,5 @@
 (ns tornado.util
+  "Utility functions used internally in Tornado."
   (:require [tornado.types]
             [clojure.edn :as edn]
             [clojure.set :as set]
@@ -136,15 +137,12 @@
 
 ;; HEXCODE TO DECIMAL NUMBERS CONVERSION, USED FOR HEX->RGBA AND RGBA->HEX COLOR CONVERSIONS
 (def ^:private base16-chars "0123456789ABCDEF")
-(def ^:private lowercase-base16 "abcdef")
 (def ^:private uppercase-base16-set (set "ABCDEF"))
 (def ^:private lowercase-uppercase-difference (- (int \a) (int \A)))
 (defn- toLower [c]
   (if (contains? uppercase-base16-set c)
     (char (+ (int c) lowercase-uppercase-difference))
     c))
-(def base16->base10-map (merge (zipmap base16-chars (range 16))
-                               (zipmap lowercase-base16 (range 10 16))))
 
 (def double-hex->base10-map
   "A precalculated map for very fast conversions of hexadecimal strings in format \"xx\"

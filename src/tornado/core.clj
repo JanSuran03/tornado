@@ -1,4 +1,6 @@
 (ns tornado.core
+  "The core tornado namespace, where every single function or value you could
+  need is defined and documented in this namespace."
   (:require [tornado.units :as u]
             [tornado.colors :as colors]
             [tornado.compiler :as compiler]
@@ -906,7 +908,7 @@
        :arglists '([[first-row & more :as all-rows]])}
   grid-areas common/grid-areas)
 
-(def ^{:doc      "When the expression is compiled, \" !important\" is appended to it:
+(def ^{:doc      "After the expression is compiled, \" !important\" is appended to it:
 
                  (important [(repeat 3 :auto)])   =>   \"auto auto auto !important\"
                  (important :none   =>   \"none !important\"

@@ -1,4 +1,6 @@
 (ns tornado.selectors
+  "Everything related to CSS selectors - standard selectors, attribute selectors,
+   pseudoelement selectors, functions for the compiler etc."
   (:require [tornado.types]
             [tornado.util :as util]
             [clojure.string :as str])

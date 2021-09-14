@@ -1,4 +1,6 @@
 (ns tornado.common
+  "Common CSS functions which do not belong to any of the other namespaces
+  but might be useful in some cases."
   (:require [clojure.string :as str]
             [tornado.util :as util]))
 
@@ -23,7 +25,7 @@
                (str "Vectors in all grid rows must have the same length:\n" all-rows))))))
 
 (defn important
-  "When the expression is compiled, \" !important\" is appended to it:
+  "After the expression is compiled, \" !important\" is appended to it:
 
   (important [(repeat 3 :auto)]) =>   \"auto auto auto !important\"
   (important :none =>   \"none !important\"

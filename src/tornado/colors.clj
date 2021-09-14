@@ -1,4 +1,6 @@
 (ns tornado.colors
+  "Everything related to colors: Mixing, color function such as rgb(a), hsl(a), color
+  conversions, a map of available default colors, special function for modifying colors."
   (:require [tornado.types]
             [tornado.units]
             [tornado.util :as util]
@@ -309,6 +311,7 @@
              (update <> 3 #(util/int* (/ % 256))))
            (rgba <>)))))
 
+;; this function currently does not have any usage
 (defn rgb->hex
   "Converts an rgb/rgba CSSColor record to a hex-string. Rounds the hex-alpha of
   the color if the color is in rgba format."

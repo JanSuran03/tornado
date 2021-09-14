@@ -1,5 +1,9 @@
 (ns tornado.compression
+  "A namespace for compression of the compiled CSS file."
   (:require [clojure.string :as str]))
+
+;; Yes, I am lazy, and I did not care about this namespace at all. Right now, it is not
+;; my priority to write better RegExps. Maybe I will improve this namespace later.
 
 (defn ^String compress-newlines
   "Transforms newlines to spaces."
