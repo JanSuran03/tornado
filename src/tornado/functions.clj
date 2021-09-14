@@ -95,7 +95,6 @@
 (defcssfn grayscale single-arg)
 (defcssfn hue-rotate single-arg)
 (defcssfn invert single-arg)
-(defcssfn opacity single-arg)
 (defcssfn perspective single-arg)
 (defcssfn rotate single-arg)
 (defcssfn rotateX single-arg)

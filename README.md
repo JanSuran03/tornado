@@ -21,9 +21,9 @@ have available literally everything useful in this library. Define some example 
 => nil
 
 (def styles
-  (list [:#some-id {:width            (px 15)
-                    :color            :font-black
-                    :background-color (rgb 100 150 200)}]))
+  [:#some-id {:width            (px 15)
+              :color            :font-black
+              :background-color (rgb 100 150 200)}])
 => #'user/styles
 
 (repl-css styles)
@@ -40,10 +40,10 @@ have available literally everything useful in this library. Define some example 
 You can also nest the selectors as you please or even make cartesian product of all given combinations:
 
 ```clojure
-(-> (list [:#id-1 :#id-2 {:width  (px 500)
-                          :height :auto}
-           [:.class-1 :.class-2 {:height  (important (percent 50))
-                                :display :flex}]])
+(-> [:#id-1 :#id-2 {:width  (px 500)
+                    :height :auto}
+     [:.class-1 :.class-2 {:height  (important (percent 50))
+                           :display :flex}]]
     repl-css)
 
 #id-2 .class-2, #id-1 .class-1, #id-2 .class-1, #id-1 .class-2 {
@@ -57,9 +57,9 @@ You can also nest the selectors as you please or even make cartesian product of 
 This is how you can use more advanced selectors (pseudoclass selectors in this case, but for pseudoelement selectors, you can use the same syntax):
 
 ```clojure
-(-> (list [:#some-id {:padding (px 10)}
-           [:.nested-class {:color :black}]
-           [hover {:padding [[(px 30) (px 20)]]}]])
+(-> [:#some-id {:padding (px 10)}
+     [:.nested-class {:color :black}]
+     [hover {:padding [[(px 30) (px 20)]]}]])
     repl-css)
 
 #some-id {
@@ -80,12 +80,12 @@ This is how you can use more advanced selectors (pseudoclass selectors in this c
 Here is an example usage of @media:
 
 ```clojure
-(-> (list [:#some-id {:padding (vw 20)}
-           [:.some-class {:margin (pt 5)}
-            (at-media {:screen false
-                       :max-width (px 500)}
-                      [:& {:margin 0}]
-                      [:.some-child {:color (hsl 120 0.5 0.8)}])]])
+(-> [:#some-id {:padding (vw 20)}
+     [:.some-class {:margin (pt 5)}
+      (at-media {:screen    false
+                 :max-width (px 500)}
+                [:& {:margin 0}]
+                [:.some-child {:color (hsl 120 0.5 0.8)}])]])
     repl-css)
 
 #some-id {
@@ -128,17 +128,23 @@ An example usage of @font-face:
 
 ;; Note that the double-nested vector given to :src key first compiles every element of each of the vectors 
 ;; and str-spacejoins them. After that, it str-commajoins each string created by str-spacejoining the individual
-;; vectors. The outer sequence must be a vector, while the inner sequences can be sequences of any type.
+;; vectors. Both the outer and the inner sequences can be sequences of any type.
 ```
+
+If you look at the previous example,
+Note that you can put more items of tornado hiccup to a list and the compiler will evaluate each item of
+the list. Does not work for items nested in vectors, but it works if above are only lists and sequences.
+=> You can create a separate namespace, e.g. my-project.css.core, where you can refer all the CSS hiccups:
+(def styles (list ns1/styles ns2/styles ns3/styles ...))   => This makes managing all the CSS much simpler.
 
 Here is how you can use some special pseudoclass selectors, which take a parameter:
 
 ```clojure
-(-> (list [:.abc {:display               :grid
-                  :grid-template-columns [[:auto :auto]]}
-           [:*
-            [(nth-child :odd) {:justify-self :right}]
-            [(nth-child :even) {:justify-self :left}]]])
+(-> [:.abc {:display               :grid
+            :grid-template-columns [[:auto :auto]]}
+     [:*
+      [(nth-child :odd) {:justify-self :right}]
+      [(nth-child :even) {:justify-self :left}]]]
     repl-css)
 
 .abc {
@@ -168,6 +174,17 @@ Here is an example how you can do arithmetics with units:
 ;; Ah yes, compile-expression, another useful function to have!
 ;; Available special keywords: :add, :sub, :mul, :div
 ```
+
+```clojure
+more examples coming soon
+```
+
+# Plans for the future
+
+Currently, I am working on a hot-code reloading plugin, similar to [lein-garden](https://github.com/noprompt/lein-garden).
+More detailed and better documentations are coming later. Everything takes time, especially when I want the documentations
+to be simple, clear and useful.
+
 ## Contact
 
 Although there are more ways to contact me, for now, suran (dot) orgpad (at) gmail (dot) com is the easiest way. I will

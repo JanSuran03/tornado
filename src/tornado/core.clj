@@ -1,40 +1,56 @@
 (ns tornado.core
-  (:require [tornado.types]
-            [tornado.units :as u]
+  (:require [tornado.units :as u]
             [tornado.colors :as colors]
             [tornado.compiler :as compiler]
             [tornado.selectors :as sel]
             [tornado.functions :as f]
             [tornado.at-rules :as at-rules]
-            [tornado.common :as common])
-  (:import (tornado.types CSSAtRule CSSFunction CSSUnit
-                          CSSPseudoClass CSSPseudoElement CSSColor)))
+            [tornado.common :as common]))
 
 ;; COMPILER FUNCTIONS
-(def compile-expression compiler/compile-expression)
-(def css compiler/css)
-(def repl-css compiler/repl-css)
+
+(def ^{:doc      "Compiles an expression: a number, string, symbol or a record. If the expression is
+                  a vector of sequential structures, compiles each of the structures and str/joins them
+                  with a space. Then, str/joins all these str/spacejoined structures with a comma.
+
+                  E.g.:
+                  (compile-expression [[(u/px 15) (u/percent 20)] [:red :chocolate]])
+                  => \"15px 20%, #FF0000 #D2691E\""
+       :arglists '([expr])}
+  compile-expression compiler/compile-expression)
+
+(def ^{:doc      "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
+                  vectors (and/or with @keyframes, @font-face). If pretty-print? is set to false,
+                  compresses it as well. Then saves the compiled CSS string to a given file path.
+
+                  You can also call this function without flags whenever you want to to just get
+                  the whole compiled CSS string printed out."
+       :arglists '([css-hiccup] [flags css-hiccup])}
+  css compiler/css)
+
+(def ^{:doc      "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
+                  vectors (and/or with @keyframes, @font-face). It then pretty prints the output string,
+                  which is useful for evaluating any tornado code in REPL."
+       :arglists '([css-hiccup])}
+  repl-css compiler/repl-css)
 
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 ;; UNITS
 
 (defmacro ^{:doc      "Creates a unit function which takes 1 argument and creates a CSSUnit record for future
-                       compilation. Defunit can either take 1 arg: (defunit px), 2 args: (defunit percent \"%\")
-                       or 3 args: (defunit hs \"hs\" \"A time unit, halfsecond.\") (optional doc, but the 2nd arg
-                       has to be given like in this case as well.
+                       compilation. Defunit can take 1 arg: (defunit px)
+                                                 or 2 args: (defunit percent \"%\").
 
-                       Usage of the defined units: (px 15)      ... compiles to \"15px\"
-                                                   (percent 33) ... compiles to \"33%\"
+                       Usage of the defined units: (px 15)       ...  compiles to \"15px\"
+                                                   (percent 33)  ...  compiles to \"33%\"
 
                        CSSUnits can be added, subtracted, multiplied or divided by using function calc (you can
                        also use these 4 keywords - they are defined just for better search in code:
                        :add, :sub, :mul, :div
 
                        E.g. (calc (px 500) :add 3 :mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"."
-            :arglists '([unit]
-                        [identifier css-unit]
-                        [identifier css-unit doc])}
+            :arglists '([unit] [identifier css-unit])}
   defunit
   [& args]
   `(u/defunit ~@args))
@@ -163,9 +179,7 @@
 
                        you can also give defcssfn 3 arguments, where the 2nd one will be a special string
                        for translation to CSS and the 3rd one the compiling function."
-            :arglists '([fn-name]
-                        [fn-name css-fn-or-fn-tail]
-                        [clojure-fn-name compiles-to compile-fn])}
+            :arglists '([fn-name] [fn-name css-fn-or-fn-tail] [clojure-fn-name compiles-to compile-fn])}
   defcssfn
   [& args]
   `(f/defcssfn ~@args))
@@ -195,9 +209,6 @@
 
 (def ^{:doc      "Coming soon"
        :arglists '([arg])} invert f/invert)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} opacity f/opacity)
 
 (def ^{:doc      "Coming soon"
        :arglists '([arg])} perspective f/perspective)
@@ -364,44 +375,38 @@
 (def ^{:doc      "An attribute selector which selects all elements which have a given
                   attribute with any value, or all html elements on/below the current
                   nested selectors level which have a given attribute with any value."
-       :arglists '([attribute]
-                   [tag attribute])} has-attr sel/has-attr)
+       :arglists '([attribute] [tag attribute])}
+  has-attr sel/has-attr)
 
 (def ^{:doc      "Selects all descendants of a html tag which have a given parameter with a given value."
-       :arglists '([attribute subvalue]
-                   [tag attribute subvalue])}
+       :arglists '([attribute subvalue] [tag attribute subvalue])}
   has-val sel/has-val)
 
 (def ^{:doc      "Selects all descendant elements which have a given parameter with a value containing
                   a given word (substring is not enough - a matching word separated by commas or spaces)."
-       :arglists '([attribute subvalue]
-                   [tag attribute subvalue])}
+       :arglists '([attribute subvalue] [tag attribute subvalue])}
   contains-word sel/contains-word)
 
 (def ^{:doc      "Selects all descendant elements which have a given parameter with a value starting with
                   a given word (substring is not enough - a matching word separated by commas or spaces)."
-       :arglists '([attribute subvalue]
-                   [tag attribute subvalue])}
+       :arglists '([attribute subvalue] [tag attribute subvalue])}
   starts-with-word sel/starts-with-word)
 
 (def ^{:doc      "Selects all descendant elements which have a given parameter with a value starting with
                   a given substring (unlike the contains-word selector, the substring does not have to be
                   a whole matching word."
-       :arglists '([attribute subvalue]
-                   [tag attribute subvalue])}
+       :arglists '([attribute subvalue] [tag attribute subvalue])}
   starts-with sel/starts-with)
 
 (def ^{:doc      "Selects all descendant elements which have a given parameter with a value ending
                   with a given substring. The substring does not have to be a whole matching word."
-       :arglists '([attribute subvalue]
-                   [tag attribute subvalue])}
+       :arglists '([attribute subvalue] [tag attribute subvalue])}
   ends-with sel/ends-with)
 
 (def ^{:doc      "Selects all descendant elements which have a given parameter with a value containing
                   a given substring (unlike the contains-word selector, the substring does not have to
                   be a whole word)."
-       :arglists '([attribute subvalue]
-                   [tag attribute subvalue])}
+       :arglists '([attribute subvalue] [tag attribute subvalue])}
   contains-subs sel/contains-subs)
 
 ;; pseudoclass selectors
@@ -420,106 +425,170 @@
                        Defpseudoclass can also take 2 parameters, where the 2nd one will be the translation
                        to CSS to avoid collisions between Clojure and CSS -
                        e.g.(defpseudolass css-empty \"empty\")."
-            :arglists '([pseudoclass]
-                        [indetifier css-pseudoclass])}
+            :arglists '([pseudoclass] [indetifier css-pseudoclass])}
   defpseudoclass
   [& args]
   `(sel/defpseudoclass ~@args))
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"active\". Used as a value, e.g.:
+             [:.some-sel {:width (px 100)}
+              [hover {:width (px 120)}]]"}
   active sel/active)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"checked\". Used as a value, e.g.:
+             [:.some-sel {:border [[(px 1) :solid :red]]}
+              [checked {:border [[(px 1) :solid :crimson]]}]]"}
   checked sel/checked)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"default\". Used as a value, e.g.:
+             [:.some-sel {:width (px 100)}
+              [default {:width (px 120)}]]"}
   default sel/default)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"disabled\". Used as a value, e.g.:
+             [:.some-sel {:background-color :white}
+              [disabled {:background-color :gray}]]"}
   disabled sel/disabled)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"css-empty\". Used as a value, e.g.:
+             [:.some-sel {:padding (px 20)}
+              [css-empty {:padding (px 5)}]]"}
   css-empty sel/css-empty)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"enabled\". Used as a value, e.g.:
+             [:.some-sel {:background-color :gray}
+              [enabled {:background-color :white}]]"}
   enabled sel/enabled)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"css-first\". Used as a value, e.g.:
+             [:.some-sel
+              [css-first {:transform (scale 1.1)}]]"}
   css-first sel/css-first)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"first-child\". Used as a value, e.g.:
+             [:.some-sel
+              [first-child {:transform (scale 1.1)}]]"}
   first-child sel/first-child)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"first-of-type\". Used as a value, e.g.:
+             [:.some-sel
+              [first-of-type {:transform (scale 1.1)}]]"}
   first-of-type sel/first-of-type)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"fullscreen\". Used as a value, e.g.:
+             [:.some-sel
+              [fullscreen {:background-color :gray}]]"}
   fullscreen sel/fullscreen)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"focus\". Used as a value, e.g.:
+             [:.some-sel
+              [focus {:background-color :blue}]]"}
   focus sel/focus)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"hover\". Used as a value, e.g.:
+             [:.some-sel {:width (px 100)}
+              [hover {:width (px 120)}]]"}
   hover sel/hover)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"indeterminate\". Used as a value, e.g.:
+             [:.some-sel {:width (px 100)}
+              [indeterminate {:width (px 120)}]]"}
   indeterminate sel/indeterminate)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"in-range\". Used as a value, e.g.:
+             [:.some-sel
+              [in-range {:border [[(px 2) :solid :red]]}]]"}
   in-range sel/in-range)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"invalid\". Used as a value, e.g.:
+             [:.some-sel {:width (px 100)}
+              [invalid
+               [:.err-msg {:display :flex}]]"}
   invalid sel/invalid)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"last-child\". Used as a value, e.g.:
+             [:.some-sel
+              [last-child {:padding-right 0}]]"}
   last-child sel/last-child)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"last-of-type\". Used as a value, e.g.:
+             [:.some-sel
+              [last-of-type {:margin-right (px 5p}]]"}
   last-of-type sel/last-of-type)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"left\". Used as a value, e.g.:
+             [:.some-sel
+              [left {:background-color :red}]]"}
   left sel/left)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"links\". Used as a value, e.g.:
+             [:.some-sel
+              [hover {:color :font-black}]]"}
   links sel/links)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"only-child\". Used as a value, e.g.:
+             [:.some-sel {:padding (px 10)}
+              [only-child {:padding (px 15)}]]"}
   only-child sel/only-child)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"only-of-type\". Used as a value, e.g.:
+             [:.some-sel
+              [only-of-type {:background-color :chocolate}]]"}
   only-of-type sel/only-of-type)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"optional\". Used as a value, e.g.:
+             [:.some-sel
+              [optional {:opacity 0.8}]]"}
   optional sel/optional)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"out-of-range\". Used as a value, e.g.:
+             [:.some-sel
+              [out-of-range {:display :none}]]"}
   out-of-range sel/out-of-range)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"read-only\". Used as a value, e.g.:
+             [:.some-sel
+              [read-only {:background-color :blanchedalmond}]]"}
   read-only sel/read-only)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"read-write\". Used as a value, e.g.:
+             [:.some-sel
+              [read-write {:cursor :pointer}]]"}
   read-write sel/read-write)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"required\". Used as a value, e.g.:
+             [:.some-sel
+              [required {:border [[(px 2) :dotted :crimson]]}]]"}
   required sel/required)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"right\". Used as a value, e.g.:
+             [:.some-sel
+              [right {:font-weight 800}]]"}
   right sel/right)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"root\". Used as a value, e.g.:
+             [:.some-sel
+              [root {:font-size (px 24)}]]"}
   root sel/root)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"scope\". Used as a value, e.g.:
+             [:.some-sel
+              [scope {:background-color :lime}]]"}
   scope sel/scope)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"target\". Used as a value, e.g.:
+             [:.some-sel
+              [target {:background-color :teal}]]"}
   target sel/target)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"valid\". Used as a value, e.g.:
+             [:.some-sel
+              [valid {:background-color :limegreen}]]"}
   valid sel/valid)
 
-(def ^{:doc "Coming soon"}
+(def ^{:doc "CSS pseudoselector \"visited\". Used as a value, e.g.:
+             [:.some-sel
+              [visited {:color :seashell}]]"}
   visited sel/visited)
 
 ;; pseudoclass selectors functions
@@ -541,8 +610,7 @@
                        (defpseudoclass css-not \"not\")
                        (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
                        not a paragraph."
-            :arglists '([pseudoclass]
-                        [pseudoclass compiles-to])}
+            :arglists '([pseudoclass] [pseudoclass compiles-to])}
   defpseudoclassfn
   [& args]
   `(sel/defpseudoclassfn ~@args))
@@ -650,27 +718,19 @@
 ;; COLORS
 
 (def ^{:doc      "Creates an rgb color."
-       :arglists '([red green blue]
-                   [[red green blue]])}
+       :arglists '([red green blue] [[red green blue]])}
   rgb colors/rgb)
 
 (def ^{:doc      "Creates an rgba color."
-       :arglists '([red green blue]
-                   [red green blue alpha]
-                   [[red green blue]]
-                   [[red green blue alpha]])}
+       :arglists '([red green blue] [red green blue alpha] [[red green blue]] [[red green blue alpha]])}
   rgba colors/rgba)
 
 (def ^{:doc      "Creates an hsl color."
-       :arglists '([hue saturation lightness]
-                   [[hue saturation lightness]])}
+       :arglists '([hue saturation lightness] [[hue saturation lightness]])}
   hsl colors/hsl)
 
 (def ^{:doc      "Creates an hsla color."
-       :arglists '([hue saturation lightness]
-                   [hue saturation lightness alpha]
-                   [[hue saturation lightness]]
-                   [[hue saturation lightness alpha]])}
+       :arglists '([hue saturation lightness] [hue saturation lightness alpha] [[hue saturation lightness]] [[hue saturation lightness alpha]])}
   hsla colors/hsla)
 
 (def ^{:doc      "Transforms a color to hsl/hsla and rotates its hue by an angle."
@@ -798,7 +858,7 @@
        :arglists '([& props-maps])}
   at-font-face at-rules/at-font-face)
 
-(defmacro ^{:doc "Defines a CSS @keyframes animation. The animation name should have a unique symbol
+(defmacro ^{:doc      "Defines a CSS @keyframes animation. The animation name should have a unique symbol
                   for later reference to it and then animation frames in a format [progress params]:
 
                   (defkeyframes fade-in-opacity

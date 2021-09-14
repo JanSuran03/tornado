@@ -9,36 +9,23 @@
   (CSSUnit. unit value))
 
 (defmacro defunit
-  "Creates a CSS unit, where a function (`identifier` <value>) can be used in
-  code to give the unit a value. `css-unit` is for compiling the unit to CSS.
-  If only one argument is given, the css-unit is same as the identifier.
-  Accepts an optional doc-string as the 3rd argument.
+  "Creates a unit function which takes 1 argument and creates a CSSUnit record for future
+   compilation. Defunit can take 1 arg: (defunit px)
+                             or 2 args: (defunit percent \"%\").
 
-  With an equal identifier:
-     (defunit px)
-     => #'tornado.units/px
-     (px 15)
-     => #tornado.types.CSSUnit{:compiles-to \"px\"
-                               :value       15}
+   Usage of the defined units: (px 15)       ...  compiles to \"15px\"
+                               (percent 33)  ...  compiles to \"33%\"
 
-  With a different identifier:
-     (defunit percent \"%\")
-     => #'tornado.units/percent
-     (percent 20)
-     => #tornado.types.CSSUnit{:compiles-to \"%\"
-                               :value       20}
+   CSSUnits can be added, subtracted, multiplied or divided by using function calc (you can
+   also use these 4 keywords - they are defined just for better search in code:
+   :add, :sub, :mul, :div
 
-  With a documentation:
-     (defunit hs \"hs\" \"A time unit, halfsecond.\")
-     **you have to include the 2nd arg**"
+   E.g. (calc (px 500) :add 3 :mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"."
   ([unit]
    (let [compiles-to (str unit)]
-     `(defunit ~unit ~compiles-to nil)))
+     `(defunit ~unit ~compiles-to)))
   ([identifier css-unit]
-   `(defunit ~identifier ~css-unit nil))
-  ([identifier css-unit doc]
-   `(do (def ~identifier (partial ~make-cssunit-record ~css-unit))
-        (alter-meta! #'~identifier assoc :doc ~doc))))
+   `(def ~identifier (partial ~make-cssunit-record ~css-unit))))
 
 ;; absolute size units
 (defunit px)

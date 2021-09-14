@@ -131,9 +131,8 @@
                                     (assert (or (sel/selector? next-selector)
                                                 (sel/id-class-tag? next-selector))
                                             (str "Expected a selector while compiling: " next-selector))
-                                    (let [selectors (if (or (instance? CSSPseudoClass next-selector)
-                                                            (instance? CSSPseudoElement next-selector)
-                                                            (instance? CSSPseudoClassFn next-selector))
+                                    (let [selectors (if (util/some-instance? next-selector CSSPseudoClass
+                                                                             CSSPseudoClassFn CSSPseudoElement)
                                                       selectors
                                                       (util/conjv selectors " "))]
                                       (util/conjv selectors (compile-selector next-selector))))
@@ -244,24 +243,24 @@
 (defn compile-expression
   "Compiles an expression: a number, string, symbol or a record. If the expression is
   a vector of sequential structures, compiles each of the structures and str/joins them
- with a space. Then, str/joins all these str/spacejoined structures with a comma.
+  with a space. Then, str/joins all these str/spacejoined structures with a comma.
 
- E.g.:
- (compile-expression [[(u/px 15) (u/percent 20)] [:red :chocolate]])
- => \"15px 20%, #FF0000 #D2691E\""
+  E.g.:
+  (compile-expression [[(u/px 15) (u/percent 20)] [:red :chocolate]])
+  => \"15px 20%, #FF0000 #D2691E\""
   [expr]
   (cond (get colors/default-colors expr) (get colors/default-colors expr)
         (get calc-keywords expr) (get calc-keywords expr)
         (util/valid? expr) (name expr)
         (number? expr) (util/int* expr)
         (record? expr) (compile-css-record expr)
-        (and (vector? expr)
+        (and (sequential? expr)
              (every? sequential? expr)) (->> expr (map #(->> % (map compile-expression)
                                                              util/str-spacejoin))
                                              util/str-commajoin)
         :else (throw (IllegalArgumentException.
-                       (str "Not a CSS unit, CSS function, CSS at-rule, nor a string, a number or"
-                            " a sequential structure of sequential structures:\n" expr)))))
+                       (str "None of a CSS unit, CSS function, CSS at-rule, a keyword a string, a number or"
+                            " a sequential structure consisting of more sequential structures:\n" expr)))))
 
 (defn compile-attributes-map
   "Compiles an attributes map, returns a sequence of [compiled-attribute compiled-value]."
@@ -531,28 +530,38 @@
             unevaluated-hiccup
             expanded-list)))
 
+(defn just-css
+  "Compiles the hiccup to a string of CSS. Does not do any printing or file output,
+  that is what the functions below are. This one is separate to simplify both
+  functions css and repl-css which just do something with the output of this function."
+  [css-hiccup]
+  (->> css-hiccup list
+       (expand-hiccup-list-for-compilation nil [])
+       simplify-prepared-expanded-hiccup
+       compile-all-selectors-params-combinations))
+
 (defn css
-  "Generates CSS from a hiccup vectors list. If pretty-print? is set to false,
+  "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
+  vectors (and/or with @keyframes, @font-face). If pretty-print? is set to false,
   compresses it as well. Then saves the compiled CSS string to a given file path.
 
   You can also call this function without flags whenever you want to to just get
-  the compiled CSS string printed out."
-  ([css-hiccup-list]
-   (css nil css-hiccup-list))
-  ([flags css-hiccup-list]
+  the whole compiled CSS string printed out."
+  ([css-hiccup]
+   (css nil css-hiccup))
+  ([flags css-hiccup]
    (with-custom-flags flags
                       (let [{:keys [pretty-print? output-to]} *flags*]
-                        (cond->> css-hiccup-list true (expand-hiccup-list-for-compilation nil [])
-                                 true simplify-prepared-expanded-hiccup
-                                 true compile-all-selectors-params-combinations
+                        (cond->> css-hiccup true just-css
                                  (not pretty-print?) compression/compress
                                  output-to (spit output-to))))))
 
 (defn repl-css
-  [css-hiccup-list]
-  (let [compiled-and-split-css-string (->> css-hiccup-list (expand-hiccup-list-for-compilation nil [])
-                                           simplify-prepared-expanded-hiccup
-                                           compile-all-selectors-params-combinations
+  "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
+  vectors (and/or with @keyframes, @font-face). It then pretty prints the output string,
+  which is useful for evaluating any tornado code in REPL."
+  [css-hiccup]
+  (let [compiled-and-split-css-string (->> css-hiccup just-css
                                            str/split-lines)]
     (println)
     (doseq [line compiled-and-split-css-string]

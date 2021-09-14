@@ -208,3 +208,8 @@
         binding-syms (mapv first w-bindings)
         for-bindings (vec (apply concat w-bindings))]
     `(for ~for-bindings ~binding-syms)))
+
+(defn some-instance?
+  "Returns true if the expression is an instance of any of the instances."
+  [expr & instances]
+  (some #(instance? % expr) instances))

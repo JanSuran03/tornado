@@ -292,11 +292,8 @@
   "Returns true if x is a selector of any kind (attribute, combinator, pseudoclass,
   pseudoclassfn, pseudoelement, special selector"
   [x]
-  (or (instance? CSSAttributeSelector x)
-      (instance? CSSCombinator x)
-      (instance? CSSPseudoClass x)
-      (instance? CSSPseudoClassFn x)
-      (instance? CSSPseudoElement x)
+  (or (util/some-instance? x CSSAttributeSelector CSSCombinator
+                           CSSPseudoClass CSSPseudoClassFn CSSPseudoElement)
       (and (util/valid? x)
            (contains? special-selectors (name x)))))
 
