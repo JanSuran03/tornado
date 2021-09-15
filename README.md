@@ -36,6 +36,16 @@ Require a namespace ***tornado.core***, where you have available ***everything u
 => nil
 ```
 
+For compiling and saving the stylesheet, there is a function tornado.compiler/css, also referred in tornado.core:
+
+```clojure
+;; First, you have to ensure that the path "resources/css" exists. This will be solved later.
+(css {:output-to "resources/css/example.css"} styles)
+=> nil
+```
+
+There is not any better compilation management **yet**, but there will be soon.
+
 ### The complete documentation with examples will be under this link: https://orgpad.com/s/SjH_TDbx4PH
 
 # Plans for the future
