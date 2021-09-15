@@ -12,8 +12,8 @@ The Tornado library is not designed to work in ClojureScript.
 
 If you are familiar with [garden](https://github.com/noprompt/garden), this library has similar syntax.
 
-First, you have to create a list of hiccup-like CSS structure that will be compiled. Refer a namespace ***tornado.core***, where you
-have available everything useful in this library. Define some example CSS like below and run it with a function "repl-css":
+First, you have to create a list of hiccup-like CSS structure that will be compiled. Require a namespace ***tornado.core***, where you
+have available ***everything useful in this library***. Define some example CSS like below and run it with a function "repl-css":
 
 ```clojure
 (require '[tornado.core :refer :all])
@@ -44,6 +44,11 @@ You can also nest the selectors as you please or even make cartesian product of 
      [:.class-1 :.class-2 {:height  (important (percent 50))
                            :display :flex}]]
     repl-css)
+
+#id-2, #id-1 {
+    width: 500px;
+    height: auto;
+}
 
 #id-2 .class-2, #id-1 .class-1, #id-2 .class-1, #id-1 .class-2 {
     height: 50% !important;
@@ -116,7 +121,7 @@ An example usage of @font-face:
     repl-css)
 
 @font-face {
-    src: url(webfonts/woff2/roboto.woff2) format("woff2")\n
+    src: url(webfonts/woff2/roboto.woff2) format("woff2"),
          url(webfonts/woff/roboto.woff) format("woff");
     font-weight: normal;
 }
@@ -126,13 +131,13 @@ An example usage of @font-face:
 }
 
 ;; Note that the double-nested vector given to :src key first compiles every element of each of the vectors 
-;; and str-spacejoins them. After that, it str-commajoins each string created by str-spacejoining the individual
+;; and str-space-joins them. After that, it str-comma-joins each string created by str-space-joining the individual
 ;; vectors. Both the outer and the inner sequences can be sequences of any type.
 ```
 
 If you look at the previous example,
-Note that you can put more items of Tornado hiccup to a list and the compiler will evaluate each item of
-the list. Does not work for items nested in vectors, but it works if above are only lists and sequences.
+Note that you can put more items of Tornado hiccup to a list and the compiler will evaluate each item of the list.
+Does not work for items nested in vectors, but it works if the parents all the way up are only lists and sequences.
 
 => You can create a separate namespace, e.g. my-project.css.core, where you can refer all the CSS hiccups:
 (def styles (list ns1/styles ns2/styles ns3/styles ...))   => This makes managing all the CSS much simpler.
@@ -175,7 +180,7 @@ Here is an example how you can do arithmetics with units:
 ;; Available special keywords: :add, :sub, :mul, :div
 ```
 
-Example of CSS keyframes in Tornado:
+Example of @keyframes in Tornado:
 
 ```clojure
 (defkeyframes fade-in-opacity
@@ -221,7 +226,9 @@ Example of CSS keyframes in Tornado:
 }
 ```
 
-***More examples coming very soon!***
+*More examples coming very soon!*
+
+The examples will be under this link: https://orgpad.com/s/SjH_TDbx4PH
 
 # Plans for the future
 
@@ -239,4 +246,4 @@ always try to reply as soon as possible.
 
 Copyright © 2021 Jan Šuráň
 
-Distributed under the [Eclipse Public License](#http://www.eclipse.org/legal/epl-2.0.) (same as Clojure)
+Distributed under the [Eclipse Public License](#http://www.eclipse.org/legal/epl-2.0.)
