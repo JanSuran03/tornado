@@ -3,17 +3,17 @@
 A Clojure library designed to generate CSS using [hiccup-like](https://github.com/weavejester/hiccup)
 data structures with focus on simplicity.
 
-Every feature in this library should work properly, but it is still very new, there are not all features that CSS
-offers (but very most of them for common usage are included). As the time passes, more new features will be added.
+The library is very new, but I will try to update it depending on how my time works out.
 
 The Tornado library is not designed to work in ClojureScript.
 
 ## Usage
 
+[![Clojars Project](https://img.shields.io/clojars/v/org.clojars.jansuran03/tornado.svg)](https://clojars.org/org.clojars.jansuran03/tornado)
+
 If you are familiar with [garden](https://github.com/noprompt/garden), you should not have any problems with switching to Tornado.
 
-First, you have to create a list of hiccup-like CSS structure that will be compiled. Require a namespace ***tornado.core***, where you
-have available ***everything useful in this library***. Define some example CSS like below and run it with a function "repl-css":
+Require a namespace ***tornado.core***, where you have available ***everything useful in this library***. Define some example CSS like below and run it with a function "repl-css":
 
 ```clojure
 (require '[tornado.core :refer :all])
@@ -36,7 +36,7 @@ have available ***everything useful in this library***. Define some example CSS 
 => nil
 ```
 
-### *The complete documentation with examples will be under this link: https://orgpad.com/s/SjH_TDbx4PH*
+### The complete documentation with examples will be under this link: https://orgpad.com/s/SjH_TDbx4PH
 
 # Plans for the future
 
