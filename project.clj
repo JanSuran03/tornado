@@ -1,4 +1,4 @@
-(defproject tornado "0.1.0"
+(defproject org.clojars.jansuran03/tornado "0.1.0"
   :description "A Clojure library similar to garden with focus on simplicity and comfort of the programmer. Still very
                 new, but I improve it as my time allows me to."
   :url "https://github.com/JanSuran03/tornado"
