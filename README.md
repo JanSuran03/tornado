@@ -63,7 +63,7 @@ This is how you can use more advanced selectors (pseudoclass selectors in this c
 ```clojure
 (-> [:#some-id {:padding (px 10)}
      [:.nested-class {:color :black}]
-     [hover {:padding [[(px 30) (px 20)]]}]])
+     [hover {:padding [[(px 30) (px 20)]]}]]
     repl-css)
 
 #some-id {
@@ -89,7 +89,7 @@ Here is an example usage of @media:
       (at-media {:screen    false
                  :max-width (px 500)}
                 [:& {:margin 0}]
-                [:.some-child {:color (hsl 120 0.5 0.8)}])]])
+                [:.some-child {:color (hsl 120 0.5 0.8)}])]]
     repl-css)
 
 #some-id {

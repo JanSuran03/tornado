@@ -109,7 +109,7 @@
 
 (defmethod compile-selector CSSAttributeSelector
   [{:keys [compiles-to tag attribute subvalue]}]
-  (let [maybe-subvalue (when subvalue (str "\"" subvalue "\""))]
+  (let [maybe-subvalue (when subvalue (str "\"" (name subvalue) "\""))]
     (str (util/get-valid tag) "[" (util/get-valid attribute) compiles-to maybe-subvalue "]")))
 
 (defmethod compile-selector CSSPseudoClass
@@ -126,7 +126,7 @@
 
 (defmethod compile-selector CSSCombinator
   [{:keys [compiles-to children]}]
-  (->> children (map #(str compiles-to " " %))
+  (->> children (map #(str compiles-to " " (name %)))
        util/str-spacejoin))
 
 (defn compile-selectors-sequence

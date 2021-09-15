@@ -389,6 +389,12 @@
        :arglists '([attribute subvalue] [tag attribute subvalue])}
   contains-word sel/contains-word)
 
+(def ^{:doc      "Selects all descendant elements which have a given parameter with a value containing
+                  a given substring (unlike the contains-word selector, the substring does not have to
+                  be a whole word)."
+       :arglists '([attribute subvalue] [tag attribute subvalue])}
+  contains-subs sel/contains-subs)
+
 (def ^{:doc      "Selects all descendant elements which have a given parameter with a value starting with
                   a given word (substring is not enough - a matching word separated by commas or spaces)."
        :arglists '([attribute subvalue] [tag attribute subvalue])}
@@ -404,12 +410,6 @@
                   with a given substring. The substring does not have to be a whole matching word."
        :arglists '([attribute subvalue] [tag attribute subvalue])}
   ends-with sel/ends-with)
-
-(def ^{:doc      "Selects all descendant elements which have a given parameter with a value containing
-                  a given substring (unlike the contains-word selector, the substring does not have to
-                  be a whole word)."
-       :arglists '([attribute subvalue] [tag attribute subvalue])}
-  contains-subs sel/contains-subs)
 
 ;; pseudoclass selectors
 
