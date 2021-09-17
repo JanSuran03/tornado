@@ -9,7 +9,9 @@ The Tornado library is not designed to work in ClojureScript.
 
 ## Usage
 
+
 [![Clojars Project](https://img.shields.io/clojars/v/org.clojars.jansuran03/tornado.svg)](https://clojars.org/org.clojars.jansuran03/tornado)
+
 
 ### [Lein-tornado](https://github.com/JanSuran03/lein-tornado)
 
