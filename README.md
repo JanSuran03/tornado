@@ -47,6 +47,7 @@ For compiling and saving the stylesheet, there is a function tornado.compiler/cs
 
 ```clojure
 ;; First, you have to ensure that the path "resources/css" exists. This will be solved later.
+;; In the plugin Lein-tornado, this is not a problem anymore, the library creates the folders for you.
 (css {:output-to "resources/css/example.css"} styles)
 => nil
 ```
