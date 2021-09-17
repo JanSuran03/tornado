@@ -11,6 +11,13 @@ The Tornado library is not designed to work in ClojureScript.
 
 [![Clojars Project](https://img.shields.io/clojars/v/org.clojars.jansuran03/tornado.svg)](https://clojars.org/org.clojars.jansuran03/tornado)
 
+### [Lein-tornado](https://github.com/JanSuran03/lein-tornado):
+
+A hot-code reloading plugin for automatic compilation Tornado stylesheets:
+
+[![Clojars Project](https://img.shields.io/clojars/v/org.clojars.jansuran03/lein-tornado.svg)](https://clojars.org/org.clojars.jansuran03/lein-tornado)
+
+
 If you are familiar with [garden](https://github.com/noprompt/garden), you should not have any problems with switching to Tornado.
 
 Require a namespace ***tornado.core***, where you have available ***everything useful in this library***. Define some example CSS like below and run it with a function "repl-css":
