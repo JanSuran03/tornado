@@ -271,7 +271,7 @@
 (defn compile-attributes-map
   "Compiles an attributes map, returns a sequence of [compiled-attribute compiled-value]."
   [attributes-map]
-  (when attributes-map
+  (when-let [attributes-map (util/prune-nils attributes-map)]
     (for [[attribute value] attributes-map]
       [(compile-expression attribute) (in-params-context (compile-expression value))])))
 
@@ -313,9 +313,9 @@
   (tornado.at-rules/at-media {:rules {:screen  :only   -> \"only screen\"
                                       :screen  false   -> \"not screen\"
                                       :screen  true    -> \"screen\"} ... "
-  {:only (fn [rule] (str "only " (name rule)))
+  {:only #(str "only " (name %))
    true  name
-   false (fn [rule] (str "not " (name rule)))})
+   false #(str "not " (name %))})
 
 (defmethod compile-at-rule "media"
   [{:keys [value] :as at-media}]
@@ -350,7 +350,7 @@
   [{:keys [value]}]
   (let [{:keys [anim-name frames]} value]
     (if *in-params-context*
-      (str anim-name)
+      anim-name
       (in-keyframes-context
         (let [compiled-frames (->> frames (map (fn [[progress params]]
                                                  (let [compiled-progress (compile-expression progress)
@@ -365,16 +365,7 @@
   "Expands lists and lazy sequences in a nested structure. Always expands the first
    collection. When any more deeply nested collection is neither a list nor a lazy-seq,
    this function does not expand it.
-   (expand-seqs [:a :b])
-   => (:a :b) ... the first element is anything seqable -> transforms it to a list
-
-   (expand-seqs [[:a :b]])
-   => ([:a :b]) ... the 2nd element is neither a list nor a lazy-seq -> does not expand it
-
-   (expand-seqs [(list :a [:b (map identity [:c :d :e])])])
-   => (:a [:b (:c :d :e)]) ... 2nd element a vector -> does not expand the nested lazy-seq.
-
-   See clojure.core/flatten. This function just only expands seqs."
+   See clojure.core/flatten."
   [coll]
   (mapcat (fn [coll]
             (if (seq? coll)
@@ -569,7 +560,7 @@
   [css-hiccup]
   (let [compiled-and-split-css-string (->> css-hiccup just-css
                                            str/split-lines)]
-    (println)
+    (newline)
     (doseq [line compiled-and-split-css-string]
       (println line))
-    (println)))
+    (newline)))

@@ -215,3 +215,11 @@
   "Returns true if the expression is an instance of any of the instances."
   [expr & instances]
   (some #(instance? % expr) instances))
+
+(defn prune-nils
+  "Given a map, removes all keys having nil value. If the pruned map is empty, returns nil."
+  [m]
+  (->> m (remove (fn [[_ v]]
+                   (nil? v)))
+       (into {})
+       not-empty))
