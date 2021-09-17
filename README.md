@@ -11,9 +11,9 @@ The Tornado library is not designed to work in ClojureScript.
 
 [![Clojars Project](https://img.shields.io/clojars/v/org.clojars.jansuran03/tornado.svg)](https://clojars.org/org.clojars.jansuran03/tornado)
 
-### [Lein-tornado](https://github.com/JanSuran03/lein-tornado):
+### [Lein-tornado](https://github.com/JanSuran03/lein-tornado)
 
-A hot-code reloading plugin for automatic compilation Tornado stylesheets:
+A hot-code reloading plugin for automatic compilation of Tornado stylesheets:
 
 [![Clojars Project](https://img.shields.io/clojars/v/org.clojars.jansuran03/lein-tornado.svg)](https://clojars.org/org.clojars.jansuran03/lein-tornado)
 
