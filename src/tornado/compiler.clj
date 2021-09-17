@@ -178,22 +178,27 @@
 (defmethod compile-color String
   [color] color)
 
+(defn round [x] (-> x float Math/round))
+
 (defmethod compile-color "rgb"
   [{:keys [value]}]
-  (let [{:keys [red green blue]} value]
+  (let [{:keys [red green blue]} value
+        [red green blue] (map round [red green blue])]
     (str "rgb(" red ", " green ", " blue ")")))
 
 (defmethod compile-color "rgba"
   [{:keys [value]}]
   (let [{:keys [red green blue alpha]} value
-        alpha (util/percent->number alpha)]
+        alpha (util/percent->number alpha)
+        [red green blue alpha] (map round [red green blue alpha])]
     (str "rgba(" red ", " green ", " blue ", " alpha ")")))
 
 (defmethod compile-color "hsl"
   [{:keys [value]}]
   (let [{:keys [hue saturation lightness]} value
         saturation (util/percent-with-symbol-append saturation)
-        lightness (util/percent-with-symbol-append lightness)]
+        lightness (util/percent-with-symbol-append lightness)
+        hue (round hue)]
     (str "hsl(" hue ", " saturation ", " lightness ")")))
 
 (defmethod compile-color "hsla"
@@ -201,7 +206,8 @@
   (let [{:keys [hue saturation lightness alpha]} value
         saturation (util/percent-with-symbol-append saturation)
         lightness (util/percent-with-symbol-append lightness)
-        alpha (util/percent->number alpha)]
+        alpha (util/percent->number alpha)
+        hue (round hue)]
     (str "hsla(" hue ", " saturation ", " lightness ", " alpha ")")))
 
 (defmulti compile-css-record
