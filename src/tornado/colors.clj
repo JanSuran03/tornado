@@ -80,7 +80,7 @@
    :dodgerblue           "#1E90FF"
    :firebrick            "#B22222"
    :floralwhite          "#FFFAF0"
-   :font-black           "#1A1B1F"                          ; recommended font color
+   :fontblack            "#1A1B1F"                          ; recommended font color
    :forestgreen          "#228B22"
    :fuchsia              "#FF00FF"
    :gainsboro            "#DCDCDC"
