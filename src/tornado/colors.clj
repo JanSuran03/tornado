@@ -19,6 +19,14 @@
                                  (str "The given color is none of a tornado CSSColor record, color keyword,"
                                       " color symbol or a string: " color)))))
 
+(defn color->1-wd
+  "Assumes that clojure.core/name can be casted to the argument. Transforms all 3 versions
+  (string, symbol, keyword) to a keyword with removed dashes (e.g. 'dark-red -> :darkred)."
+  [color]
+  (-> color name
+      (str/replace #"\-" "")
+      keyword))
+
 (def default-colors
   "Available default colors in tornado.
   Usage: {:color            :black
@@ -384,8 +392,10 @@
   not find the color, throws an expception. Otherwise, this function returns the color
   in hex code."
   [color]
-  (if-let [color' (get default-colors color)]
-    color'
+  (if (util/valid? color)
+    (if-let [color' (get default-colors (color->1-wd color))]
+      color'
+      (unknown-color-type color))
     (unknown-color-type color)))
 
 (defn ->rgb
@@ -586,7 +596,9 @@
          colors (map #(cond-> % ((some-fn symbol? string?) %) keyword) colors)
          types (->> colors (map get-color-type) (filter string?) (#(if (seq %) % ["rgba"])))
          colors (->> colors (map (fn [color]
-                                   (get default-colors color color))))
+                                   (if (keyword? color)
+                                     (get default-colors (color->1-wd color) color)
+                                     color))))
          some-alpha-hex? (some alpha-hex? colors)
          dominant-type (->> types frequencies (sort-by second >)
                             (sort-by (fn [[color-type _]]

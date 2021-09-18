@@ -164,20 +164,6 @@
           otherwise prints out a warning and returns a string form of that keyword."
           colors/get-color-type)
 
-(defmethod compile-color Symbol
-  [color] (name color))
-
-(defmethod compile-color Keyword
-  [color]
-  (if-let [color* (get colors/default-colors color)]
-    color*
-    (do (println (str "Warning: Unknown color keyword: " color
-                      ", not found in tornado.colors/default-colors."))
-        (name color))))
-
-(defmethod compile-color String
-  [color] color)
-
 (defn round [x] (-> x float Math/round))
 
 (defmethod compile-color "rgb"
@@ -261,7 +247,8 @@
   (compile-expression [[(u/px 15) (u/percent 20)] [:red :chocolate]])
   => \"15px 20%, #FF0000 #D2691E\""
   [expr]
-  (cond (get colors/default-colors expr) (get colors/default-colors expr)
+  (cond (and (util/valid? expr)
+             (get colors/default-colors (colors/color->1-wd expr))) (get colors/default-colors (colors/color->1-wd expr))
         (get calc-keywords expr) (get calc-keywords expr)
         (util/valid? expr) (name expr)
         (number? expr) (util/int* expr)
