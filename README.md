@@ -22,7 +22,8 @@ A hot-code reloading plugin for automatic compilation of Tornado stylesheets:
 
 If you are familiar with [garden](https://github.com/noprompt/garden), you should not have any problems with switching to Tornado.
 
-Require a namespace ***tornado.core***, where you have available ***everything useful in this library***. Define some example CSS like below and run it with a function "repl-css":
+Require a namespace ***tornado.core***, where you have available ***everything useful in this library***. Define some example CSS-hiccup like below and
+run it with a function "repl-css" to see the compiled CSS:
 
 ```clojure
 (require '[tornado.core :refer :all])
@@ -45,25 +46,16 @@ Require a namespace ***tornado.core***, where you have available ***everything u
 => nil
 ```
 
-For compiling and saving the stylesheet, there is a function tornado.compiler/css, also referred in tornado.core:
+For compiling **and saving** the stylesheet, there is a function tornado.compiler/css, also referred in tornado.core:
 
 ```clojure
-;; First, you have to ensure that the path "resources/css" exists. This will be solved later.
-;; In the plugin Lein-tornado, this is not a problem anymore, the library creates the folders for you.
+;; First, you have to ensure that the path "resources/css" exists. In the plugin
+;;  Lein-tornado, this is not a problem anymore, the library creates the folders for you.
 (css {:output-to "resources/css/example.css"} styles)
 => nil
 ```
 
-There is not any better compilation management **yet**, but there will be soon.
-
 ### The complete documentation with examples will be under this link: https://orgpad.com/s/SjH_TDbx4PH
-
-# Plans for the future
-
-Since this library already has a lot of features, but it is not too practical for a project where you should recompile
-the hiccup every few seconds, I will soon be working on a hot-code reloading plugin, similar to [lein-garden](https://github.com/noprompt/lein-garden).
-More detailed and better documentations are coming later. Everything takes time, especially when I want the documentations
-and the whole library to be simple, clear, flexible and comfortable.
 
 ## Contact
 
