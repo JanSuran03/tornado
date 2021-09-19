@@ -9,7 +9,8 @@
            (clojure.lang Keyword Symbol)))
 
 (defn get-color-type
-  "Returns "
+  "Returns the type of a given color, either :type of a CSSColor record or the
+  argument's class. If the class cannot represent a CSS color, throws an exception."
   [color]
   (condp = (type color) CSSColor (:type color)
                         String String
@@ -30,8 +31,11 @@
 (def default-colors
   "Available default colors in tornado.
   Usage: {:color            :black
-          :background-color :crimson}   etc.
-  Tornado does the hex-code translation for you."
+          :background-color :crimson
+          :border           [[(u/px 1) :solid :yellow-green]]}   etc.
+  Tornado does the hex-code translation for you.
+  Also, you can use both e.g. :yellow-green and :yellowgreen (or in string and
+  symbol-forms, respectively), it all compiles to the same color."
   ; See https://www.w3schools.com/cssref/css_colors.asp + ":font-black for recommended font color"
   {:aliceblue            "#F0F8FF"
    :antiquewhite         "#FAEBD7"
@@ -534,9 +538,10 @@
   "Multiplies a color's alpha by a given value. "
   [color value] (-> color with-alpha (update-in [:value :alpha] #(range-0-1 (* % value)))))
 
-(defmulti -mix-colors
-          "Calls a relevant function to compute the average of more colors. Presumes that
-          the colors are converted to the same type by a function 'mix-colors'"
+(defmulti ^{:doc      "Calls a relevant function to compute the average of more colors. Presumes that
+                       the colors are converted to the same type by a function 'mix-colors'"
+            :arglists '([color-type colors])}
+          -mix-colors
           (fn [color-type _]
             color-type))
 
@@ -595,10 +600,12 @@
    (let [colors (cons color1 more)
          colors (map #(cond-> % ((some-fn symbol? string?) %) keyword) colors)
          types (->> colors (map get-color-type) (filter string?) (#(if (seq %) % ["rgba"])))
+         _ (println colors)
          colors (->> colors (map (fn [color]
-                                   (if (keyword? color)
+                                   (if (util/valid? color)
                                      (get default-colors (color->1-wd color) color)
                                      color))))
+         _ (println colors)
          some-alpha-hex? (some alpha-hex? colors)
          dominant-type (->> types frequencies (sort-by second >)
                             (sort-by (fn [[color-type _]]

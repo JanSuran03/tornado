@@ -18,19 +18,12 @@
       (string? x)
       (symbol? x)))
 
-(defn get-valid
-  "If the argument is a symbol, a keyword or a string, returns its string form."
-  [x]
-  (if (valid? x)
-    (name x)
-    x))
-
 (defn valid-or-nil
-  "If the argument is a symbol, a keyword or a string, returns its valid form.
-  Otherwise, return nil."
+  "If the argument is a symbol, a keyword or a string, returns its string form.
+   Otherwise, returns nil."
   [x]
   (when (valid? x)
-    (get-valid x)))
+    (name x)))
 
 (defn int*
   "Converts a float to an integer if the value would remain equal. Ratios will

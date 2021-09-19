@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.clojure:google-closure-library-third-party:0.0-20201211-3e6c510d">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/clojure/google-closure-library-third-party/0.0-20201211-3e6c510d/google-closure-library-third-party-0.0-20201211-3e6c510d.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/clojure/google-closure-library-third-party/0.0-20201211-3e6c510d/google-closure-library-third-party-0.0-20201211-3e6c510d-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/clojure/google-closure-library-third-party/0.0-20201211-3e6c510d/google-closure-library-third-party-0.0-20201211-3e6c510d-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

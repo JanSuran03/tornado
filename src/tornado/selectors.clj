@@ -317,7 +317,7 @@
   "Returns true if the argument is a keyword, a string or a symbol
   and represents an existing html tag."
   [x]
-  (->> x util/get-valid (contains? html-tags)))
+  (->> x util/valid-or-nil (contains? html-tags)))
 
 (defn id-class-tag?
   "Returns true if the argument is a keyword, a string or a symbol

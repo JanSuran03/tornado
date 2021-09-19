@@ -51,14 +51,14 @@
   ([clojure-fn-name compiles-to compile-fn]
    `(def ~clojure-fn-name (partial ~make-cssfn-record ~compiles-to ~compile-fn))))
 
-(defn commajoin
+(defn comma-join
   "A CSSFunction util/str-commajoin compile function. Compiles the
   function to a form <fn-name>(arg1, arg2, arg3, ...),"
   [{:keys [compiles-to args]}]
   (str compiles-to "(" (->> args (map compile-expression)
                             util/str-commajoin) ")"))
 
-(defn spacejoin
+(defn space-join
   "A CSSFunction util/str-spacejoin compile function. Compiles the
   function to a form <fn-name>(arg1 arg2 arg3 ...),"
   [{:keys [compiles-to args]}]
@@ -73,7 +73,7 @@
     (str compiles-to "(" (-> args first compile-expression) ")")
     (do (println (str "Warning: A CSSFunction \"" compiles-to "\" expects to have"
                       " 1 argument, instead got arguments: " args))
-        (commajoin cssfn))))
+        (comma-join cssfn))))
 
 (defn css-format-fn
   "A special function for css-format which also puts additional quotes around
@@ -83,7 +83,7 @@
     (str "format(\"" (-> args first compile-expression) "\")")
     (do (println (str "Warning: A CSSFunction \"css-format\" expects to have"
                       " 1 argument, instead got arguments: " args))
-        (commajoin cssfn))))
+        (comma-join cssfn))))
 
 ; https://www.quackit.com/css/functions/
 
@@ -114,36 +114,36 @@
 
 ;; comma-join functions
 
-(defcssfn attr commajoin)
-(defcssfn counter commajoin)
-(defcssfn counters commajoin)
-(defcssfn cubic-bezier commajoin)
-(defcssfn css-filter "filter" commajoin)
-(defcssfn hwb commajoin)
-(defcssfn linear-gradient commajoin)
-(defcssfn matrix commajoin)
-(defcssfn matrix3d commajoin)
-(defcssfn css-max "max" commajoin)
-(defcssfn css-min "min" commajoin)
-(defcssfn polygon commajoin)
-(defcssfn radial-gradient commajoin)
-(defcssfn repeating-linear-gradient commajoin)
-(defcssfn repeating-radial-gradient commajoin)
-(defcssfn rotate3d commajoin)
-(defcssfn scale commajoin)
-(defcssfn scale3d commajoin)
-(defcssfn skew commajoin)
-(defcssfn translate commajoin)
-(defcssfn translate3d commajoin)
-(defcssfn url commajoin)
-(defcssfn css-var "var" commajoin)
+(defcssfn attr comma-join)
+(defcssfn counter comma-join)
+(defcssfn counters comma-join)
+(defcssfn cubic-bezier comma-join)
+(defcssfn css-filter "filter" comma-join)
+(defcssfn hwb comma-join)
+(defcssfn linear-gradient comma-join)
+(defcssfn matrix comma-join)
+(defcssfn matrix3d comma-join)
+(defcssfn css-max "max" comma-join)
+(defcssfn css-min "min" comma-join)
+(defcssfn polygon comma-join)
+(defcssfn radial-gradient comma-join)
+(defcssfn repeating-linear-gradient comma-join)
+(defcssfn repeating-radial-gradient comma-join)
+(defcssfn rotate3d comma-join)
+(defcssfn scale comma-join)
+(defcssfn scale3d comma-join)
+(defcssfn skew comma-join)
+(defcssfn translate comma-join)
+(defcssfn translate3d comma-join)
+(defcssfn url comma-join)
+(defcssfn css-var "var" comma-join)
 
 ;; space-join functions
 
-(defcssfn calc spacejoin)
-(defcssfn circle spacejoin)
-(defcssfn drop-shadow spacejoin)
-(defcssfn ellipse spacejoin)
-(defcssfn image spacejoin)
-(defcssfn inset spacejoin)
-(defcssfn symbols spacejoin)
+(defcssfn calc space-join)
+(defcssfn circle space-join)
+(defcssfn drop-shadow space-join)
+(defcssfn ellipse space-join)
+(defcssfn image space-join)
+(defcssfn inset space-join)
+(defcssfn symbols space-join)

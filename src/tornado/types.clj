@@ -18,5 +18,3 @@
 (defrecord CSSPseudoClassFn [compiles-to arg])
 
 (defrecord CSSPseudoElement [pseudoelement])
-
-(defrecord CSScomma-join [args])

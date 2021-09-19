@@ -155,11 +155,11 @@
 
 (def ^{:doc      "Coming soon"
        :arglists '([{:keys [compiles-to args]}])}
-  commajoin f/commajoin)
+  comma-join f/comma-join)
 
 (def ^{:doc      "Coming soon"
        :arglists '([{:keys [compiles-to args]}])}
-  spacejoin f/spacejoin)
+  space-join f/space-join)
 
 (defmacro ^{:doc      "Creates a cssfn function which which takes any number of arguments and creates
                        a CSSFunction record for future compilation.
@@ -363,12 +363,14 @@
                        Start with a word, start with a substring, contain a word, contain a substring,
                        end with a substring, have a given value, have a given attribute with any value.
 
-                       By attributes, it is meant html attributes, e.g. span[class~=\"info\"] selects
-                       all spans with a class containing a whole word \"info\".
+                       By attributes, it is meant html attributes,
+                       e.g. span[class~=\"info\"]
+                       selects all spans with a class containing a whole word \"info\".
                        In tornado, we can represent this by (contains-word :span :class \"info\").
 
                        We can also use (contains-word :class \"info\") to mark all elements with that
-                       class ... compiles to [class~´\"info\"] and affects all elements with that condition."
+                       class ... compiles to [class~=\"info\"] and affects all elements with that
+                       class (divs, spans, iframes, everything)."
             :arglists '([selector-name compiles-to])}
   defattributeselector
   [& args]
@@ -427,14 +429,14 @@
                        Defpseudoclass can also take 2 parameters, where the 2nd one will be the translation
                        to CSS to avoid collisions between Clojure and CSS -
                        e.g.(defpseudolass css-empty \"empty\")."
-            :arglists '([pseudoclass] [indetifier css-pseudoclass])}
+            :arglists '([pseudoclass] [identifier css-pseudoclass])}
   defpseudoclass
   [& args]
   `(sel/defpseudoclass ~@args))
 
 (def ^{:doc "CSS pseudoselector \"active\". Used as a value, e.g.:
              [:.some-sel {:width (px 100)}
-              [hover {:width (px 120)}]]"}
+              [active {:width (px 120)}]]"}
   active sel/active)
 
 (def ^{:doc "CSS pseudoselector \"checked\". Used as a value, e.g.:

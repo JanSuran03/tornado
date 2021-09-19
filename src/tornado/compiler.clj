@@ -10,7 +10,7 @@
             [tornado.compression :as compression])
   (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                           CSSCombinator CSSAttributeSelector
-                          CSSPseudoClass CSSPseudoElement CSSPseudoClassFn CSScomma-join)
+                          CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
            (clojure.lang Keyword Symbol)))
 
 (def ^{:dynamic true
@@ -25,10 +25,12 @@
                               and newlines) to make the CSS file a bit smaller.
 
              :output-to     - Specifies, where the compiled CSS file should be saved.
-             "}
+
+             _show-time     - When set to true, elapsed time will be printed."}
   *flags* {:indent-length 4
            :pretty-print? true
-           :output-to     nil})
+           :output-to     nil
+           :show-time     false})
 
 (defmacro with-custom-flags
   "Given custom-flags & body, temporarily merges default *flags* with the given flags
@@ -86,7 +88,7 @@
          compile-all-selectors-params-combinations)
 
 (defn conjs
-  "Conj(oin)s to a (potentially empty) set,"
+  "Conj(oin)s to a (potentially empty) set."
   [s value]
   (conj (or s #{}) value))
 
@@ -110,7 +112,7 @@
 (defmethod compile-selector CSSAttributeSelector
   [{:keys [compiles-to tag attribute subvalue]}]
   (let [maybe-subvalue (when subvalue (str "\"" (name subvalue) "\""))]
-    (str (util/get-valid tag) "[" (util/get-valid attribute) compiles-to maybe-subvalue "]")))
+    (str (util/valid-or-nil tag) "[" (util/valid-or-nil attribute) compiles-to maybe-subvalue "]")))
 
 (defmethod compile-selector CSSPseudoClass
   [{:keys [pseudoclass]}]
@@ -227,10 +229,6 @@
   [color-record]
   (compile-color color-record))
 
-(defmethod compile-css-record CSScomma-join
-  [{:keys [args]}]
-  (->> args (map compile-expression) util/str-commajoin))
-
 (def calc-keywords
   "A special map for calc keywords"
   {:add "+"
@@ -271,7 +269,7 @@
 (defn attr-map-to-css
   "Compiles an attributes map and translates the compiled data to CSS:
   (attr-map-to-css {:width            (units/percent 50)
-                    :margin           [[0 (units/px 15) (units/rem* 3) :auto]]
+                    :margin           [[0 (units/px 15) (units/css-rem 3) :auto]]
                     :background-color (colors/rotate-hue \"#ff0000\" 60)}
   => width: 50%;
      margin: 0 15px rem3 auto;
@@ -315,15 +313,14 @@
   (let [paths *media-query-parents*
         {:keys [rules changes]} value
         compiled-media-rules (->> (for [[param value] rules]
-                                    (let [param-fn (get special-media-rules-map value)]
-                                      (if (nil? param-fn)
-                                        (if-let [compiled-param (util/valid-or-nil param)]
-                                          (let [compiled-unit (compile-expression value)]
-                                            (str "(" compiled-param ": " compiled-unit ")"))
-                                          (throw (IllegalArgumentException.
-                                                   (str "Invalid format of a CSS property: " value " in a map of rules:"
-                                                        rules " in at-media compilation of at-media: " at-media))))
-                                        (param-fn param))))
+                                    (if-let [param-fn (get special-media-rules-map value)]
+                                      (param-fn param)
+                                      (if-let [compiled-param (util/valid-or-nil param)]
+                                        (let [compiled-unit (compile-expression value)]
+                                          (str "(" compiled-param ": " compiled-unit ")"))
+                                        (throw (IllegalArgumentException.
+                                                 (str "Invalid format of a CSS property: " value " in a map of rules:"
+                                                      rules " in at-media compilation of @media expression: " at-media))))))
                                   (str/join " and "))
         compiled-media-changes (->> (for [parents-path paths]
                                       (-> (expand-hiccup-list-for-compilation parents-path [] changes)
@@ -432,7 +429,7 @@
        (reduce (fn [final-expanded-hiccup [params selectors-set]]
                  (cond (at-rules/at-media? params) (conj final-expanded-hiccup {:paths    (vec selectors-set)
                                                                                 :at-media params})
-                       (= :keyframes-set params) (reduce #(conj % {:at-keyframes %2}) final-expanded-hiccup selectors-set)
+                       (= :keyframes-set params) (reduce #(conj %1 {:at-keyframes %2}) final-expanded-hiccup selectors-set)
                        (= :font-faces-set params) (reduce #(conj %1 {:at-font-face %2}) final-expanded-hiccup selectors-set)
                        :else (conj final-expanded-hiccup {:paths  (vec selectors-set)
                                                           :params params})))
@@ -540,11 +537,14 @@
   ([css-hiccup]
    (css nil css-hiccup))
   ([flags css-hiccup]
+   (println flags)
    (with-custom-flags flags
                       (let [{:keys [pretty-print? output-to]} *flags*]
+                        (println pretty-print?)
                         (cond->> css-hiccup true just-css
                                  (not pretty-print?) compression/compress
-                                 output-to (spit output-to))))))
+                                 output-to (#(do (spit output-to %)
+                                                 (println "   Wrote: " output-to))))))))
 
 (defn repl-css
   "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
