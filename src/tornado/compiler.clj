@@ -112,7 +112,7 @@
 (defmethod compile-selector CSSAttributeSelector
   [{:keys [compiles-to tag attribute subvalue]}]
   (let [maybe-subvalue (when subvalue (str "\"" (name subvalue) "\""))]
-    (str (util/valid-or-nil tag) "[" (util/valid-or-nil attribute) compiles-to maybe-subvalue "]")))
+    (str (util/get-str-form tag) "[" (util/get-str-form attribute) compiles-to maybe-subvalue "]")))
 
 (defmethod compile-selector CSSPseudoClass
   [{:keys [pseudoclass]}]
@@ -315,7 +315,7 @@
         compiled-media-rules (->> (for [[param value] rules]
                                     (if-let [param-fn (get special-media-rules-map value)]
                                       (param-fn param)
-                                      (if-let [compiled-param (util/valid-or-nil param)]
+                                      (if-let [compiled-param (util/get-str-form param)]
                                         (let [compiled-unit (compile-expression value)]
                                           (str "(" compiled-param ": " compiled-unit ")"))
                                         (throw (IllegalArgumentException.
@@ -537,7 +537,6 @@
   ([css-hiccup]
    (css nil css-hiccup))
   ([flags css-hiccup]
-   (println flags)
    (with-custom-flags flags
                       (let [{:keys [pretty-print? output-to]} *flags*]
                         (println pretty-print?)
