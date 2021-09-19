@@ -18,7 +18,7 @@
       (string? x)
       (symbol? x)))
 
-(defn valid-or-nil
+(defn get-str-form
   "If the argument is a symbol, a keyword or a string, returns its string form.
    Otherwise, returns nil."
   [x]

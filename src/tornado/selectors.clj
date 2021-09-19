@@ -303,21 +303,21 @@
   "Returns true if the argument is a keyword, a string or a symbol
   and (name argument) starts with \".\"."
   [x]
-  (and (-> x util/valid-or-nil (or "") (str/starts-with? "."))
+  (and (-> x util/get-str-form (or "") (str/starts-with? "."))
        (> (count (name x)) 1)))
 
 (defn css-id?
   "Returns true if the argument is a keyword, a string or a symbol
   and (name argument) starts with \"#\"."
   [x]
-  (and (-> x util/valid-or-nil (or "") (str/starts-with? "#"))
+  (and (-> x util/get-str-form (or "") (str/starts-with? "#"))
        (> (count (name x)) 1)))
 
 (defn html-tag?
   "Returns true if the argument is a keyword, a string or a symbol
   and represents an existing html tag."
   [x]
-  (->> x util/valid-or-nil (contains? html-tags)))
+  (->> x util/get-str-form (contains? html-tags)))
 
 (defn id-class-tag?
   "Returns true if the argument is a keyword, a string or a symbol
