@@ -5,7 +5,7 @@ data structures with focus on simplicity.
 
 The library is very new, but I will try to update it depending on how my time works out.
 
-The Tornado library is not designed to work in ClojureScript.
+The Tornado library is not designed to work in ClojureScript yet, but I want to address it soon.
 
 ## Usage
 
@@ -57,6 +57,16 @@ For compiling **and saving** the stylesheet, there is a function tornado.compile
 
 ### The complete documentation with examples will be under this link: https://orgpad.com/s/SjH_TDbx4PH
 
+## Plans for the future:
+
+- Make it work in both Clojure and ClojureScript.
+- Add html <... style="..."/> data generator.
+- Docs to CSS functions, better docs overall.
+- More common utility functions (currently only 'important' and 'grid-areas'.
+- More at-rules functions (currently @media, @font-face, @keyframes).
+- The code could be simpler on some places.
+- More examples in the OrgPad document.
+
 ## Contact
 
 Although there are more ways to contact me, you can send me an e-mail to **suran (dot) orgpad (at) gmail (dot) com**. I will
@@ -66,4 +76,4 @@ always try to reply as soon as possible. I am also on discord: **Honza_Suran#670
 
 Copyright © 2021 Jan Šuráň
 
-Distributed under the [Eclipse Public License](#http://www.eclipse.org/legal/epl-2.0.)
+Distributed under the [Eclipse Public License](#http://www.eclipse.org/legal/epl-2.0).
