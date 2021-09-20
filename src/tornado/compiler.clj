@@ -29,8 +29,7 @@
              _show-time     - When set to true, elapsed time will be printed."}
   *flags* {:indent-length 4
            :pretty-print? true
-           :output-to     nil
-           :show-time     false})
+           :output-to     nil})
 
 (defmacro with-custom-flags
   "Given custom-flags & body, temporarily merges default *flags* with the given flags
@@ -146,7 +145,7 @@
                                       (util/conjv selectors (compile-selector next-selector))))
                                   [] <>)
         (apply str <>)
-        (subs <> 1)))
+        (str/trim <>)))
 
 (defn compile-selectors
   "Given a sequence of selectors paths, e.g. '([:iframe :.abc] [:#def sel/after :.ghi]),

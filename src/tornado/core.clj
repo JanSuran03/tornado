@@ -520,11 +520,6 @@
               [last-of-type {:margin-right (px 5p}]]"}
   last-of-type sel/last-of-type)
 
-(def ^{:doc "CSS pseudoselector \"left\". Used as a value, e.g.:
-             [:.some-sel
-              [left {:background-color :red}]]"}
-  left sel/left)
-
 (def ^{:doc "CSS pseudoselector \"links\". Used as a value, e.g.:
              [:.some-sel
               [hover {:color :font-black}]]"}
@@ -564,11 +559,6 @@
              [:.some-sel
               [required {:border [[(px 2) :dotted :crimson]]}]]"}
   required sel/required)
-
-(def ^{:doc "CSS pseudoselector \"right\". Used as a value, e.g.:
-             [:.some-sel
-              [right {:font-weight 800}]]"}
-  right sel/right)
 
 (def ^{:doc "CSS pseudoselector \"root\". Used as a value, e.g.:
              [:.some-sel
@@ -680,6 +670,9 @@
 
 (def ^{:doc "Coming soon"}
   first-line sel/first-line)
+
+(def ^{:doc "Coming soon"}
+  marker sel/marker)
 
 (def ^{:doc "Coming soon"}
   selection sel/selection)

@@ -7,6 +7,11 @@
   (:import (tornado.types CSSPseudoClass CSSPseudoElement
                           CSSAttributeSelector CSSCombinator CSSPseudoClassFn)))
 
+;; Lists of special selectors can be found on https://www.w3schools.com/css/css_selectors.asp
+;; On https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors, you can find even more of them
+;; I did not include all of them because I do not think they are all needed, but if you would like me
+;; to include more of them, you can contact me via e-mail: see https://github.com/JanSuran03/tornado/#contact
+
 (defn attribute-selector-fn
   "Creates a CSSAttributeSelector record."
   ([compiles-to attribute subvalue]
@@ -120,7 +125,6 @@
 (defpseudoclass invalid)
 (defpseudoclass last-child)
 (defpseudoclass last-of-type)
-(defpseudoclass left)
 (defpseudoclass links)
 (defpseudoclass only-child)
 (defpseudoclass only-of-type)
@@ -129,7 +133,6 @@
 (defpseudoclass read-only)
 (defpseudoclass read-write)
 (defpseudoclass required)
-(defpseudoclass right)
 (defpseudoclass root)
 (defpseudoclass scope)
 (defpseudoclass target)
@@ -171,8 +174,6 @@
 (defpseudoclassfn nth-child)
 (defpseudoclassfn nth-last-child)
 (defpseudoclassfn nth-last-of-type)
-(defpseudoclassfn nth-of-type)
-(defpseudoclassfn nth-of-type)
 (defpseudoclassfn nth-of-type)
 
 (def html-tags
@@ -345,6 +346,7 @@
 (defpseudoelement before)
 (defpseudoelement first-letter)
 (defpseudoelement first-line)
+(defpseudoelement marker)
 (defpseudoelement selection)
 
 (defn make-combinator-fn
