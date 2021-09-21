@@ -21,7 +21,7 @@
                            (let [row-str (str/join " " (map name row))]
                              (str "\"" row-str "\""))))
            vector)
-      (throw (IllegalArgumentException.
+      (throw (util/exception
                (str "Vectors in all grid rows must have the same length:\n" all-rows))))))
 
 (defn important

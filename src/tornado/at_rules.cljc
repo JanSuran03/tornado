@@ -1,7 +1,15 @@
 (ns tornado.at-rules
   "Current available at-rules: @media, @font-face, @keyframes"
-  (:require [tornado.types])
-  (:import (tornado.types CSSAtRule)))
+  (:require [tornado.types :as t])
+  #?(:clj (:import (tornado.types CSSAtRule))))
+
+(defn cssatrule [id val]
+  #?(:clj  (CSSAtRule. id val)
+     :cljs (t/CSSAtRule. id val)))
+
+(defn cssatrule? [x]
+  (instance? #?(:clj  CSSAtRule
+                :cljs t/CSSAtRule) x))
 
 (defn at-media
   "Takes a rules map and any number of media changes and creates a CSSAtRule instance
@@ -28,8 +36,8 @@
    :min-width (u/px 800}
    => @media screen and not speech and (min-width: 600px) and (max-width: 800px) {..."
   [rules & changes]
-  (CSSAtRule. "media" {:rules   rules
-                       :changes changes}))
+  (cssatrule "media" {:rules   rules
+                      :changes changes}))
 
 (defn at-font-face
   "Can be used for more convenient describing of @font-face. This is how example
@@ -50,7 +58,7 @@
    :font-weight :normal
    :font-style  :italic}"
   [& props-maps]
-  (CSSAtRule. "font-face" props-maps))
+  (cssatrule "font-face" props-maps))
 
 (defmacro defkeyframes
   "Defines a CSS @keyframes animation. The animation name should have a unique symbol
@@ -86,20 +94,20 @@
                 [:from {:transform (f/translate (u/px 100) (u/px 200)}]
                 [:to {:transform (f/translate (u/px 200) (u/px 400)}])"
   [animation-name & frames]
-  `(def ~animation-name (CSSAtRule. "keyframes" {:anim-name (str '~animation-name)
-                                                 :frames    (list ~@frames)})))
+  `(def ~animation-name (cssatrule "keyframes" {:anim-name (str '~animation-name)
+                                                :frames    (list ~@frames)})))
 
 (defn at-media?
   "Returns true if the expression is a CSSAtRule instance with \"media\" identifier."
-  [expr] (and (instance? CSSAtRule expr)
+  [expr] (and (cssatrule? expr)
               (= (:identifier expr) "media")))
 
 (defn at-font-face?
   "Returns true if the expression is a CSSAtRule instance with \"font-face\" identifier."
-  [expr] (and (instance? CSSAtRule expr)
+  [expr] (and (cssatrule? expr)
               (= (:identifier expr) "font-face")))
 
 (defn at-keyframes?
   "Returns true if the expression is a CSSAtRule instance with \"keyframes\" identifier."
-  [expr] (and (instance? CSSAtRule expr)
+  [expr] (and (cssatrule? expr)
               (= (:identifier expr) "keyframes")))
