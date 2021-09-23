@@ -4,82 +4,87 @@
   (:require [tornado.types]
             [tornado.util :as util]
             [clojure.string :as str])
-  (:import (tornado.types CSSPseudoClass CSSPseudoElement
-                          CSSAttributeSelector CSSCombinator CSSPseudoClassFn)))
+  #?(:cljs (:require-macros [tornado.selectors :refer [defattributeselector defpseudoclass defpseudoclassfn
+                                                       defpseudoelement defcombinatorselector has-attr selector?]]))
+  #?(:clj (:import (tornado.types CSSPseudoClass CSSPseudoElement
+                                  CSSAttributeSelector CSSCombinator CSSPseudoClassFn))))
 
 ;; Lists of special selectors can be found on https://www.w3schools.com/css/css_selectors.asp
 ;; On https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors, you can find even more of them
 ;; I did not include all of them because I do not think they are all needed, but if you would like me
 ;; to include more of them, you can contact me via e-mail: see https://github.com/JanSuran03/tornado/#contact
 
-(defn attribute-selector-fn
-  "Creates a CSSAttributeSelector record."
-  ([compiles-to attribute subvalue]
-   (CSSAttributeSelector. compiles-to nil attribute subvalue))
-  ([compiles-to tag attribute subvalue]
-   (CSSAttributeSelector. compiles-to tag attribute subvalue)))
+#?(:clj
+   (defn attribute-selector-fn
+     "Creates a CSSAttributeSelector record."
+     ([compiles-to attribute subvalue]
+      (CSSAttributeSelector. compiles-to nil attribute subvalue))
+     ([compiles-to tag attribute subvalue]
+      (CSSAttributeSelector. compiles-to tag attribute subvalue))))
 
-(defmacro defattributeselector
-  "Attribute selectors select all descendant elements containing a given attribute,
-  of which the value matches a given substring. All attribute selectors have
-  different conditions for matching. Dashes count as words separators.
-  By attributes, it is meant html attributes, e.g.:    div[class~=\"info\"]
+#?(:clj
+   (defmacro defattributeselector
+     "Attribute selectors select all descendant elements containing a given attribute,
+     of which the value matches a given substring. All attribute selectors have
+     different conditions for matching. Dashes count as words separators.
+     By attributes, it is meant html attributes, e.g.:    div[class~=\"info\"]
 
-  Usage:
-     (defattributeselector contains-word \"~=\")
-     => #'tornado.selectors/contains-word
-     (contains-word :direction \"reverse\")
-     => #tornado.types.CSSAttributeSelector{:compiles-to \"~=\"
-                                            :attribute   :direction
-                                            :subvalue    \"reverse\"}
+     Usage:
+        (defattributeselector contains-word \"~=\")
+        => #'tornado.selectors/contains-word
+        (contains-word :direction \"reverse\")
+        => #tornado.types.CSSAttributeSelector{:compiles-to \"~=\"
+                                               :attribute   :direction
+                                               :subvalue    \"reverse\"}
 
 
-  [attribute=\"value\"]:
-     Selects all descendant elements which have a given parameter with a given value.
-     In code: <has-val>
-  - - - - - - - - - - - -
-  With an html tag:
-  a[attribute=\"value\"]:
-     Selects all descendants of a html tag which have a given parameter
-     with a given value.
+     [attribute=\"value\"]:
+        Selects all descendant elements which have a given parameter with a given value.
+        In code: <has-val>
+     - - - - - - - - - - - -
+     With an html tag:
+     a[attribute=\"value\"]:
+        Selects all descendants of a html tag which have a given parameter
+        with a given value.
 
-  [attribute~=\"value\"]:
-     Selects all descendant elements which have a given parameter with a value
-     containing a given word (not substring, word).
-     In code: <contains-word>
+     [attribute~=\"value\"]:
+        Selects all descendant elements which have a given parameter with a value
+        containing a given word (not substring, word).
+        In code: <contains-word>
 
-  [attribute|=\"value\"]:
-     Selects all descendant elements which have a given parameter with a value
-     starting with a given word (not substring, word).
-     In code: <starts-with-word>
+     [attribute|=\"value\"]:
+        Selects all descendant elements which have a given parameter with a value
+        starting with a given word (not substring, word).
+        In code: <starts-with-word>
 
-  [attribute^=\"value\"]:
-     Selects all descendant elements which have a given parameter with a value
-     starting with a given substring (unlike the \"|=\" selector, the substring
-     does not have to be a whole word.
-     In code: <starts-with>
+     [attribute^=\"value\"]:
+        Selects all descendant elements which have a given parameter with a value
+        starting with a given substring (unlike the \"|=\" selector, the substring
+        does not have to be a whole word.
+        In code: <starts-with>
 
-  [attribute$=\"value\"]:
-     Selects all descendant elements which have a given parameter with a value
-     ending with a given substring. The substring does not have to be a whole word.
-     In code: <ends-with>
+     [attribute$=\"value\"]:
+        Selects all descendant elements which have a given parameter with a value
+        ending with a given substring. The substring does not have to be a whole word.
+        In code: <ends-with>
 
-  [attribute*=\"value\"]:
-     Selects all descendant elements which have a given parameter with a value
-     containing a given substring. (unlike the \"~=\" selector, the substring does
-     not have to be a whole word).
-     In code: <contains-subs>"
-  [selector-name compiles-to]
-  `(do (def ~selector-name (partial ~attribute-selector-fn ~compiles-to))
-       (alter-meta! #'~selector-name assoc :arglists '([~'attribute ~'subvalue]
-                                                       [~'tag ~'attribute ~'subvalue]))))
+     [attribute*=\"value\"]:
+        Selects all descendant elements which have a given parameter with a value
+        containing a given substring. (unlike the \"~=\" selector, the substring does
+        not have to be a whole word).
+        In code: <contains-subs>"
+     [selector-name compiles-to]
+     `(do (def ~selector-name (partial ~attribute-selector-fn ~compiles-to))
+          (alter-meta! #'~selector-name assoc :arglists '([~'attribute ~'subvalue]
+                                                          [~'tag ~'attribute ~'subvalue])))))
 
-(defn has-attr
-  "An attribute selector which selects all elements which have a given
-  attribute with any value, or all html elements on/below the current
-  nested selectors level which have a given attribute with any value."
-  ([attribute] (CSSAttributeSelector. nil nil attribute nil))
-  ([tag attribute] (CSSAttributeSelector. nil tag attribute nil)))
+#?(:clj
+   (defn has-attr
+     "An attribute selector which selects all elements which have a given
+     attribute with any value, or all html elements on/below the current
+     nested selectors level which have a given attribute with any value."
+     ([attribute] (CSSAttributeSelector. nil nil attribute nil))
+     ([tag attribute] (CSSAttributeSelector. nil tag attribute nil))))
 
 (defattributeselector has-val "=")
 (defattributeselector contains-word "~=")
@@ -88,26 +93,27 @@
 (defattributeselector ends-with "$=")
 (defattributeselector contains-subs "*=")
 
-(defmacro defpseudoclass
-  "Defines a CSS pseudoclass. A CSS pseudoclass can activate some CSS properties on
-  a css-class/css-id/html-element based on some current special state of the element.
+#?(:clj
+   (defmacro defpseudoclass
+     "Defines a CSS pseudoclass. A CSS pseudoclass can activate some CSS properties on
+     a css-class/css-id/html-element based on some current special state of the element.
 
-  For example, hover: (defpseudoclass hover)
-  When compiling a selectors sequence, e.g. [:.abc :#def hover], the resulting CSS
-  selectors sequence will look like this: \".abc #def:hover\".
+     For example, hover: (defpseudoclass hover)
+     When compiling a selectors sequence, e.g. [:.abc :#def hover], the resulting CSS
+     selectors sequence will look like this: \".abc #def:hover\".
 
-  So, what does it even do? We can give the element a special value on hover:
-  ... [:a hover {:color :blue} ...] - when we hover over a link with our mouse, the
-  text color of the link will turn blue until we put our mouse away.
+     So, what does it even do? We can give the element a special value on hover:
+     ... [:a hover {:color :blue} ...] - when we hover over a link with our mouse, the
+     text color of the link will turn blue until we put our mouse away.
 
-  Defpseudoclass can also take 2 parameters, where the 2nd one will be the translation
-  to CSS to avoid collisions between Clojure and CSS -
-  e.g.(defpseudolass css-empty \"empty\")."
-  ([pseudoclass]
-   (let [compiles-to (str pseudoclass)]
-     `(defpseudoclass ~pseudoclass ~compiles-to)))
-  ([identifier css-pseudoclass]
-   `(def ~identifier (CSSPseudoClass. ~css-pseudoclass))))
+     Defpseudoclass can also take 2 parameters, where the 2nd one will be the translation
+     to CSS to avoid collisions between Clojure and CSS -
+     e.g.(defpseudolass css-empty \"empty\")."
+     ([pseudoclass]
+      (let [compiles-to (str pseudoclass)]
+        `(defpseudoclass ~pseudoclass ~compiles-to)))
+     ([identifier css-pseudoclass]
+      `(def ~identifier (CSSPseudoClass. ~css-pseudoclass)))))
 
 (defpseudoclass active)
 (defpseudoclass checked)
@@ -140,35 +146,37 @@
 (defpseudoclass valid)
 (defpseudoclass visited)
 
-(defn create-pseudoclassfn-record
-  "Given a CSS pseudoclass for compilation and an argument, creates a CSSPseudoclassFn
-  record with the pseudoclass and argument."
-  [pseudoclass argument]
-  (CSSPseudoClassFn. pseudoclass argument))
+#?(:clj
+   (defn create-pseudoclassfn-record
+     "Given a CSS pseudoclass for compilation and an argument, creates a CSSPseudoclassFn
+     record with the pseudoclass and argument."
+     [pseudoclass argument]
+     (CSSPseudoClassFn. pseudoclass argument)))
 
-(defmacro defpseudoclassfn
-  "Creates a special CSS pseudoclass function, which compiles similarly as a standard
-  CSS pseudoclass, but it is pseudoclass function with an argument.
+#?(:clj
+   (defmacro defpseudoclassfn
+     "Creates a special CSS pseudoclass function, which compiles similarly as a standard
+     CSS pseudoclass, but it is pseudoclass function with an argument.
 
-  For example. if you wanted to only select every n-th argument:
-  (defpseudoclassfn nth-child)
-  (nth-child :odd)     ... compiles to   \"<parent>:nth-child(odd)\"
-  (nth-child \"3n+1\")   ... compiles to   \"<parent>:nth-child(3n+1)\"
+     For example. if you wanted to only select every n-th argument:
+     (defpseudoclassfn nth-child)
+     (nth-child :odd)     ... compiles to   \"<parent>:nth-child(odd)\"
+     (nth-child \"3n+1\")   ... compiles to   \"<parent>:nth-child(3n+1)\"
 
-  Or if you wanted to show something based on the current language of the browser:
-  (defpseudoclass lang)
-  (lang \"en\") ... compiles to   \"<parent>:lang(en)\"
+     Or if you wanted to show something based on the current language of the browser:
+     (defpseudoclass lang)
+     (lang \"en\") ... compiles to   \"<parent>:lang(en)\"
 
-  To avoid collisions with some Clojure functions, you can give a second argument
-  to defpseudoclassfn for a different translation to CSS:
-  (defpseudoclass css-not \"not\")
-  (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
-  not a paragraph."
-  ([pseudoclass]
-   (let [compiles-to (str pseudoclass)]
-     `(defpseudoclassfn ~pseudoclass ~compiles-to)))
-  ([pseudoclass compiles-to]
-   `(def ~pseudoclass (partial ~create-pseudoclassfn-record ~compiles-to))))
+     To avoid collisions with some Clojure functions, you can give a second argument
+     to defpseudoclassfn for a different translation to CSS:
+     (defpseudoclass css-not \"not\")
+     (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
+     not a paragraph."
+     ([pseudoclass]
+      (let [compiles-to (str pseudoclass)]
+        `(defpseudoclassfn ~pseudoclass ~compiles-to)))
+     ([pseudoclass compiles-to]
+      `(def ~pseudoclass (partial ~create-pseudoclassfn-record ~compiles-to)))))
 
 (defpseudoclassfn lang)
 (defpseudoclassfn css-not "not")
@@ -292,14 +300,15 @@
                              :& "A selector for selecting the current element."})
 (def special-selectors (->> special-sels keys (map name) set))
 
-(defn selector?
-  "Returns true if x is a selector of any kind (attribute, combinator, pseudoclass,
-  pseudoclassfn, pseudoelement, special selector"
-  [x]
-  (or (util/some-instance? x CSSAttributeSelector CSSCombinator
-                           CSSPseudoClass CSSPseudoClassFn CSSPseudoElement)
-      (and (util/valid? x)
-           (contains? special-selectors (name x)))))
+#?(:clj
+   (defn selector?
+     "Returns true if x is a selector of any kind (attribute, combinator, pseudoclass,
+     pseudoclassfn, pseudoelement, special selector"
+     [x]
+     (or (util/some-instance? x CSSAttributeSelector CSSCombinator
+                              CSSPseudoClass CSSPseudoClassFn CSSPseudoElement)
+         (and (util/valid? x)
+              (contains? special-selectors (name x))))))
 
 (defn css-class?
   "Returns true if the argument is a keyword, a string or a symbol
@@ -327,21 +336,22 @@
   [x]
   ((some-fn css-class? css-id? html-tag?) x))
 
-(defmacro defpseudoelement
-  "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
-  a special part of a css-class/css-id/html-element.
+#?(:clj
+   (defmacro defpseudoelement
+     "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
+     a special part of a css-class/css-id/html-element.
 
-  For example, first-letter: (defpseudoclass first-letter)
-  When compiling a selectors sequence, e.g. [:.abc :#def first-letter], the resulting CSS
-  selectors sequence will look like this: \".abc #def::first-letter\".
+     For example, first-letter: (defpseudoclass first-letter)
+     When compiling a selectors sequence, e.g. [:.abc :#def first-letter], the resulting CSS
+     selectors sequence will look like this: \".abc #def::first-letter\".
 
-  So, what does it even do? We can give the first letter of an element a special value:
-  ... [:.abc :p first-letter {:font-size (u/px 60)} ...] - this causes the first letter
-  of every paragraph in an element with class .abc to have the first letter significantly
-  bigger than the rest of the paragraph."
-  ([pseudoelement]
-   (let [compiles-to (str pseudoelement)]
-     `(def ~pseudoelement (CSSPseudoElement. ~compiles-to)))))
+     So, what does it even do? We can give the first letter of an element a special value:
+     ... [:.abc :p first-letter {:font-size (u/px 60)} ...] - this causes the first letter
+     of every paragraph in an element with class .abc to have the first letter significantly
+     bigger than the rest of the paragraph."
+     ([pseudoelement]
+      (let [compiles-to (str pseudoelement)]
+        `(def ~pseudoelement (CSSPseudoElement. ~compiles-to))))))
 
 (defpseudoelement after)
 (defpseudoelement before)
@@ -350,32 +360,34 @@
 (defpseudoelement marker)
 (defpseudoelement selection)
 
-(defn make-combinator-fn
-  "Creates a CSSCombinator record."
-  [compiles-to & children]
-  (CSSCombinator. compiles-to children))
+#?(:clj
+   (defn make-combinator-fn
+     "Creates a CSSCombinator record."
+     [compiles-to & children]
+     (CSSCombinator. compiles-to children)))
 
-(defmacro defcombinatorselector
-  "Defines a combinator selector function which describes relationships between its
-  arguments depending on the selector type:
+#?(:clj
+   (defmacro defcombinatorselector
+     "Defines a combinator selector function which describes relationships between its
+     arguments depending on the selector type:
 
-  :#abc :.def is the default combinator selector - descendant selector. Affects all
-  children with a class .def.
+     :#abc :.def is the default combinator selector - descendant selector. Affects all
+     children with a class .def.
 
-  child-selector \">\": is active when the given selectors are every of them a direct
-  child of the previous one.
+     child-selector \">\": is active when the given selectors are every of them a direct
+     child of the previous one.
 
-  adjacent-sibling (selector) \"+\": is active when the given html blocks elements or
-  elements with a given class/id connected with the \"+\" sign are adjacent siblings.
+     adjacent-sibling (selector) \"+\": is active when the given html blocks elements or
+     elements with a given class/id connected with the \"+\" sign are adjacent siblings.
 
-  general-sibling (selector) \"~\" is active when the given selectors are on the same
-  level of nesting; they do not have to be adjacent necessarily.
+     general-sibling (selector) \"~\" is active when the given selectors are on the same
+     level of nesting; they do not have to be adjacent necessarily.
 
-  Usage: [:.abc
-           [:.def (child-selector :p :#ghi)]]
-  compiles to   \".abc .def, .abc > p > #ghi\""
-  [selector-name compiles-to]
-  `(def ~selector-name (partial ~make-combinator-fn ~compiles-to)))
+     Usage: [:.abc
+              [:.def (child-selector :p :#ghi)]]
+     compiles to   \".abc .def, .abc > p > #ghi\""
+     [selector-name compiles-to]
+     `(def ~selector-name (partial ~make-combinator-fn ~compiles-to))))
 
 (defcombinatorselector child-selector ">")
 (defcombinatorselector adjacent-sibling "+")
