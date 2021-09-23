@@ -80,6 +80,7 @@
   nested selectors level which have a given attribute with any value."
   ([attribute] (CSSAttributeSelector. nil nil attribute nil))
   ([tag attribute] (CSSAttributeSelector. nil tag attribute nil)))
+
 (defattributeselector has-val "=")
 (defattributeselector contains-word "~=")
 (defattributeselector starts-with-word "|=")
