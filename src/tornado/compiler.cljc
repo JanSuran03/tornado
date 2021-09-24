@@ -252,8 +252,8 @@
 
 (defmethod compile-css-record :default
   [record]
-  (throw (util/exception (str "Not a valid tornado record: " record " with a class: " #?(:clj  (class record)
-                                                                                         :cljs (type record))))))
+  (util/exception (str "Not a valid tornado record: " record " with a class: " #?(:clj  (class record)
+                                                                                  :cljs (type record)))))
 
 (defmethod compile-css-record IUnit
   [{:keys [value compiles-to]}]
@@ -303,9 +303,9 @@
              (every? sequential? expr)) (->> expr (map #(->> % (map compile-expression)
                                                              util/str-spacejoin))
                                              util/str-commajoin)
-        :else (throw (util/exception
-                       (str "None of a CSS unit, CSS function, CSS at-rule, a keyword a string, a number or"
-                            " a sequential structure consisting of more sequential structures:\n" expr)))))
+        :else (util/exception
+                (str "None of a CSS unit, CSS function, CSS at-rule, a keyword a string, a number or"
+                     " a sequential structure consisting of more sequential structures:\n" expr))))
 
 (defn compile-attributes-map
   "Compiles an attributes map, returns a sequence of [compiled-attribute compiled-value]."
@@ -345,7 +345,7 @@
 
 (defmethod compile-at-rule :default
   [{:keys [identifier] :as at-rule}]
-  (throw (util/exception (str "Unknown at-rule identifier: " identifier " of at-rule: " at-rule))))
+  (util/exception (str "Unknown at-rule identifier: " identifier " of at-rule: " at-rule)))
 
 (def special-media-rules-map
   "A special map for generating media queries rules, e.g.:
@@ -366,9 +366,9 @@
                                       (if-let [compiled-param (util/get-str-form param)]
                                         (let [compiled-unit (compile-expression value)]
                                           (str "(" compiled-param ": " compiled-unit ")"))
-                                        (throw (util/exception
-                                                 (str "Invalid format of a CSS property: " value " in a map of rules:"
-                                                      rules " in at-media compilation of @media expression: " at-media))))))
+                                        (util/exception
+                                          (str "Invalid format of a CSS property: " value " in a map of rules:"
+                                               rules " in at-media compilation of @media expression: " at-media)))))
                                   (str/join " and "))
         compiled-media-changes (->> (for [parents-path paths]
                                       (-> (expand-hiccup-list-for-compilation parents-path [] changes)
@@ -427,23 +427,23 @@
                                                         (map? hiccup-element)) :params
                                                    (vector? hiccup-element) :children
                                                    (at-rules/at-media? hiccup-element) :at-media
-                                                   :else (throw (util/exception
-                                                                  (str "Invalid hiccup element: " hiccup-element "\nin"
-                                                                       " hiccup: " hiccup "\nNone from a class, id,"
-                                                                       " selector, child-vector, at-media CSSAtRule"
-                                                                       " instance or a params map."))))]
+                                                   :else (util/exception
+                                                           (str "Invalid hiccup element: " hiccup-element "\nin"
+                                                                " hiccup: " hiccup "\nNone from a class, id,"
+                                                                " selector, child-vector, at-media CSSAtRule"
+                                                                " instance or a params map.")))]
                               (if (or (and (not= belongs-to :selectors)
                                            (empty? selectors))
                                       (and (= belongs-to :selectors)
                                            (or (seq params) (seq children) (seq at-media)))
                                       (and (= belongs-to :params)
                                            (or (seq params) (seq children) (seq at-media))))
-                                (throw (util/exception
-                                         (str "Error: Hiccup rules:\nYou have to include at least one selector before"
-                                              " params or children.\nIf you include any of params or children, the order"
-                                              " has to be selectors -> params -> children.\nYou also cannot include more"
-                                              " than one parameters map. At-font-face can be included anywhere in the"
-                                              " hiccup vector.\nHiccup received: " hiccup)))
+                                (util/exception
+                                  (str "Error: Hiccup rules:\nYou have to include at least one selector before"
+                                       " params or children.\nIf you include any of params or children, the order"
+                                       " has to be selectors -> params -> children.\nYou also cannot include more"
+                                       " than one parameters map. At-font-face can be included anywhere in the"
+                                       " hiccup vector.\nHiccup received: " hiccup))
                                 (update spc-map belongs-to conj hiccup-element))))
                           {:selectors []
                            :params    []

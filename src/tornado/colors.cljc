@@ -26,9 +26,9 @@
                                                :cljs (type ""))
                         Keyword Keyword
                         Symbol Symbol
-                        (throw (util/exception
-                                 (str "The given color is none of a tornado CSSColor record, color keyword,"
-                                      " color symbol or a string: " color)))))
+                        (util/exception
+                          (str "The given color is none of a tornado CSSColor record, color keyword,"
+                               " color symbol or a string: " color))))
 
 (defn color->1-wd
   "Assumes that clojure.core/name can be casted to the argument. Transforms all 3 versions
@@ -202,8 +202,8 @@
   ([[red green blue]]
    (if (every? #(util/between % 0 255) [red green blue])
      (color "rgb" {:red red, :green green, :blue blue})
-     (throw (util/exception (str "All values of an rgb color must be between 0 and 255: "
-                                 red ", " green ", " blue)))))
+     (util/exception (str "All values of an rgb color must be between 0 and 255: "
+                          red ", " green ", " blue))))
   ([red green blue]
    (rgb [red green blue])))
 
@@ -213,9 +213,9 @@
    (let [alpha (or alpha 1)]
      (if (and (every? #(util/between % 0 255) [red green blue]) (util/between alpha 0 1))
        (color "rgba" {:red red, :green green, :blue blue, :alpha (util/percent->number alpha true)})
-       (throw (util/exception
-                (str "All r, g, b values of an rgb color must be between 0 and 255: "
-                     red ", " green ", " blue " and alpha between 0 and 1: " alpha))))))
+       (util/exception
+         (str "All r, g, b values of an rgb color must be between 0 and 255: "
+              red ", " green ", " blue " and alpha between 0 and 1: " alpha)))))
   ([red green blue]
    (rgba [red green blue 1]))
   ([red green blue alpha]
@@ -351,7 +351,7 @@
                :else (do (println (str "Unable to convert " color " to a hex-string -"
                                        " it is neither in rgb nor in rgba format."))
                          color))
-    (throw (util/exception (str "Expected a CSSColor record: " color)))))
+    (util/exception (str "Expected a CSSColor record: " color))))
 
 (defn hsl->rgb
   "https://www.rapidtables.com/convert/color/hsl-to-rgb.html
@@ -399,7 +399,7 @@
 (defn- unknown-color-type
   "Throws an exception when the color type is not supported."
   [{:keys [type] :or {type "undefined"} :as color}]
-  (throw (util/exception (str "Unknown color type: " type " of color " color))))
+  (util/exception (str "Unknown color type: " type " of color " color)))
 
 (defn- try-keyword-color
   "Tries to get a hex-code color from default-colors map under the given key. If it does
@@ -416,11 +416,11 @@
   "Converts a color to rgb."
   [{:keys [type] :as color}]
   (case type "rgb" color
-             "rgba" (throw (util/exception
-                             (str "Error: an rgba color is not convertible to rgb: " color)))
+             "rgba" (util/exception
+                      (str "Error: an rgba color is not convertible to rgb: " color))
              "hsl" (hsl->rgb color)
-             "hsla" (throw (util/exception
-                             (str "Error: an hsla color is not convertible to rgb: " color)))
+             "hsla" (util/exception
+                      (str "Error: an hsla color is not convertible to rgb: " color))
              (if (non-alpha-hex? color)
                (-> color hex->rgba rgba->rgb)
                (->rgb (try-keyword-color color)))))
@@ -439,11 +439,11 @@
   "Converts a color to hsl."
   [{:keys [type] :as color}]
   (case type "rgb" (rgb->hsl color)
-             "rgba" (throw (util/exception
-                             (str "Error: an rgba color is not convertible to hsl: " color)))
+             "rgba" (util/exception
+                      (str "Error: an rgba color is not convertible to hsl: " color))
              "hsl" color
-             "hsla" (throw (util/exception
-                             (str "Error: an hsla color is not convertible to hsl: " color)))
+             "hsla" (util/exception
+                      (str "Error: an hsla color is not convertible to hsl: " color))
              (if (non-alpha-hex? color)
                (-> color hex->rgba rgba->rgb rgb->hsl)
                (->hsl (try-keyword-color color)))))

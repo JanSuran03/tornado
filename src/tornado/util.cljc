@@ -25,8 +25,9 @@
   (subs s 0 (dec (count s))))
 
 (defn exception [arg]
-  (#?(:clj  IllegalArgumentException.
-      :cljs js/Error.) arg))
+  (throw
+    (#?(:clj  IllegalArgumentException.
+        :cljs js/Error.) arg)))
 
 (defn valid?
   "Returns true if the argument is a symbol, a keyword or a string."
@@ -105,8 +106,8 @@
                        :cljs t/CSSUnit) value) (if (= (:compiles-to value) "%")
                                                  (int* (/ (:value value) 100))
                                                  value)
-         throw-if-no-match (throw (exception
-                                    (str "Not a valid value for conversion from percent to number: " value)))
+         throw-if-no-match (exception
+                             (str "Not a valid value for conversion from percent to number: " value))
          :else value)))
 
 (defn ->fixed
@@ -213,7 +214,7 @@
                                    (vec vect))
                                  value)
         (nil? vect) [value]
-        :else (throw (exception (str "Not sequential, nor `nil`: " vect)))))
+        :else (exception (str "Not sequential, nor `nil`: " vect))))
 
 (defn in-range
   "If the value is not in range of min-val and max-val, returns the value of the

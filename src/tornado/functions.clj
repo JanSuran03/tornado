@@ -13,9 +13,9 @@
                                      `(defcssfn ~fn-name ~compiles-to ~css-fn-or-fn-tail))
          (ifn? css-fn-or-fn-tail) (let [compiles-to (str fn-name)]
                                     `(defcssfn ~fn-name ~compiles-to ~css-fn-or-fn-tail))
-         :else (throw (util/exception
-                        (str "Error defining a CSS function " fn-name " with arity(2):"
-                             "\nThe second argument " css-fn-or-fn-tail " is"
-                             " neither a string nor a function.")))))
+         :else (util/exception
+                 (str "Error defining a CSS function " fn-name " with arity(2):"
+                      "\nThe second argument " css-fn-or-fn-tail " is"
+                      " neither a string nor a function."))))
   ([clojure-fn-name compiles-to compile-fn]
    `(def ~clojure-fn-name (fn [& args#] (CSSFunction. ~compiles-to ~compile-fn args#)))))
