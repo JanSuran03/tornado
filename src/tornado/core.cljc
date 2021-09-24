@@ -7,20 +7,10 @@
             [tornado.selectors :as sel]
             [tornado.functions :as f]
             [tornado.at-rules :as at-rules]
-            [tornado.common :as common])
-  #?(:cljs (:require-macros [tornado.units :refer [defunit]]
-                            [tornado.selectors :refer [defattributeselector defpseudoclass defpseudoclassfn
-                                                       defpseudoelement defcombinatorselector has-attr*]]
-                            [tornado.at-rules :refer [defkeyframes]]
-                            [tornado.functions :refer [defcssfn]])))
-
-(require 'tornado.units
-         'tornado.colors
-         'tornado.compiler
-         'tornado.selectors
-         'tornado.functions
-         'tornado.at-rules
-         'tornado.common)
+            [tornado.common :as common]
+            #?(:clj [tornado.clj-macros :as m]))
+  #?(:cljs (:require-macros [tornado.cljs-macros :refer [defunit defattributeselector defpseudoclass defpseudoclassfn
+                                                         defpseudoelement defcombinatorselector defcssfn defkeyframes]])))
 
 ;; COMPILER FUNCTIONS
 
@@ -69,7 +59,7 @@
                :arglists '([unit] [identifier css-unit])}
      defunit
      [& args]
-     `(u/defunit ~@args)))
+     `(m/defunit ~@args)))
 
 ;; absolute size units
 
@@ -199,7 +189,7 @@
                :arglists '([fn-name] [fn-name css-fn-or-fn-tail] [clojure-fn-name compiles-to compile-fn])}
      defcssfn
      [& args]
-     `(f/defcssfn ~@args)))
+     `(m/defcssfn ~@args)))
 
 ;; single arg functions
 
@@ -387,7 +377,7 @@
                :arglists '([selector-name compiles-to])}
      defattributeselector
      [& args]
-     `(sel/defattributeselector ~@args)))
+     `(m/defattributeselector ~@args)))
 
 (def ^{:doc      "An attribute selector which selects all elements which have a given
                   attribute with any value, or all html elements on/below the current
@@ -449,7 +439,7 @@
                :arglists '([pseudoclass] [identifier css-pseudoclass])}
      defpseudoclass
      [& args]
-     `(sel/defpseudoclass ~@args)))
+     `(m/defpseudoclass ~@args)))
 
 (def ^{:doc "CSS pseudoselector \"active\". Used as a value, e.g.:
              [:.some-sel {:width (px 100)}
@@ -625,7 +615,7 @@
                :arglists '([pseudoclass] [pseudoclass compiles-to])}
      defpseudoclassfn
      [& args]
-     `(sel/defpseudoclassfn ~@args)))
+     `(m/defpseudoclassfn ~@args)))
 
 (def ^{:doc      "Coming soon"
        :arglists '([arg])}
@@ -668,7 +658,7 @@
                :arglists '([pseudoelement])}
      defpseudoelement
      [& args]
-     `(sel/defpseudoelement ~@args)))
+     `(m/defpseudoelement ~@args)))
 
 (def ^{:doc "Coming soon"}
   after sel/after)
@@ -712,7 +702,7 @@
                :arglists '([selector-name compiles-to])}
      defcombinatorselector
      [& args]
-     `(sel/defcombinatorselector ~@args)))
+     `(m/defcombinatorselector ~@args)))
 
 (def ^{:doc      "Coming soon"
        :arglists '([& selectors])} child-selector sel/child-selector)
@@ -902,7 +892,7 @@
                :arglists '([animation-name & frames])}
      defkeyframes
      [& args]
-     `(at-rules/defkeyframes ~@args)))
+     `(m/defkeyframes ~@args)))
 
 ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ;; COMMON UTILITY FUNCTIONS

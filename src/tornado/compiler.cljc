@@ -8,8 +8,6 @@
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
             [tornado.compression :as compression])
-  #?(:cljs (:require-macros [tornado.compiler :refer [with-custom-flags with-media-query-parents
-                                                      in-keyframes-context in-params-context]]))
   #?(:clj (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                                   CSSCombinator CSSAttributeSelector
                                   CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
@@ -60,14 +58,6 @@
            :pretty-print? true
            :output-to     nil})
 
-#?(:clj
-   (defmacro with-custom-flags
-     "Given custom-flags & body, temporarily merges default *flags* with the given flags
-     and executes the body."
-     [flags & body]
-     `(binding [*flags* (merge *flags* ~flags)]
-        ~@body)))
-
 (defn indent
   "The actual globally used indent in a string form of *X* spaces."
   []
@@ -87,30 +77,6 @@
   "")
 
 (def ^:dynamic *in-params-context* false)
-
-#?(:clj
-   (defmacro with-media-query-parents
-     "Temporarily stores current parents paths for compiling @media and adds
-    + 1* globally used indent."
-     [-parents- & body]
-     `(binding [*media-query-parents* ~-parents-
-                *at-media-indent* ~(indent)]
-        ~@body)))
-
-#?(:clj
-   (defmacro in-keyframes-context
-     "Temporarily adds extra + 1* globally used indent for compiling @keyframes."
-     [& body]
-     `(binding [*keyframes-indent* ~(indent)]
-        ~@body)))
-
-#?(:clj
-   (defmacro in-params-context
-     "A macro to bind *in-params-context* to true, which causes a css at-rule keyframes
-     record to be compiled to {:anim-name} (assuming it is for :animation-name)"
-     [& body]
-     `(binding [*in-params-context* true]
-        ~@body)))
 
 (declare compile-expression
          compile-at-rule
@@ -312,7 +278,8 @@
   [attributes-map]
   (when-let [attributes-map (util/prune-nils attributes-map)]
     (for [[attribute value] attributes-map]
-      [(compile-expression attribute) (in-params-context (compile-expression value))])))
+      [(compile-expression attribute) (binding [*in-params-context* true]
+                                        (compile-expression value))])))
 
 (defn attr-map-to-css
   "Compiles an attributes map and translates the compiled data to CSS:
@@ -394,7 +361,7 @@
   (let [{:keys [anim-name frames]} value]
     (if *in-params-context*
       anim-name
-      (in-keyframes-context
+      (binding [*keyframes-indent* (indent)]
         (let [compiled-frames (->> frames (map (fn [[progress params]]
                                                  (let [compiled-progress (compile-expression progress)
                                                        compiled-params (attr-map-to-css params)]
@@ -537,7 +504,9 @@
          display: flex;
       }"
   [{:keys [paths params at-media at-font-face at-keyframes]}]
-  (cond at-media (with-media-query-parents paths (compile-at-rule at-media))
+  (cond at-media (binding [*media-query-parents* paths
+                           *at-media-indent* (indent)]
+                   (compile-at-rule at-media))
         at-font-face (compile-css-record at-font-face)
         at-keyframes (compile-css-record at-keyframes)
         :else (when params (let [compiled-selectors (compile-selectors paths)
@@ -590,13 +559,13 @@
   ([css-hiccup]
    (css nil css-hiccup))
   ([flags css-hiccup]
-   (with-custom-flags flags
-                      (let [{:keys [pretty-print? output-to]} *flags*]
-                        (cond->> css-hiccup true just-css
-                                 (not pretty-print?) compression/compress
-                                 output-to ((fn [x] #?(:clj  (do (spit output-to x)
-                                                                 (println "   Wrote: " output-to))
-                                                       :cljs nil))))))))
+   (binding [*flags* (merge *flags* flags)]
+     (let [{:keys [pretty-print? output-to]} *flags*]
+       (cond->> css-hiccup true just-css
+                (not pretty-print?) compression/compress
+                output-to ((fn [x] #?(:clj  (do (spit output-to x)
+                                                (println "   Wrote: " output-to))
+                                      :cljs nil))))))))
 
 (defn repl-css
   "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
