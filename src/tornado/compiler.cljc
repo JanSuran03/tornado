@@ -9,10 +9,10 @@
             [tornado.colors :as colors]
             [tornado.compression :as compression]
             #?(:clj [tornado.macros :as m]))
-  #?(:clj (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
-                                  CSSCombinator CSSAttributeSelector
-                                  CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
-                   (clojure.lang Keyword Symbol))
+  #?(:clj  (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
+                                   CSSCombinator CSSAttributeSelector
+                                   CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
+                    (clojure.lang Keyword Symbol))
      :cljs (:require-macros [tornado.macros :refer [cartesian-product]])))
 
 (def IUnit #?(:clj  CSSUnit
@@ -299,10 +299,21 @@
          (str/join (str "\n" (indent) *at-media-indent*))
          (str *keyframes-indent*))))
 
-(defn html-style [attributes-map]
+(defn html-style
+  "Can be used for compilation of a map of style parameters to a single string of html
+  style=\"...\" attribute. Receives the styles map as its argument and returns a string
+  of compiled style:
+
+  (html-style {:width            (px 500)
+               :height           (percent 15)
+               :color            :font-black
+               :background-color :teal})
+
+  => \"width:500px;height:15%;color:#1A1B1F;background-color:#008080\""
+  [attributes-map]
   (as-> attributes-map <> (compile-attributes-map <>)
-        (map #(str/join % ":") <>)
-        (str/join <> ";")))
+        (map #(str/join ":" %) <>)
+        (str/join ";" <>)))
 
 (defmulti compile-at-rule
           "Generates CSS from a CSSAtRule record, at the moment, these are available:
@@ -569,7 +580,7 @@
                 (not pretty-print?) compression/compress
                 output-to ((fn [x] #?(:clj  (do (spit output-to x)
                                                 (println "   Wrote: " output-to))
-                                      :cljs nil))))))))
+                                      :cljs (util/exception "Cannot save compiled stylesheet in ClojureScript.")))))))))
 
 (defn repl-css
   "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
@@ -582,10 +593,3 @@
     (doseq [line compiled-and-split-css-string]
       (println line))
     (newline)))
-
-(comment
-  {:color     (cex :chocolate)
-   :font-size (cex (t/em 25))
-   :position  "absolute"
-   :top       (cex (viewport-height -80))
-   :left      (cex (vw -15))})

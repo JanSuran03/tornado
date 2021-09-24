@@ -39,6 +39,19 @@
        :arglists '([css-hiccup])}
   repl-css compiler/repl-css)
 
+(def ^{:doc      "Can be used for compilation of a map of style parameters to a single string of html
+                  style=\"...\" attribute. Receives the styles map as its argument and returns a string
+                  of compiled style:
+
+                  (html-style {:width            (px 500)
+                               :height           (percent 15)
+                               :color            :font-black
+                               :background-color :teal})
+
+                  => \"width:500px;height:15%;color:#1A1B1F;background-color:#008080\""
+       :arglists '([styles-map])}
+  html-style compiler/html-style)
+
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 ;; UNITS
