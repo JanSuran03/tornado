@@ -2,7 +2,7 @@
   "Everything related to CSS functions."
   (:require [tornado.types]
             [tornado.util :as util]
-    #_[tornado.compiler :refer [compile-expression]])
+            [tornado.compiler :refer [compile-expression]])
   #?(:cljs (:require-macros [tornado.functions :refer [defcssfn]]))
   #?(:clj (:import (tornado.types CSSFunction)
                    (clojure.lang PersistentList IFn))))
