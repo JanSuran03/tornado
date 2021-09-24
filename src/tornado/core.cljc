@@ -7,7 +7,20 @@
             [tornado.selectors :as sel]
             [tornado.functions :as f]
             [tornado.at-rules :as at-rules]
-            [tornado.common :as common]))
+            [tornado.common :as common])
+  #?(:cljs (:require-macros [tornado.units :refer [defunit]]
+                            [tornado.selectors :refer [defattributeselector defpseudoclass defpseudoclassfn
+                                                       defpseudoelement defcombinatorselector has-attr*]]
+                            [tornado.at-rules :refer [defkeyframes]]
+                            [tornado.functions :refer [defcssfn]])))
+
+(require 'tornado.units
+         'tornado.colors
+         'tornado.compiler
+         'tornado.selectors
+         'tornado.functions
+         'tornado.at-rules
+         'tornado.common)
 
 ;; COMPILER FUNCTIONS
 
@@ -40,7 +53,8 @@
 
 ;; UNITS
 
-(defmacro ^{:doc      "Creates a unit function which takes 1 argument and creates a CSSUnit record for future
+#?(:clj
+   (defmacro ^{:doc      "Creates a unit function which takes 1 argument and creates a CSSUnit record for future
                        compilation. Defunit can take 1 arg: (defunit px)
                                                  or 2 args: (defunit percent \"%\").
 
@@ -52,10 +66,10 @@
                        :add, :sub, :mul, :div
 
                        E.g. (calc (px 500) :add 3 :mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"."
-            :arglists '([unit] [identifier css-unit])}
-  defunit
-  [& args]
-  `(u/defunit ~@args))
+               :arglists '([unit] [identifier css-unit])}
+     defunit
+     [& args]
+     `(u/defunit ~@args)))
 
 ;; absolute size units
 
@@ -161,7 +175,8 @@
        :arglists '([{:keys [compiles-to args]}])}
   space-join f/space-join)
 
-(defmacro ^{:doc      "Creates a cssfn function which which takes any number of arguments and creates
+#?(:clj
+   (defmacro ^{:doc      "Creates a cssfn function which which takes any number of arguments and creates
                        a CSSFunction record for future compilation.
 
                        Defcssfn can take 1 argument, which creates the function with the same name in CSS
@@ -181,10 +196,10 @@
 
                        you can also give defcssfn 3 arguments, where the 2nd one will be a special string
                        for translation to CSS and the 3rd one the compiling function."
-            :arglists '([fn-name] [fn-name css-fn-or-fn-tail] [clojure-fn-name compiles-to compile-fn])}
-  defcssfn
-  [& args]
-  `(f/defcssfn ~@args))
+               :arglists '([fn-name] [fn-name css-fn-or-fn-tail] [clojure-fn-name compiles-to compile-fn])}
+     defcssfn
+     [& args]
+     `(f/defcssfn ~@args)))
 
 ;; single arg functions
 
@@ -354,7 +369,8 @@
 
 ;; attribute selectors
 
-(defmacro ^{:doc      "Defines a CSS attribute selector. Those select all descendant elements containing
+#?(:clj
+   (defmacro ^{:doc      "Defines a CSS attribute selector. Those select all descendant elements containing
                        a given attribute, of which the value matches a given substring. All attribute
                        selectors have different conditions for matching:
                        Start with a word, start with a substring, contain a word, contain a substring,
@@ -368,18 +384,19 @@
                        We can also use (contains-word :class \"info\") to mark all elements with that
                        class ... compiles to [class~=\"info\"] and affects all elements with that
                        class (divs, spans, iframes, everything)."
-            :arglists '([selector-name compiles-to])}
-  defattributeselector
-  [& args]
-  `(sel/defattributeselector ~@args))
+               :arglists '([selector-name compiles-to])}
+     defattributeselector
+     [& args]
+     `(sel/defattributeselector ~@args)))
 
 (def ^{:doc      "An attribute selector which selects all elements which have a given
                   attribute with any value, or all html elements on/below the current
                   nested selectors level which have a given attribute with any value."
        :arglists '([attribute] [tag attribute])}
-  has-attr #?(:clj sel/has-attr
-              :cljs (fn ([attr] (sel/has-attr attr))
-                        ([tag attr] (sel/has-attr tag attr)))))
+  has-attr #?(:clj  sel/has-attr
+              :cljs (fn
+                      ([attr] (has-attr* attr))
+                      ([tag attr] (has-attr* tag attr)))))
 
 (def ^{:doc      "Selects all descendants of a html tag which have a given parameter with a given value."
        :arglists '([attribute subvalue] [tag attribute subvalue])}
@@ -414,7 +431,8 @@
 
 ;; pseudoclass selectors
 
-(defmacro ^{:doc      "Defines a CSS pseudoclass. A CSS pseudoclass can activate some CSS properties on
+#?(:clj
+   (defmacro ^{:doc      "Defines a CSS pseudoclass. A CSS pseudoclass can activate some CSS properties on
                        a css-class/css-id/html-element based on some current special state of the element.
 
                        For example, hover: (defpseudoclass hover)
@@ -428,10 +446,10 @@
                        Defpseudoclass can also take 2 parameters, where the 2nd one will be the translation
                        to CSS to avoid collisions between Clojure and CSS -
                        e.g.(defpseudolass css-empty \"empty\")."
-            :arglists '([pseudoclass] [identifier css-pseudoclass])}
-  defpseudoclass
-  [& args]
-  `(sel/defpseudoclass ~@args))
+               :arglists '([pseudoclass] [identifier css-pseudoclass])}
+     defpseudoclass
+     [& args]
+     `(sel/defpseudoclass ~@args)))
 
 (def ^{:doc "CSS pseudoselector \"active\". Used as a value, e.g.:
              [:.some-sel {:width (px 100)}
@@ -586,7 +604,8 @@
 
 ;; pseudoclass selectors functions
 
-(defmacro ^{:doc      "Creates a special CSS pseudoclass function, which compiles similarly as a standard
+#?(:clj
+   (defmacro ^{:doc      "Creates a special CSS pseudoclass function, which compiles similarly as a standard
                        CSS pseudoclass, but it is pseudoclass function with an argument.
 
                        For example. if you wanted to only select every n-th argument:
@@ -603,10 +622,10 @@
                        (defpseudoclass css-not \"not\")
                        (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
                        not a paragraph."
-            :arglists '([pseudoclass] [pseudoclass compiles-to])}
-  defpseudoclassfn
-  [& args]
-  `(sel/defpseudoclassfn ~@args))
+               :arglists '([pseudoclass] [pseudoclass compiles-to])}
+     defpseudoclassfn
+     [& args]
+     `(sel/defpseudoclassfn ~@args)))
 
 (def ^{:doc      "Coming soon"
        :arglists '([arg])}
@@ -634,7 +653,8 @@
 
 ;; pseudoelement selectors
 
-(defmacro ^{:doc      "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
+#?(:clj
+   (defmacro ^{:doc      "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
                       a special part of a css-class/css-id/html-element.
 
                       For example, first-letter: (defpseudoclass first-letter)
@@ -645,10 +665,10 @@
                       ... [:.abc :p first-letter {:font-size (u/px 60)} ...] - this causes the first letter
                       of every paragraph in an element with class .abc to have the first letter significantly
                       bigger than the rest of the paragraph."
-            :arglists '([pseudoelement])}
-  defpseudoelement
-  [& args]
-  `(sel/defpseudoelement ~@args))
+               :arglists '([pseudoelement])}
+     defpseudoelement
+     [& args]
+     `(sel/defpseudoelement ~@args)))
 
 (def ^{:doc "Coming soon"}
   after sel/after)
@@ -670,7 +690,8 @@
 
 ;; combinator selectors
 
-(defmacro ^{:doc      "Defines a combinator selector function which describes relationships between its
+#?(:clj
+   (defmacro ^{:doc      "Defines a combinator selector function which describes relationships between its
                        arguments depending on the selector type:
 
                       :#abc :.def is the default combinator selector - descendant selector. Affects all
@@ -688,10 +709,10 @@
                        Usage: [:.abc
                                 [:.def (child-selector :p :#ghi)]]
                        compiles to   \".abc .def, .abc > p > #ghi\""
-            :arglists '([selector-name compiles-to])}
-  defcombinatorselector
-  [& args]
-  `(sel/defcombinatorselector ~@args))
+               :arglists '([selector-name compiles-to])}
+     defcombinatorselector
+     [& args]
+     `(sel/defcombinatorselector ~@args)))
 
 (def ^{:doc      "Coming soon"
        :arglists '([& selectors])} child-selector sel/child-selector)
@@ -845,7 +866,8 @@
        :arglists '([& props-maps])}
   at-font-face at-rules/at-font-face)
 
-(defmacro ^{:doc      "Defines a CSS @keyframes animation. The animation name should have a unique symbol
+#?(:clj
+   (defmacro ^{:doc      "Defines a CSS @keyframes animation. The animation name should have a unique symbol
                   for later reference to it and then animation frames in a format [progress params]:
 
                   (defkeyframes fade-in-opacity
@@ -877,10 +899,10 @@
                   (defkeyframes translate-animation
                                 [:from {:transform (translate (px 100) (px 200)}]
                                 [:to {:transform (translate (px 200) (px 400)}])"
-            :arglists '([animation-name & frames])}
-  defkeyframes
-  [& args]
-  `(at-rules/defkeyframes ~@args))
+               :arglists '([animation-name & frames])}
+     defkeyframes
+     [& args]
+     `(at-rules/defkeyframes ~@args)))
 
 ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ;; COMMON UTILITY FUNCTIONS

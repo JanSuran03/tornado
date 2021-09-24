@@ -35,6 +35,6 @@
   [selector-name compiles-to]
   `(def ~selector-name (fn [& children#] (CSSCombinator. ~compiles-to children#))))
 
-(defmacro has-attr
+(defmacro has-attr*
   ([attr] (CSSAttributeSelector. nil nil attr nil))
   ([tag attr] (CSSAttributeSelector. nil tag attr nil)))

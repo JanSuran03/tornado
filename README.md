@@ -5,7 +5,7 @@ data structures with focus on simplicity.
 
 The library is very new, but I will try to update it depending on how my time works out.
 
-The Tornado library is not designed to work in ClojureScript yet, but I want to address it soon.
+There are some limitations for ClojureScript, see below.
 
 ## Usage
 
@@ -53,6 +53,26 @@ For compiling **and saving** the stylesheet, there is a function tornado.compile
 ;;  Lein-tornado, this is not a problem anymore, the library creates the folders for you.
 (css {:output-to "resources/css/example.css"} styles)
 => nil
+```
+
+ClojureScript:
+
+```clojure
+(ns example.cljs.core
+  (:require [reagent.dom :as r-dom]
+            [tornado.core :as t])
+  (:require-macros [tornado.units :refer [defunit]]))
+
+(defunit )
+
+(defn root []
+  [:h2 "Abc"])
+
+(defn -main []
+  (r-dom/render
+    [root]
+    (.getElementById js/document "app"))
+  (js/console.log "Hello World!"))
 ```
 
 ### The complete documentation with examples will be under this link: https://orgpad.com/s/SjH_TDbx4PH

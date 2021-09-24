@@ -1,5 +1,7 @@
 (ns tornado.compiler)
 
+(in-ns 'tornado.compiler)
+
 (def ^:dynamic
   *flags* {:indent-length 4
            :pretty-print? true

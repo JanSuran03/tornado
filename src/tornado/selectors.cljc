@@ -5,7 +5,7 @@
             [tornado.util :as util]
             [clojure.string :as str])
   #?(:cljs (:require-macros [tornado.selectors :refer [defattributeselector defpseudoclass defpseudoclassfn
-                                                       defpseudoelement defcombinatorselector has-attr]]))
+                                                       defpseudoelement defcombinatorselector has-attr*]]))
   #?(:clj (:import (tornado.types CSSPseudoClass CSSPseudoElement
                                   CSSAttributeSelector CSSCombinator CSSPseudoClassFn))))
 

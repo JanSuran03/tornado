@@ -330,6 +330,11 @@
          (str/join (str "\n" (indent) *at-media-indent*))
          (str *keyframes-indent*))))
 
+(defn html-style [attributes-map]
+  (as-> attributes-map <> (compile-attributes-map <>)
+        (map #(str/join % ":") <>)
+        (str/join <> ";")))
+
 (defmulti compile-at-rule
           "Generates CSS from a CSSAtRule record, at the moment, these are available:
           @media, @keyframes, @font-face.
@@ -604,3 +609,10 @@
     (doseq [line compiled-and-split-css-string]
       (println line))
     (newline)))
+
+(comment
+  {:color     (cex :chocolate)
+   :font-size (cex (t/em 25))
+   :position  "absolute"
+   :top       (cex (viewport-height -80))
+   :left      (cex (vw -15))})
