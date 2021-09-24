@@ -1,7 +1,15 @@
 (ns tornado.at-rules
   "Current available at-rules: @media, @font-face, @keyframes"
-  (:require [tornado.types])
-  (:import (tornado.types CSSAtRule)))
+  (:require [tornado.types :as t])
+  #?(:clj (:import (tornado.types CSSAtRule))))
+
+(defn cssatrule [id val]
+  #?(:clj  (CSSAtRule. id val)
+     :cljs (t/CSSAtRule. id val)))
+
+(defn cssatrule? [x]
+  (instance? #?(:clj  CSSAtRule
+                :cljs t/CSSAtRule) x))
 
 (defn at-media
   "Takes a rules map and any number of media changes and creates a CSSAtRule instance
@@ -28,8 +36,8 @@
    :min-width (u/px 800}
    => @media screen and not speech and (min-width: 600px) and (max-width: 800px) {..."
   [rules & changes]
-  (CSSAtRule. "media" {:rules   rules
-                       :changes changes}))
+  (cssatrule "media" {:rules   rules
+                      :changes changes}))
 
 (defn at-font-face
   "Can be used for more convenient describing of @font-face. This is how example
@@ -50,56 +58,19 @@
    :font-weight :normal
    :font-style  :italic}"
   [& props-maps]
-  (CSSAtRule. "font-face" props-maps))
-
-(defmacro defkeyframes
-  "Defines a CSS @keyframes animation. The animation name should have a unique symbol
-  for later reference to it and then animation frames in a format [progress params]:
-
-  (defkeyframes fade-in-opacity
-                [(u/percent 0) {:opacity 0}]
-                [(u/percent 25) {:opacity 0.1}]
-                [(u/percent 50) {:opacity 0.25}]
-                [(u/percent 75) {:opacity 0.5}]
-                [(u/percent 100) {:opacity 1}])
-
-  Then, refer it the CSS hiccup list to make tornado compile it for later usage:
-
-  (def styles
-     (list
-        fade-in-opacity
-        ...))
-
-  After that, you can assign this animation to whatever element you want:
-
-  (def styles
-     (list
-        fade-in-opacity
-        [:.some-element {:animation-duration (u/ms 500)
-                         :animation-name     fade-in-opacity)}]
-        [:#another-element {:animation-name  fade-in-opacity
-                            :animation-delay (u/s 1.5)}]))
-
-  With defkeyframes you can also define from & to progress animations:
-
-  (defkeyframes translate-animation
-                [:from {:transform (f/translate (u/px 100) (u/px 200)}]
-                [:to {:transform (f/translate (u/px 200) (u/px 400)}])"
-  [animation-name & frames]
-  `(def ~animation-name (CSSAtRule. "keyframes" {:anim-name (str '~animation-name)
-                                                 :frames    (list ~@frames)})))
+  (cssatrule "font-face" props-maps))
 
 (defn at-media?
   "Returns true if the expression is a CSSAtRule instance with \"media\" identifier."
-  [expr] (and (instance? CSSAtRule expr)
+  [expr] (and (cssatrule? expr)
               (= (:identifier expr) "media")))
 
 (defn at-font-face?
   "Returns true if the expression is a CSSAtRule instance with \"font-face\" identifier."
-  [expr] (and (instance? CSSAtRule expr)
+  [expr] (and (cssatrule? expr)
               (= (:identifier expr) "font-face")))
 
 (defn at-keyframes?
   "Returns true if the expression is a CSSAtRule instance with \"keyframes\" identifier."
-  [expr] (and (instance? CSSAtRule expr)
+  [expr] (and (cssatrule? expr)
               (= (:identifier expr) "keyframes")))

@@ -1,24 +1,33 @@
 (ns tornado.colors
   "Everything related to colors: Mixing, color function such as rgb(a), hsl(a), color
   conversions, a map of available default colors, special function for modifying colors."
-  (:require [tornado.types]
+  (:require [tornado.types :as t]
             [tornado.units]
             [tornado.util :as util]
             [clojure.string :as str])
-  (:import (tornado.types CSSColor)
-           (clojure.lang Keyword Symbol)))
+  #?(:clj (:import (tornado.types CSSColor)
+                   (clojure.lang Keyword Symbol))))
+
+(def IColor #?(:clj  CSSColor
+               :cljs t/CSSColor))
+
+(defn color [type value]
+  #?(:clj  (CSSColor. type value)
+     :cljs (t/CSSColor. type value)))
 
 (defn get-color-type
   "Returns the type of a given color, either :type of a CSSColor record or the
   argument's class. If the class cannot represent a CSS color, throws an exception."
   [color]
-  (condp = (type color) CSSColor (:type color)
-                        String String
+  (condp = (type color) IColor (:type color)
+                        #?(:clj  String
+                           :cljs (type "")) #?(:clj  String
+                                               :cljs (type ""))
                         Keyword Keyword
                         Symbol Symbol
-                        (throw (IllegalArgumentException.
-                                 (str "The given color is none of a tornado CSSColor record, color keyword,"
-                                      " color symbol or a string: " color)))))
+                        (util/exception
+                          (str "The given color is none of a tornado CSSColor record, color keyword,"
+                               " color symbol or a string: " color))))
 
 (defn color->1-wd
   "Assumes that clojure.core/name can be casted to the argument. Transforms all 3 versions
@@ -191,9 +200,9 @@
   "Creates an rgb CSSColor record."
   ([[red green blue]]
    (if (every? #(util/between % 0 255) [red green blue])
-     (CSSColor. "rgb" {:red red, :green green, :blue blue})
-     (throw (IllegalArgumentException. (str "All values of an rgb color must be between 0 and 255: "
-                                            red ", " green ", " blue)))))
+     (color "rgb" {:red red, :green green, :blue blue})
+     (util/exception (str "All values of an rgb color must be between 0 and 255: "
+                          red ", " green ", " blue))))
   ([red green blue]
    (rgb [red green blue])))
 
@@ -202,10 +211,10 @@
   ([[red green blue alpha]]
    (let [alpha (or alpha 1)]
      (if (and (every? #(util/between % 0 255) [red green blue]) (util/between alpha 0 1))
-       (CSSColor. "rgba" {:red red, :green green, :blue blue, :alpha (util/percent->number alpha true)})
-       (throw (IllegalArgumentException.
-                (str "All r, g, b values of an rgb color must be between 0 and 255: "
-                     red ", " green ", " blue " and alpha between 0 and 1: " alpha))))))
+       (color "rgba" {:red red, :green green, :blue blue, :alpha (util/percent->number alpha true)})
+       (util/exception
+         (str "All r, g, b values of an rgb color must be between 0 and 255: "
+              red ", " green ", " blue " and alpha between 0 and 1: " alpha)))))
   ([red green blue]
    (rgba [red green blue 1]))
   ([red green blue alpha]
@@ -214,9 +223,9 @@
 (defn hsl
   "Creates an hsl CSSColor record."
   ([[hue saturation lightness]]
-   (CSSColor. "hsl" {:hue        hue
-                     :saturation (util/percent->number saturation)
-                     :lightness  (util/percent->number lightness)}))
+   (color "hsl" {:hue        hue
+                 :saturation (util/percent->number saturation)
+                 :lightness  (util/percent->number lightness)}))
   ([hue saturation lightness]
    (hsl [hue saturation lightness])))
 
@@ -224,26 +233,26 @@
   "Creates an hsla CSSColor record."
   ([[hue saturation lightness alpha]]
    (let [alpha (or alpha 1)]
-     (CSSColor. "hsla" {:hue        hue
-                        :saturation (util/percent->number saturation)
-                        :lightness  (util/percent->number lightness)
-                        :alpha      (util/percent->number alpha)})))
+     (color "hsla" {:hue        hue
+                    :saturation (util/percent->number saturation)
+                    :lightness  (util/percent->number lightness)
+                    :alpha      (util/percent->number alpha)})))
   ([hue saturation lightness]
    (hsla [hue saturation lightness 1]))
   ([hue saturation lightness alpha]
    (hsla [hue saturation lightness alpha])))
 
 (defn rgb? [x]
-  (and (instance? CSSColor x)
+  (and (instance? IColor x)
        (= (:type x) "rgb")))
 (defn rgba? [x]
-  (and (instance? CSSColor x)
+  (and (instance? IColor x)
        (= (:type x) "rgba")))
 (defn hsl? [x]
-  (and (instance? CSSColor x)
+  (and (instance? IColor x)
        (= (:type x) "hsl")))
 (defn hsla? [x]
-  (and (instance? CSSColor x)
+  (and (instance? IColor x)
        (= (:type x) "hsla")))
 
 (defn hex? [x]
@@ -328,7 +337,7 @@
   "Converts an rgb/rgba CSSColor record to a hex-string. Rounds the hex-alpha of
   the color if the color is in rgba format."
   [{:keys [type value] :as color}]
-  (if (instance? CSSColor color)
+  (if (instance? IColor color)
     (case type "rgb" (let [{:keys [red green blue]} value
                            [red green blue] (map #(Math/round %) [red green blue])
                            in-hex (map util/base10->double-hex-map [red green blue])]
@@ -341,7 +350,7 @@
                :else (do (println (str "Unable to convert " color " to a hex-string -"
                                        " it is neither in rgb nor in rgba format."))
                          color))
-    (throw (IllegalArgumentException. (str "Expected a CSSColor record: " color)))))
+    (util/exception (str "Expected a CSSColor record: " color))))
 
 (defn hsl->rgb
   "https://www.rapidtables.com/convert/color/hsl-to-rgb.html
@@ -389,7 +398,7 @@
 (defn- unknown-color-type
   "Throws an exception when the color type is not supported."
   [{:keys [type] :or {type "undefined"} :as color}]
-  (throw (IllegalArgumentException. (str "Unknown color type: " type " of color " color))))
+  (util/exception (str "Unknown color type: " type " of color " color)))
 
 (defn- try-keyword-color
   "Tries to get a hex-code color from default-colors map under the given key. If it does
@@ -406,11 +415,11 @@
   "Converts a color to rgb."
   [{:keys [type] :as color}]
   (case type "rgb" color
-             "rgba" (throw (IllegalArgumentException.
-                             (str "Error: an rgba color is not convertible to rgb: " color)))
+             "rgba" (util/exception
+                      (str "Error: an rgba color is not convertible to rgb: " color))
              "hsl" (hsl->rgb color)
-             "hsla" (throw (IllegalArgumentException.
-                             (str "Error: an hsla color is not convertible to rgb: " color)))
+             "hsla" (util/exception
+                      (str "Error: an hsla color is not convertible to rgb: " color))
              (if (non-alpha-hex? color)
                (-> color hex->rgba rgba->rgb)
                (->rgb (try-keyword-color color)))))
@@ -429,11 +438,11 @@
   "Converts a color to hsl."
   [{:keys [type] :as color}]
   (case type "rgb" (rgb->hsl color)
-             "rgba" (throw (IllegalArgumentException.
-                             (str "Error: an rgba color is not convertible to hsl: " color)))
+             "rgba" (util/exception
+                      (str "Error: an rgba color is not convertible to hsl: " color))
              "hsl" color
-             "hsla" (throw (IllegalArgumentException.
-                             (str "Error: an hsla color is not convertible to hsl: " color)))
+             "hsla" (util/exception
+                      (str "Error: an hsla color is not convertible to hsl: " color))
              (if (non-alpha-hex? color)
                (-> color hex->rgba rgba->rgb rgb->hsl)
                (->hsl (try-keyword-color color)))))
@@ -551,9 +560,9 @@
         red-vals (map :red values)
         green-vals (map :green values)
         blue-vals (map :blue values)]
-    (CSSColor. "rgb" {:red   (util/apply-avg red-vals)
-                      :green (util/apply-avg green-vals)
-                      :blue  (util/apply-avg blue-vals)})))
+    (color "rgb" {:red   (util/apply-avg red-vals)
+                  :green (util/apply-avg green-vals)
+                  :blue  (util/apply-avg blue-vals)})))
 
 (defmethod -mix-colors "rgba"
   [_ colors]
@@ -562,10 +571,10 @@
         green-vals (map :green values)
         blue-vals (map :blue values)
         alpha-vals (map :alpha values)]
-    (CSSColor. "rgba" {:red   (util/apply-avg red-vals)
-                       :green (util/apply-avg green-vals)
-                       :blue  (util/apply-avg blue-vals)
-                       :alpha (util/apply-avg alpha-vals)})))
+    (color "rgba" {:red   (util/apply-avg red-vals)
+                   :green (util/apply-avg green-vals)
+                   :blue  (util/apply-avg blue-vals)
+                   :alpha (util/apply-avg alpha-vals)})))
 
 (defmethod -mix-colors "hsl"
   [_ colors]
@@ -573,9 +582,9 @@
         hue-vals (map :hue values)
         saturation-vals (map :saturation values)
         lightness-vals (map :lightness values)]
-    (CSSColor. "hsl" {:hue        (util/apply-avg hue-vals)
-                      :saturation (util/apply-avg saturation-vals)
-                      :lightness  (util/apply-avg lightness-vals)})))
+    (color "hsl" {:hue        (util/apply-avg hue-vals)
+                  :saturation (util/apply-avg saturation-vals)
+                  :lightness  (util/apply-avg lightness-vals)})))
 
 (defmethod -mix-colors "hsla"
   [_ colors]
@@ -584,10 +593,10 @@
         saturation-vals (map :saturation values)
         lightness-vals (map :lightness values)
         alpha-vals (map :alpha values)]
-    (CSSColor. "hsla" {:hue        (util/apply-avg hue-vals)
-                       :saturation (util/apply-avg saturation-vals)
-                       :lightness  (util/apply-avg lightness-vals)
-                       :alpha      (util/apply-avg alpha-vals)})))
+    (color "hsla" {:hue        (util/apply-avg hue-vals)
+                   :saturation (util/apply-avg saturation-vals)
+                   :lightness  (util/apply-avg lightness-vals)
+                   :alpha      (util/apply-avg alpha-vals)})))
 
 (defn mix-colors
   "Given any number of colors in any form (alpha-hex, non-alpha-hex, rgb, rgba,
@@ -600,12 +609,10 @@
    (let [colors (cons color1 more)
          colors (map #(cond-> % ((some-fn symbol? string?) %) keyword) colors)
          types (->> colors (map get-color-type) (filter string?) (#(if (seq %) % ["rgba"])))
-         _ (println colors)
          colors (->> colors (map (fn [color]
                                    (if (util/valid? color)
                                      (get default-colors (color->1-wd color) color)
                                      color))))
-         _ (println colors)
          some-alpha-hex? (some alpha-hex? colors)
          dominant-type (->> types frequencies (sort-by second >)
                             (sort-by (fn [[color-type _]]

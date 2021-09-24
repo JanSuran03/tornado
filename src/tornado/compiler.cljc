@@ -1,17 +1,46 @@
 (ns tornado.compiler
   "The Tornado compiler, where you should only care about these 3 functions:
   css, repl-css, compile-expression."
-  (:require [tornado.types]
+  (:require [tornado.types :as t]
             [tornado.at-rules :as at-rules]
             [tornado.util :as util]
             [clojure.string :as str]
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
-            [tornado.compression :as compression])
-  (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
-                          CSSCombinator CSSAttributeSelector
-                          CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
-           (clojure.lang Keyword Symbol)))
+            [tornado.compression :as compression]
+            #?(:clj [tornado.macros :as m]))
+  #?(:clj  (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
+                                   CSSCombinator CSSAttributeSelector
+                                   CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
+                    (clojure.lang Keyword Symbol))
+     :cljs (:require-macros [tornado.macros :refer [cartesian-product]])))
+
+(def IUnit #?(:clj  CSSUnit
+              :cljs t/CSSUnit))
+
+(def IAtRule #?(:clj  CSSAtRule
+                :cljs t/CSSAtRule))
+
+(def IFunction #?(:clj  CSSFunction
+                  :cljs t/CSSFunction))
+
+(def IColor #?(:clj  CSSColor
+               :cljs t/CSSColor))
+
+(def ICombinator #?(:clj  CSSCombinator
+                    :cljs t/CSSCombinator))
+
+(def IAttribute #?(:clj  CSSAttributeSelector
+                   :cljs t/CSSAttributeSelector))
+
+(def IPseudoClass #?(:clj  CSSPseudoClass
+                     :cljs t/CSSPseudoClass))
+
+(def IPseudoElement #?(:clj  CSSPseudoElement
+                       :cljs t/CSSPseudoElement))
+
+(def IPseudoClassFn #?(:clj  CSSPseudoClassFn
+                       :cljs t/CSSPseudoClassFn))
 
 (def ^{:dynamic true
        :doc     "The current flags for a tornado build compilation:
@@ -30,13 +59,6 @@
   *flags* {:indent-length 4
            :pretty-print? true
            :output-to     nil})
-
-(defmacro with-custom-flags
-  "Given custom-flags & body, temporarily merges default *flags* with the given flags
-  and executes the body."
-  [flags & body]
-  `(binding [*flags* (merge *flags* ~flags)]
-     ~@body))
 
 (defn indent
   "The actual globally used indent in a string form of *X* spaces."
@@ -58,27 +80,6 @@
 
 (def ^:dynamic *in-params-context* false)
 
-(defmacro with-media-query-parents
-  "Temporarily stores current parents paths for compiling @media and adds
- + 1* globally used indent."
-  [-parents- & body]
-  `(binding [*media-query-parents* ~-parents-
-             *at-media-indent* ~(indent)]
-     ~@body))
-
-(defmacro in-keyframes-context
-  "Temporarily adds extra + 1* globally used indent for compiling @keyframes."
-  [& body]
-  `(binding [*keyframes-indent* ~(indent)]
-     ~@body))
-
-(defmacro in-params-context
-  "A macro to bind *in-params-context* to true, which causes a css at-rule keyframes
-  record to be compiled to {:anim-name} (assuming it is for :animation-name)"
-  [& body]
-  `(binding [*in-params-context* true]
-     ~@body))
-
 (declare compile-expression
          compile-at-rule
          expand-hiccup-list-for-compilation
@@ -94,7 +95,16 @@
 (defmulti compile-selector
           "Compiles a CSS combinator, attribute selector, pseudoclass or pseudoelement
           or a selector in a keyword/symbol/string form."
-          class)
+          #?(:clj  class
+             :cljs (fn [sel]
+                       (cond (keyword? sel) Keyword
+                             (symbol? sel) Symbol
+                             (string? sel) (type "")
+                             (instance? IAttribute sel) IAttribute
+                             (instance? IPseudoClass sel) IPseudoClass
+                             (instance? IPseudoElement sel) IPseudoElement
+                             (instance? IPseudoClassFn sel) IPseudoClassFn
+                             (instance? ICombinator sel) ICombinator))))
 
 (defmethod compile-selector Keyword
   [selector]
@@ -104,28 +114,29 @@
   [selector]
   (name selector))
 
-(defmethod compile-selector String
+(defmethod compile-selector #?(:clj  String
+                               :cljs (type ""))
   [selector]
   (name selector))
 
-(defmethod compile-selector CSSAttributeSelector
+(defmethod compile-selector IAttribute
   [{:keys [compiles-to tag attribute subvalue]}]
   (let [maybe-subvalue (when subvalue (str "\"" (name subvalue) "\""))]
     (str (util/get-str-form tag) "[" (util/get-str-form attribute) compiles-to maybe-subvalue "]")))
 
-(defmethod compile-selector CSSPseudoClass
+(defmethod compile-selector IPseudoClass
   [{:keys [pseudoclass]}]
   (str ":" pseudoclass))
 
-(defmethod compile-selector CSSPseudoElement
+(defmethod compile-selector IPseudoElement
   [{:keys [pseudoelement]}]
   (str "::" pseudoelement))
 
-(defmethod compile-selector CSSPseudoClassFn
+(defmethod compile-selector IPseudoClassFn
   [{:keys [compiles-to arg]}]
   (str ":" compiles-to "(" (compile-expression arg) ")"))
 
-(defmethod compile-selector CSSCombinator
+(defmethod compile-selector ICombinator
   [{:keys [compiles-to children]}]
   (->> children (map #(str compiles-to " " (name %)))
        util/str-spacejoin))
@@ -138,8 +149,8 @@
                                     (assert (or (sel/selector? next-selector)
                                                 (sel/id-class-tag? next-selector))
                                             (str "Expected a selector while compiling: " next-selector))
-                                    (let [selectors (if (util/some-instance? next-selector CSSPseudoClass
-                                                                             CSSPseudoClassFn CSSPseudoElement)
+                                    (let [selectors (if (util/some-instance? next-selector IPseudoClass
+                                                                             IPseudoClassFn IPseudoElement)
                                                       selectors
                                                       (util/conjv selectors " "))]
                                       (util/conjv selectors (compile-selector next-selector))))
@@ -200,13 +211,19 @@
 (defmulti compile-css-record
           "Compiles a CSS record (unit, function, at-rule, color). For 4 different types of
           CSS selectors, there is a different multifunction \"compile-selector\"."
-          class)
+          #?(:clj  class
+             :cljs (fn [rec]
+                       (cond (instance? IUnit rec) IUnit
+                             (instance? IFunction rec) IFunction
+                             (instance? IAtRule rec) IAtRule
+                             (instance? IColor rec) IColor))))
 
 (defmethod compile-css-record :default
   [record]
-  (throw (IllegalArgumentException. (str "Not a valid tornado record: " record " with a class: " (class record)))))
+  (util/exception (str "Not a valid tornado record: " record " with a class: " #?(:clj  (class record)
+                                                                                  :cljs (type record)))))
 
-(defmethod compile-css-record CSSUnit
+(defmethod compile-css-record IUnit
   [{:keys [value compiles-to]}]
   (str (util/int* value) compiles-to))
 
@@ -216,15 +233,15 @@
   (str compiles-to "(" (->> args (map compile-expression)
                             util/str-commajoin) ")"))
 
-(defmethod compile-css-record CSSFunction
+(defmethod compile-css-record IFunction
   [{:keys [compile-fn] :or {compile-fn commajoin} :as CSSFn-record}]
   (compile-fn CSSFn-record))
 
-(defmethod compile-css-record CSSAtRule
+(defmethod compile-css-record IAtRule
   [at-rule-record]
   (compile-at-rule at-rule-record))
 
-(defmethod compile-css-record CSSColor
+(defmethod compile-css-record IColor
   [color-record]
   (compile-color color-record))
 
@@ -254,16 +271,17 @@
              (every? sequential? expr)) (->> expr (map #(->> % (map compile-expression)
                                                              util/str-spacejoin))
                                              util/str-commajoin)
-        :else (throw (IllegalArgumentException.
-                       (str "None of a CSS unit, CSS function, CSS at-rule, a keyword a string, a number or"
-                            " a sequential structure consisting of more sequential structures:\n" expr)))))
+        :else (util/exception
+                (str "None of a CSS unit, CSS function, CSS at-rule, a keyword a string, a number or"
+                     " a sequential structure consisting of more sequential structures:\n" expr))))
 
 (defn compile-attributes-map
   "Compiles an attributes map, returns a sequence of [compiled-attribute compiled-value]."
   [attributes-map]
   (when-let [attributes-map (util/prune-nils attributes-map)]
     (for [[attribute value] attributes-map]
-      [(compile-expression attribute) (in-params-context (compile-expression value))])))
+      [(compile-expression attribute) (binding [*in-params-context* true]
+                                        (compile-expression value))])))
 
 (defn attr-map-to-css
   "Compiles an attributes map and translates the compiled data to CSS:
@@ -281,6 +299,22 @@
          (str/join (str "\n" (indent) *at-media-indent*))
          (str *keyframes-indent*))))
 
+(defn html-style
+  "Can be used for compilation of a map of style parameters to a single string of html
+  style=\"...\" attribute. Receives the styles map as its argument and returns a string
+  of compiled style:
+
+  (html-style {:width            (px 500)
+               :height           (percent 15)
+               :color            :font-black
+               :background-color :teal})
+
+  => \"width:500px;height:15%;color:#1A1B1F;background-color:#008080\""
+  [attributes-map]
+  (as-> attributes-map <> (compile-attributes-map <>)
+        (map #(str/join ":" %) <>)
+        (str/join ";" <>)))
+
 (defmulti compile-at-rule
           "Generates CSS from a CSSAtRule record, at the moment, these are available:
           @media, @keyframes, @font-face.
@@ -296,7 +330,7 @@
 
 (defmethod compile-at-rule :default
   [{:keys [identifier] :as at-rule}]
-  (throw (IllegalArgumentException. (str "Unknown at-rule identifier: " identifier " of at-rule: " at-rule))))
+  (util/exception (str "Unknown at-rule identifier: " identifier " of at-rule: " at-rule)))
 
 (def special-media-rules-map
   "A special map for generating media queries rules, e.g.:
@@ -317,9 +351,9 @@
                                       (if-let [compiled-param (util/get-str-form param)]
                                         (let [compiled-unit (compile-expression value)]
                                           (str "(" compiled-param ": " compiled-unit ")"))
-                                        (throw (IllegalArgumentException.
-                                                 (str "Invalid format of a CSS property: " value " in a map of rules:"
-                                                      rules " in at-media compilation of @media expression: " at-media))))))
+                                        (util/exception
+                                          (str "Invalid format of a CSS property: " value " in a map of rules:"
+                                               rules " in at-media compilation of @media expression: " at-media)))))
                                   (str/join " and "))
         compiled-media-changes (->> (for [parents-path paths]
                                       (-> (expand-hiccup-list-for-compilation parents-path [] changes)
@@ -340,7 +374,7 @@
   (let [{:keys [anim-name frames]} value]
     (if *in-params-context*
       anim-name
-      (in-keyframes-context
+      (binding [*keyframes-indent* (indent)]
         (let [compiled-frames (->> frames (map (fn [[progress params]]
                                                  (let [compiled-progress (compile-expression progress)
                                                        compiled-params (attr-map-to-css params)]
@@ -378,23 +412,23 @@
                                                         (map? hiccup-element)) :params
                                                    (vector? hiccup-element) :children
                                                    (at-rules/at-media? hiccup-element) :at-media
-                                                   :else (throw (IllegalArgumentException.
-                                                                  (str "Invalid hiccup element: " hiccup-element "\nin"
-                                                                       " hiccup: " hiccup "\nNone from a class, id,"
-                                                                       " selector, child-vector, at-media CSSAtRule"
-                                                                       " instance or a params map."))))]
+                                                   :else (util/exception
+                                                           (str "Invalid hiccup element: " hiccup-element "\nin"
+                                                                " hiccup: " hiccup "\nNone from a class, id,"
+                                                                " selector, child-vector, at-media CSSAtRule"
+                                                                " instance or a params map.")))]
                               (if (or (and (not= belongs-to :selectors)
                                            (empty? selectors))
                                       (and (= belongs-to :selectors)
                                            (or (seq params) (seq children) (seq at-media)))
                                       (and (= belongs-to :params)
                                            (or (seq params) (seq children) (seq at-media))))
-                                (throw (IllegalArgumentException.
-                                         (str "Error: Hiccup rules:\nYou have to include at least one selector before"
-                                              " params or children.\nIf you include any of params or children, the order"
-                                              " has to be selectors -> params -> children.\nYou also cannot include more"
-                                              " than one parameters map. At-font-face can be included anywhere in the"
-                                              " hiccup vector.\nHiccup received: " hiccup)))
+                                (util/exception
+                                  (str "Error: Hiccup rules:\nYou have to include at least one selector before"
+                                       " params or children.\nIf you include any of params or children, the order"
+                                       " has to be selectors -> params -> children.\nYou also cannot include more"
+                                       " than one parameters map. At-font-face can be included anywhere in the"
+                                       " hiccup vector.\nHiccup received: " hiccup))
                                 (update spc-map belongs-to conj hiccup-element))))
                           {:selectors []
                            :params    []
@@ -448,7 +482,8 @@
         :else (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
                     maybe-at-media (when (seq at-media)
                                      (as-> selectors <> (map (partial util/conjv parents) <>)
-                                           (util/cartesian-product <> at-media)
+                                           (#?(:clj  m/cartesian-product
+                                               :cljs cartesian-product) <> at-media)
                                            (map (fn [[path media-rules]]
                                                   {:path     path
                                                    :at-media media-rules}) <>)))
@@ -461,7 +496,8 @@
                                   updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
                               (expand-hiccup-list-for-compilation new-parents updated-hiccup (list child))))
                           unevaluated-hiccup
-                          (util/cartesian-product selectors children))
+                          (#?(:clj  m/cartesian-product
+                              :cljs cartesian-product) selectors children))
                   (reduce (fn [current-unevaluated-hiccup selector]
                             (let [new-parents (util/conjv parents selector)]
                               (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)))
@@ -483,7 +519,9 @@
          display: flex;
       }"
   [{:keys [paths params at-media at-font-face at-keyframes]}]
-  (cond at-media (with-media-query-parents paths (compile-at-rule at-media))
+  (cond at-media (binding [*media-query-parents* paths
+                           *at-media-indent* (indent)]
+                   (compile-at-rule at-media))
         at-font-face (compile-css-record at-font-face)
         at-keyframes (compile-css-record at-keyframes)
         :else (when params (let [compiled-selectors (compile-selectors paths)
@@ -536,12 +574,13 @@
   ([css-hiccup]
    (css nil css-hiccup))
   ([flags css-hiccup]
-   (with-custom-flags flags
-                      (let [{:keys [pretty-print? output-to]} *flags*]
-                        (cond->> css-hiccup true just-css
-                                 (not pretty-print?) compression/compress
-                                 output-to (#(do (spit output-to %)
-                                                 (println "   Wrote: " output-to))))))))
+   (binding [*flags* (merge *flags* flags)]
+     (let [{:keys [pretty-print? output-to]} *flags*]
+       (cond->> css-hiccup true just-css
+                (not pretty-print?) compression/compress
+                output-to ((fn [x] #?(:clj  (do (spit output-to x)
+                                                (println "   Wrote: " output-to))
+                                      :cljs (util/exception "Cannot save compiled stylesheet in ClojureScript.")))))))))
 
 (defn repl-css
   "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup

@@ -5,7 +5,7 @@ data structures with focus on simplicity.
 
 The library is very new, but I will try to update it depending on how my time works out.
 
-The Tornado library is not designed to work in ClojureScript yet, but I want to address it soon.
+There are some limitations for ClojureScript, see below.
 
 ## Usage
 
@@ -53,6 +53,37 @@ For compiling **and saving** the stylesheet, there is a function tornado.compile
 ;;  Lein-tornado, this is not a problem anymore, the library creates the folders for you.
 (css {:output-to "resources/css/example.css"} styles)
 => nil
+```
+
+ClojureScript:
+
+```clojure
+(ns example.core
+  (:require [reagent.dom :as r-dom]
+    [tornado.core :as t :refer [em]]) ; in ClojureScript, you cannot refer the whole namespace tornado.core
+  (:require-macros [tornado.macros :refer [defunit]])) ; note that you cannot refer macros from tornado.core, like in Clojure
+
+;; is defined in tornado.core, but I want to redefine it as an example
+(defunit viewport-height "vh")   ; compiles to "vh"
+
+;; viewport width, compiles to "vw", string form of the unit function
+(defunit vw)
+
+(def cex t/compile-expression)
+
+(defn root []
+  [:h2 {:style {:color     (cex :chocolate)
+                :font-size (cex (em 15))
+                :position  (cex :position/absolute)
+                :top       (cex (viewport-height -60))
+                :left      (cex (vw 25))}}
+   "Abc"])
+
+(defn render []
+  (r-dom/render
+    [root]
+    (.getElementById js/document "app"))
+  (js/console.log "Hello World!"))
 ```
 
 ### The complete documentation with examples will be under this link: https://orgpad.com/s/SjH_TDbx4PH

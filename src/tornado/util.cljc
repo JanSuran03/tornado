@@ -1,15 +1,33 @@
 (ns tornado.util
   "Utility functions used internally in Tornado."
-  (:require [tornado.types]
-            [clojure.edn :as edn]
+  (:require [tornado.types :as t]
+            [#?(:clj  clojure.edn
+                :cljs cljs.reader) :as edn]
             [clojure.set :as set]
             [clojure.string :as str])
-  (:import (tornado.types CSSUnit)))
+  #?(:clj (:import (tornado.types CSSUnit))))
+
+(defn math-round [x]
+  (#?(:clj  Math/round
+      :cljs js/Math.round) x))
+
+(defn math-pow [x y]
+  (#?(:clj  Math/pow
+      :cljs js/Math.pow) x y))
+
+(defn parse-float [s]
+  (#?(:clj  Float/parseFloat
+      :cljs js/parseFloat) s))
 
 (defn str-butlast
   "Returns the given string without the last character."
   [s]
   (subs s 0 (dec (count s))))
+
+(defn exception [arg]
+  (throw
+    (#?(:clj  IllegalArgumentException.
+        :cljs js/Error.) arg)))
 
 (defn valid?
   "Returns true if the argument is a symbol, a keyword or a string."
@@ -29,13 +47,17 @@
   "Converts a float to an integer if the value would remain equal. Ratios will
   be converted to a float, or, again, to an integer if possible."
   [x]
-  (let [non-ratio (if (ratio? x)
-                    (float x)
-                    x)
-        int-x (int non-ratio)]
-    (if (and (float? non-ratio) (== non-ratio int-x))
-      int-x
-      non-ratio)))
+  #?(:clj  (let [non-ratio (if (ratio? x)
+                             (float x)
+                             x)
+                 int-x (int non-ratio)]
+             (if (and (float? non-ratio) (== non-ratio int-x))
+               int-x
+               non-ratio))
+     :cljs (let [int-x (int x)]
+                (if (== int-x x)
+                  int-x
+                  x))))
 
 (defn to-percent-float
   "Parses a percentage from a string or multiplies a number with 100 to get
@@ -49,7 +71,7 @@
                " a number or a string: " value))
   (cond (number? value) (int* (* value 100))
         (str/ends-with? value "%") (-> value str-butlast edn/read-string)
-        :else (-> value Float/parseFloat to-percent-float)))
+        :else (-> value parse-float to-percent-float)))
 
 (defn percent-with-symbol-append
   "Multiplies a number with 100 to get a percentage value of it. Returns
@@ -80,22 +102,23 @@
                            (->> value str-butlast edn/read-string (#(/ % 100)) int*)
                            (edn/read-string value))
          (number? value) (int* value)
-         (instance? CSSUnit value) (if (= (:compiles-to value) "%")
-                                     (int* (/ (:value value) 100))
-                                     value)
-         throw-if-no-match (throw (IllegalArgumentException.
-                                    (str "Not a valid value for conversion from percent to number: " value)))
+         (instance? #?(:clj  CSSUnit
+                       :cljs t/CSSUnit) value) (if (= (:compiles-to value) "%")
+                                                 (int* (/ (:value value) 100))
+                                                 value)
+         throw-if-no-match (exception
+                             (str "Not a valid value for conversion from percent to number: " value))
          :else value)))
 
 (defn ->fixed
   "Rounds a given number x to d decimal digits, or 0 by default."
   ([x] (if (int? x)
          x
-         (Math/round x)))
+         (math-round x)))
   ([x d] (if (zero? d)
-           (Math/round x)
-           (let [scale (Math/pow 10 d)]
-             (/ (Math/round (* x scale)) scale)))))
+           (math-round x)
+           (let [scale (math-pow 10 d)]
+             (/ (math-round (* x scale)) scale)))))
 
 (defn round
   "Rounds a given number to 4 decimal digits, which should be enough in most cases."
@@ -128,14 +151,18 @@
 
 ;; HEXCODE TO DECIMAL NUMBERS CONVERSION, USED FOR HEX->RGBA AND RGBA->HEX COLOR CONVERSIONS
 
-(def ^:private base16-chars "0123456789ABCDEF")
-(def ^:private uppercase-base16-set (set "ABCDEF"))
-(def ^:private lowercase-uppercase-difference (- (int \a) (int \A)))
-(defn- toLower
+(defn c->int [x]
+  #?(:clj  (int x)
+     :cljs (.charCodeAt x)))
+
+(def base16-chars "0123456789ABCDEF")
+(def uppercase-base16-set (set "ABCDEF"))
+(def lowercase-uppercase-difference (- (c->int \a) (c->int \A)))
+(defn toLower
   "Characters [A-F] will be transformed to [a-f], other chars will be returned unchanged."
   [c]
   (if (contains? uppercase-base16-set c)
-    (char (+ (int c) lowercase-uppercase-difference))
+    (char (+ (c->int c) lowercase-uppercase-difference))
     c))
 
 (def double-hex->base10-map
@@ -187,7 +214,7 @@
                                    (vec vect))
                                  value)
         (nil? vect) [value]
-        :else (throw (IllegalArgumentException. (str "Not sequential, nor `nil`: " vect)))))
+        :else (exception (str "Not sequential, nor `nil`: " vect))))
 
 (defn in-range
   "If the value is not in range of min-val and max-val, returns the value of the
