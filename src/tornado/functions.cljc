@@ -104,7 +104,6 @@
 (defcssfn rotateX single-arg)
 (defcssfn rotateY single-arg)
 (defcssfn rotateZ single-arg)
-(defcssfn saturate single-arg)
 (defcssfn sepia single-arg)
 (defcssfn skewX single-arg)
 (defcssfn skewY single-arg)

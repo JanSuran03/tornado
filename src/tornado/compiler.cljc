@@ -8,6 +8,8 @@
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
             [tornado.compression :as compression])
+  #?(:cljs (:require-macros [tornado.compiler :refer [with-custom-flags with-media-query-parents
+                                                      in-keyframes-context in-params-context]]))
   #?(:clj (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                                   CSSCombinator CSSAttributeSelector
                                   CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
@@ -58,12 +60,13 @@
            :pretty-print? true
            :output-to     nil})
 
-(defmacro with-custom-flags
-  "Given custom-flags & body, temporarily merges default *flags* with the given flags
-  and executes the body."
-  [flags & body]
-  `(binding [*flags* (merge *flags* ~flags)]
-     ~@body))
+#?(:clj
+   (defmacro with-custom-flags
+     "Given custom-flags & body, temporarily merges default *flags* with the given flags
+     and executes the body."
+     [flags & body]
+     `(binding [*flags* (merge *flags* ~flags)]
+        ~@body)))
 
 (defn indent
   "The actual globally used indent in a string form of *X* spaces."
@@ -85,26 +88,29 @@
 
 (def ^:dynamic *in-params-context* false)
 
-(defmacro with-media-query-parents
-  "Temporarily stores current parents paths for compiling @media and adds
- + 1* globally used indent."
-  [-parents- & body]
-  `(binding [*media-query-parents* ~-parents-
-             *at-media-indent* ~(indent)]
-     ~@body))
+#?(:clj
+   (defmacro with-media-query-parents
+     "Temporarily stores current parents paths for compiling @media and adds
+    + 1* globally used indent."
+     [-parents- & body]
+     `(binding [*media-query-parents* ~-parents-
+                *at-media-indent* ~(indent)]
+        ~@body)))
 
-(defmacro in-keyframes-context
-  "Temporarily adds extra + 1* globally used indent for compiling @keyframes."
-  [& body]
-  `(binding [*keyframes-indent* ~(indent)]
-     ~@body))
+#?(:clj
+   (defmacro in-keyframes-context
+     "Temporarily adds extra + 1* globally used indent for compiling @keyframes."
+     [& body]
+     `(binding [*keyframes-indent* ~(indent)]
+        ~@body)))
 
-(defmacro in-params-context
-  "A macro to bind *in-params-context* to true, which causes a css at-rule keyframes
-  record to be compiled to {:anim-name} (assuming it is for :animation-name)"
-  [& body]
-  `(binding [*in-params-context* true]
-     ~@body))
+#?(:clj
+   (defmacro in-params-context
+     "A macro to bind *in-params-context* to true, which causes a css at-rule keyframes
+     record to be compiled to {:anim-name} (assuming it is for :animation-name)"
+     [& body]
+     `(binding [*in-params-context* true]
+        ~@body)))
 
 (declare compile-expression
          compile-at-rule

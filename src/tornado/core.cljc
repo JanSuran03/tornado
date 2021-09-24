@@ -228,9 +228,6 @@
        :arglists '([arg])} rotateZ f/rotateZ)
 
 (def ^{:doc      "Coming soon"
-       :arglists '([arg])} saturate f/saturate)
-
-(def ^{:doc      "Coming soon"
        :arglists '([arg])} sepia f/sepia)
 
 (def ^{:doc      "Coming soon"
@@ -380,7 +377,9 @@
                   attribute with any value, or all html elements on/below the current
                   nested selectors level which have a given attribute with any value."
        :arglists '([attribute] [tag attribute])}
-  has-attr sel/has-attr)
+  has-attr #?(:clj sel/has-attr
+              :cljs (fn ([attr] (sel/has-attr attr))
+                        ([tag attr] (sel/has-attr tag attr)))))
 
 (def ^{:doc      "Selects all descendants of a html tag which have a given parameter with a given value."
        :arglists '([attribute subvalue] [tag attribute subvalue])}
@@ -628,14 +627,6 @@
 (def ^{:doc      "Coming soon"
        :arglists '([arg])}
   nth-last-of-type sel/nth-last-of-type)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])}
-  nth-of-type sel/nth-of-type)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])}
-  nth-of-type sel/nth-of-type)
 
 (def ^{:doc      "Coming soon"
        :arglists '([arg])}

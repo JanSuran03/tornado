@@ -38,13 +38,3 @@
 (defmacro has-attr
   ([attr] (CSSAttributeSelector. nil nil attr nil))
   ([tag attr] (CSSAttributeSelector. nil tag attr nil)))
-
-(def ^:private special-sels {:* "A selector for selecting all descendants."
-                             :& "A selector for selecting the current element."})
-(def special-selectors (->> special-sels keys (map name) set))
-
-(defmacro selector? [x]
-  (or (util/some-instance? x CSSAttributeSelector CSSCombinator
-                           CSSPseudoClass CSSPseudoClassFn CSSPseudoElement)
-      (and (util/valid? x)
-           (contains? special-selectors (name x)))))

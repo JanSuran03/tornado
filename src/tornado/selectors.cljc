@@ -1,11 +1,11 @@
 (ns tornado.selectors
   "Everything related to CSS selectors - standard selectors, attribute selectors,
    pseudoelement selectors, functions for the compiler etc."
-  (:require [tornado.types]
+  (:require [tornado.types :as t]
             [tornado.util :as util]
             [clojure.string :as str])
   #?(:cljs (:require-macros [tornado.selectors :refer [defattributeselector defpseudoclass defpseudoclassfn
-                                                       defpseudoelement defcombinatorselector has-attr selector?]]))
+                                                       defpseudoelement defcombinatorselector has-attr]]))
   #?(:clj (:import (tornado.types CSSPseudoClass CSSPseudoElement
                                   CSSAttributeSelector CSSCombinator CSSPseudoClassFn))))
 
@@ -300,15 +300,22 @@
                              :& "A selector for selecting the current element."})
 (def special-selectors (->> special-sels keys (map name) set))
 
-#?(:clj
-   (defn selector?
-     "Returns true if x is a selector of any kind (attribute, combinator, pseudoclass,
-     pseudoclassfn, pseudoelement, special selector"
-     [x]
-     (or (util/some-instance? x CSSAttributeSelector CSSCombinator
-                              CSSPseudoClass CSSPseudoClassFn CSSPseudoElement)
-         (and (util/valid? x)
-              (contains? special-selectors (name x))))))
+(defn selector?
+  "Returns true if x is a selector of any kind (attribute, combinator, pseudoclass,
+  pseudoclassfn, pseudoelement, special selector"
+  [x]
+  (or (util/some-instance? x #?(:clj  CSSAttributeSelector
+                                :cljs t/CSSAttributeSelector)
+                           #?(:clj  CSSCombinator
+                              :cljs t/CSSCombinator)
+                           #?(:clj  CSSPseudoClass
+                              :cljs t/CSSPseudoClass)
+                           #?(:clj  CSSPseudoClassFn
+                              :cljs t/CSSPseudoClassFn)
+                           #?(:clj  CSSPseudoElement
+                              :cljs t/CSSPseudoElement))
+      (and (util/valid? x)
+           (contains? special-selectors (name x)))))
 
 (defn css-class?
   "Returns true if the argument is a keyword, a string or a symbol
