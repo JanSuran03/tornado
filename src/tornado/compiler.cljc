@@ -31,7 +31,7 @@
 (def IAttribute #?(:clj  CSSAttributeSelector
                    :cljs t/CSSAttributeSelector))
 
-(def IPseudoClass #(:clj CSSPseudoClass
+(def IPseudoClass #?(:clj  CSSPseudoClass
                      :cljs t/CSSPseudoClass))
 
 (def IPseudoElement #?(:clj  CSSPseudoElement
@@ -121,7 +121,16 @@
 (defmulti compile-selector
           "Compiles a CSS combinator, attribute selector, pseudoclass or pseudoelement
           or a selector in a keyword/symbol/string form."
-          class)
+          #?(:clj  class
+             :cljs (fn [sel]
+                       (cond (keyword? sel) Keyword
+                             (symbol? sel) Symbol
+                             (string? sel) (type "")
+                             (instance? IAttribute sel) IAttribute
+                             (instance? IPseudoClass sel) IPseudoClass
+                             (instance? IPseudoElement sel) IPseudoElement
+                             (instance? IPseudoClassFn sel) IPseudoClassFn
+                             (instance? ICombinator sel) ICombinator))))
 
 (defmethod compile-selector Keyword
   [selector]
@@ -131,7 +140,8 @@
   [selector]
   (name selector))
 
-(defmethod compile-selector String
+(defmethod compile-selector #?(:clj  String
+                               :cljs (type ""))
   [selector]
   (name selector))
 
@@ -227,11 +237,17 @@
 (defmulti compile-css-record
           "Compiles a CSS record (unit, function, at-rule, color). For 4 different types of
           CSS selectors, there is a different multifunction \"compile-selector\"."
-          class)
+          #?(:clj  class
+             :cljs (fn [rec]
+                       (cond (instance? IUnit rec) IUnit
+                             (instance? IFunction rec) IFunction
+                             (instance? IAtRule rec) IAtRule
+                             (instance? IColor rec) IColor))))
 
 (defmethod compile-css-record :default
   [record]
-  (throw (IllegalArgumentException. (str "Not a valid tornado record: " record " with a class: " (class record)))))
+  (throw (util/exception (str "Not a valid tornado record: " record " with a class: " #?(:clj  (class record)
+                                                                                         :cljs (type record))))))
 
 (defmethod compile-css-record IUnit
   [{:keys [value compiles-to]}]
@@ -281,7 +297,7 @@
              (every? sequential? expr)) (->> expr (map #(->> % (map compile-expression)
                                                              util/str-spacejoin))
                                              util/str-commajoin)
-        :else (throw (IllegalArgumentException.
+        :else (throw (util/exception
                        (str "None of a CSS unit, CSS function, CSS at-rule, a keyword a string, a number or"
                             " a sequential structure consisting of more sequential structures:\n" expr)))))
 
@@ -323,7 +339,7 @@
 
 (defmethod compile-at-rule :default
   [{:keys [identifier] :as at-rule}]
-  (throw (IllegalArgumentException. (str "Unknown at-rule identifier: " identifier " of at-rule: " at-rule))))
+  (throw (util/exception (str "Unknown at-rule identifier: " identifier " of at-rule: " at-rule))))
 
 (def special-media-rules-map
   "A special map for generating media queries rules, e.g.:
@@ -344,7 +360,7 @@
                                       (if-let [compiled-param (util/get-str-form param)]
                                         (let [compiled-unit (compile-expression value)]
                                           (str "(" compiled-param ": " compiled-unit ")"))
-                                        (throw (IllegalArgumentException.
+                                        (throw (util/exception
                                                  (str "Invalid format of a CSS property: " value " in a map of rules:"
                                                       rules " in at-media compilation of @media expression: " at-media))))))
                                   (str/join " and "))
@@ -405,7 +421,7 @@
                                                         (map? hiccup-element)) :params
                                                    (vector? hiccup-element) :children
                                                    (at-rules/at-media? hiccup-element) :at-media
-                                                   :else (throw (IllegalArgumentException.
+                                                   :else (throw (util/exception
                                                                   (str "Invalid hiccup element: " hiccup-element "\nin"
                                                                        " hiccup: " hiccup "\nNone from a class, id,"
                                                                        " selector, child-vector, at-media CSSAtRule"
@@ -416,7 +432,7 @@
                                            (or (seq params) (seq children) (seq at-media)))
                                       (and (= belongs-to :params)
                                            (or (seq params) (seq children) (seq at-media))))
-                                (throw (IllegalArgumentException.
+                                (throw (util/exception
                                          (str "Error: Hiccup rules:\nYou have to include at least one selector before"
                                               " params or children.\nIf you include any of params or children, the order"
                                               " has to be selectors -> params -> children.\nYou also cannot include more"
@@ -567,8 +583,9 @@
                       (let [{:keys [pretty-print? output-to]} *flags*]
                         (cond->> css-hiccup true just-css
                                  (not pretty-print?) compression/compress
-                                 output-to (#(do (spit output-to %)
-                                                 (println "   Wrote: " output-to))))))))
+                                 output-to ((fn [x] #?(:clj  (do (spit output-to x)
+                                                                 (println "   Wrote: " output-to))
+                                                       :cljs nil))))))))
 
 (defn repl-css
   "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
