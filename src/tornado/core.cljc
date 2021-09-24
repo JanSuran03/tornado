@@ -8,9 +8,7 @@
             [tornado.functions :as f]
             [tornado.at-rules :as at-rules]
             [tornado.common :as common]
-            #?(:clj [tornado.macros :as m]))
-  #?(:cljs (:require-macros [tornado.macros :refer [defunit defattributeselector defpseudoclass defpseudoclassfn
-                                                    defpseudoelement defcombinatorselector defcssfn defkeyframes]])))
+            #?(:clj [tornado.macros :as m])))
 
 ;; COMPILER FUNCTIONS
 

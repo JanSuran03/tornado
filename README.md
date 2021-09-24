@@ -58,17 +58,28 @@ For compiling **and saving** the stylesheet, there is a function tornado.compile
 ClojureScript:
 
 ```clojure
-(ns example.cljs.core
+(ns example.core
   (:require [reagent.dom :as r-dom]
-            [tornado.core :as t])
-  (:require-macros [tornado.units :refer [defunit]]))
+    [tornado.core :as t :refer [em]]) ; in ClojureScript, you cannot refer the whole namespace tornado.core
+  (:require-macros [tornado.macros :refer [defunit]])) ; note that you cannot refer macros from tornado.core, like in Clojure
 
-(defunit )
+;; is defined in tornado.core, but I want to redefine it as an example
+(defunit viewport-height "vh")   ; compiles to "vh"
+
+;; viewport width, compiles to "vw", string form of the unit function
+(defunit vw)
+
+(def cex t/compile-expression)
 
 (defn root []
-  [:h2 "Abc"])
+  [:h2 {:style {:color     (cex :chocolate)
+                :font-size (cex (em 15))
+                :position  (cex :position/absolute)
+                :top       (cex (viewport-height -60))
+                :left      (cex (vw 25))}}
+   "Abc"])
 
-(defn -main []
+(defn render []
   (r-dom/render
     [root]
     (.getElementById js/document "app"))

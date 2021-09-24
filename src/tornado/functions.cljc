@@ -35,7 +35,7 @@
   the parameter to enable usage of keywords."
   [{:keys [args] :as cssfn}]
   (if (= (count args) 1)
-    (str "format(\"" (-> args first identity #_compile-expression) "\")")
+    (str "format(\"" (-> args first compile-expression) "\")")
     (do (println (str "Warning: A CSSFunction \"css-format\" expects to have"
                       " 1 argument, instead got arguments: " args))
         (comma-join cssfn))))

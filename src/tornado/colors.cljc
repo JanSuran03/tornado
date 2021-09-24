@@ -19,8 +19,7 @@
   "Returns the type of a given color, either :type of a CSSColor record or the
   argument's class. If the class cannot represent a CSS color, throws an exception."
   [color]
-  (condp = (type color) #?(:clj  CSSColor
-                           :cljs t/CSSColor) (:type color)
+  (condp = (type color) IColor (:type color)
                         #?(:clj  String
                            :cljs (type "")) #?(:clj  String
                                                :cljs (type ""))
