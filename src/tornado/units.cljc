@@ -1,8 +1,7 @@
 (ns tornado.units
   "A namespace for defining CSS units."
-  (:require [tornado.types :as t]
-            #?(:clj [tornado.clj-macros :refer [defunit]]))
-  #?(:cljs (:require-macros [tornado.units :refer [defunit]])))
+  #?(:clj  (:require [tornado.macros :refer [defunit]])
+     :cljs (:require-macros [tornado.macros :refer [defunit]])))
 
 ;; absolute size units
 (defunit px)

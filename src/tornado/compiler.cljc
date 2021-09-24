@@ -7,11 +7,13 @@
             [clojure.string :as str]
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
-            [tornado.compression :as compression])
+            [tornado.compression :as compression]
+            #?(:clj [tornado.macros :as m]))
   #?(:clj (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                                   CSSCombinator CSSAttributeSelector
                                   CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
-                   (clojure.lang Keyword Symbol))))
+                   (clojure.lang Keyword Symbol))
+     :cljs (:require-macros [tornado.macros :refer [cartesian-product]])))
 
 (def IUnit #?(:clj  CSSUnit
               :cljs t/CSSUnit))
@@ -469,7 +471,8 @@
         :else (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
                     maybe-at-media (when (seq at-media)
                                      (as-> selectors <> (map (partial util/conjv parents) <>)
-                                           (util/cartesian-product <> at-media)
+                                           (#?(:clj  m/cartesian-product
+                                               :cljs cartesian-product) <> at-media)
                                            (map (fn [[path media-rules]]
                                                   {:path     path
                                                    :at-media media-rules}) <>)))
@@ -482,7 +485,8 @@
                                   updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
                               (expand-hiccup-list-for-compilation new-parents updated-hiccup (list child))))
                           unevaluated-hiccup
-                          (util/cartesian-product selectors children))
+                          (#?(:clj  m/cartesian-product
+                              :cljs cartesian-product) selectors children))
                   (reduce (fn [current-unevaluated-hiccup selector]
                             (let [new-parents (util/conjv parents selector)]
                               (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)))

@@ -8,9 +8,9 @@
             [tornado.functions :as f]
             [tornado.at-rules :as at-rules]
             [tornado.common :as common]
-            #?(:clj [tornado.clj-macros :as m]))
-  #?(:cljs (:require-macros [tornado.cljs-macros :refer [defunit defattributeselector defpseudoclass defpseudoclassfn
-                                                         defpseudoelement defcombinatorselector defcssfn defkeyframes]])))
+            #?(:clj [tornado.macros :as m]))
+  #?(:cljs (:require-macros [tornado.macros :refer [defunit defattributeselector defpseudoclass defpseudoclassfn
+                                                    defpseudoelement defcombinatorselector defcssfn defkeyframes]])))
 
 ;; COMPILER FUNCTIONS
 
@@ -383,10 +383,7 @@
                   attribute with any value, or all html elements on/below the current
                   nested selectors level which have a given attribute with any value."
        :arglists '([attribute] [tag attribute])}
-  has-attr #?(:clj  sel/has-attr
-              :cljs (fn
-                      ([attr] (has-attr* attr))
-                      ([tag attr] (has-attr* tag attr)))))
+  has-attr sel/has-attr)
 
 (def ^{:doc      "Selects all descendants of a html tag which have a given parameter with a given value."
        :arglists '([attribute subvalue] [tag attribute subvalue])}

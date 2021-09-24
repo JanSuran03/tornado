@@ -1,4 +1,4 @@
-(ns tornado.clj-macros
+(ns tornado.macros
   (:require [tornado.types])
   (:import (tornado.types CSSUnit CSSAttributeSelector CSSPseudoClass CSSPseudoClassFn
                           CSSFunction CSSCombinator CSSPseudoElement CSSAtRule)
@@ -41,12 +41,6 @@
   `(def ~animation-name (CSSAtRule. "keyframes" {:anim-name (str '~animation-name)
                                                 :frames     (list ~@frames)})))
 
-(defn- make-cssunit-record
-  "An internal CSSUnit function which takes the \"compiles-to\" unit parameter,
-  e.g. \"%\" and the unit value parameter and creates a CSSUnit record."
-  [unit value]
-  (CSSUnit. unit value))
-
 (defmacro defunit
   "Creates a unit function which takes 1 argument and creates a CSSUnit record for future
    compilation. Defunit can take 1 arg: (defunit px)
@@ -64,14 +58,7 @@
    (let [compiles-to (str unit)]
      `(defunit ~unit ~compiles-to)))
   ([identifier css-unit]
-   `(def ~identifier (partial ~make-cssunit-record ~css-unit))))
-
-(defn attribute-selector-fn
-  "Creates a CSSAttributeSelector record."
-  ([compiles-to attribute subvalue]
-   (CSSAttributeSelector. compiles-to nil attribute subvalue))
-  ([compiles-to tag attribute subvalue]
-   (CSSAttributeSelector. compiles-to tag attribute subvalue)))
+   `(def ~identifier (fn [value#] (CSSUnit. ~css-unit value#)))))
 
 (defmacro defattributeselector
   "Attribute selectors select all descendant elements containing a given attribute,
@@ -124,7 +111,9 @@
      not have to be a whole word).
      In code: <contains-subs>"
   [selector-name compiles-to]
-  `(do (def ~selector-name (partial ~attribute-selector-fn ~compiles-to))
+  `(do (def ~selector-name (fn
+                             ([attr# subval#] (CSSAttributeSelector. ~compiles-to nil attr# subval#))
+                             ([tag# attr# subval#] (CSSAttributeSelector. ~compiles-to tag# attr# subval#))))
        (alter-meta! #'~selector-name assoc :arglists '([~'attribute ~'subvalue]
                                                        [~'tag ~'attribute ~'subvalue]))))
 
@@ -149,12 +138,6 @@
   ([identifier css-pseudoclass]
    `(def ~identifier (CSSPseudoClass. ~css-pseudoclass))))
 
-(defn create-pseudoclassfn-record
-  "Given a CSS pseudoclass for compilation and an argument, creates a CSSPseudoclassFn
-  record with the pseudoclass and argument."
-  [pseudoclass argument]
-  (CSSPseudoClassFn. pseudoclass argument))
-
 (defmacro defpseudoclassfn
   "Creates a special CSS pseudoclass function, which compiles similarly as a standard
   CSS pseudoclass, but it is pseudoclass function with an argument.
@@ -177,7 +160,7 @@
    (let [compiles-to (str pseudoclass)]
      `(defpseudoclassfn ~pseudoclass ~compiles-to)))
   ([pseudoclass compiles-to]
-   `(def ~pseudoclass (partial ~create-pseudoclassfn-record ~compiles-to))))
+   `(def ~pseudoclass (fn [arg#] (CSSPseudoClassFn. ~compiles-to arg#)))))
 
 (defmacro defpseudoelement
   "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
@@ -194,11 +177,6 @@
   ([pseudoelement]
    (let [compiles-to (str pseudoelement)]
      `(def ~pseudoelement (CSSPseudoElement. ~compiles-to)))))
-
-(defn make-combinator-fn
-  "Creates a CSSCombinator record."
-  [compiles-to & children]
-  (CSSCombinator. compiles-to children))
 
 (defmacro defcombinatorselector
   "Defines a combinator selector function which describes relationships between its
@@ -220,14 +198,7 @@
            [:.def (child-selector :p :#ghi)]]
   compiles to   \".abc .def, .abc > p > #ghi\""
   [selector-name compiles-to]
-  `(def ~selector-name (partial ~make-combinator-fn ~compiles-to)))
-
-(defn- make-cssfn-record
-  "An internal CSSFunction function which takes the \"compiles-to\"
-  function parameter, e.g. min\", a function which is applied to args
-  during the compilation and the arguments and creates a CSSFunction record."
-  [compiles-to* compile-fn* & args]
-  (CSSFunction. compiles-to* compile-fn* args))
+  `(def ~selector-name (fn [& children#] (CSSCombinator. ~compiles-to children#))))
 
 (defmacro defcssfn
   "Defines a CSS function. In most cases, you do NOT need to define a special compile-fn
@@ -265,4 +236,13 @@
                                                     "\nThe second argument " css-fn-or-fn-tail " is"
                                                     " neither a string nor a function.")))))
   ([clojure-fn-name compiles-to compile-fn]
-   `(def ~clojure-fn-name (partial ~make-cssfn-record ~compiles-to ~compile-fn))))
+   `(def ~clojure-fn-name (fn [& args#] (CSSFunction. ~compiles-to ~compile-fn args#)))))
+
+(defmacro cartesian-product
+  "Given any number of seqs, this function returns a lazy sequence of all possible
+  combinations of taking 1 element from each of the input sequences."
+  [& seqs]
+  (let [w-bindings (map #(vector (gensym) %) seqs)
+        binding-syms (mapv first w-bindings)
+        for-bindings (vec (apply concat w-bindings))]
+    `(for ~for-bindings ~binding-syms)))

@@ -1,7 +1,6 @@
 (ns tornado.at-rules
   "Current available at-rules: @media, @font-face, @keyframes"
   (:require [tornado.types :as t])
-  #?(:cljs (:require-macros [tornado.at-rules :refer [defkeyframes]]))
   #?(:clj (:import (tornado.types CSSAtRule))))
 
 (defn cssatrule [id val]

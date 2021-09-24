@@ -4,11 +4,11 @@
   (:require [tornado.types :as t]
             [tornado.util :as util]
             [clojure.string :as str]
-            #?(:clj [tornado.clj-macros :refer [defattributeselector defpseudoclass defpseudoclassfn
+            #?(:clj [tornado.macros :refer [defattributeselector defpseudoclass defpseudoclassfn
                                                 defpseudoelement defcombinatorselector]]))
   #?(:clj  (:import (tornado.types CSSPseudoClass CSSPseudoElement
                                    CSSAttributeSelector CSSCombinator CSSPseudoClassFn))
-     :cljs (:require-macros [tornado.cljs-macros :refer [defattributeselector defpseudoclass defpseudoclassfn
+     :cljs (:require-macros [tornado.macros :refer [defattributeselector defpseudoclass defpseudoclassfn
                                                          defpseudoelement defcombinatorselector]])))
 
 ;; Lists of special selectors can be found on https://www.w3schools.com/css/css_selectors.asp
@@ -18,7 +18,7 @@
 
 (defn IAttr [compiles-to tag attr subval]
   #?(:clj  (CSSAttributeSelector. compiles-to tag attr subval)
-     :cljs (t/CSSAttributeSelector compiles-to tag attr subval)))
+     :cljs (t/CSSAttributeSelector. compiles-to tag attr subval)))
 
 (defn has-attr
   "An attribute selector which selects all elements which have a given
