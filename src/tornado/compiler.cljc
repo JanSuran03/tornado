@@ -1,17 +1,44 @@
 (ns tornado.compiler
   "The Tornado compiler, where you should only care about these 3 functions:
   css, repl-css, compile-expression."
-  (:require [tornado.types]
+  (:require [tornado.types :as t]
             [tornado.at-rules :as at-rules]
             [tornado.util :as util]
             [clojure.string :as str]
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
             [tornado.compression :as compression])
-  (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
-                          CSSCombinator CSSAttributeSelector
-                          CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
-           (clojure.lang Keyword Symbol)))
+  #?(:clj (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
+                                  CSSCombinator CSSAttributeSelector
+                                  CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
+                   (clojure.lang Keyword Symbol))))
+
+(def IUnit #?(:clj  CSSUnit
+              :cljs t/CSSUnit))
+
+(def IAtRule #?(:clj  CSSAtRule
+                :cljs t/CSSAtRule))
+
+(def IFunction #?(:clj  CSSFunction
+                  :cljs t/CSSFunction))
+
+(def IColor #?(:clj  CSSColor
+               :cljs t/CSSColor))
+
+(def ICombinator #?(:clj  CSSCombinator
+                    :cljs t/CSSCombinator))
+
+(def IAttribute #?(:clj  CSSAttributeSelector
+                   :cljs t/CSSAttributeSelector))
+
+(def IPseudoClass #(:clj CSSPseudoClass
+                     :cljs t/CSSPseudoClass))
+
+(def IPseudoElement #?(:clj  CSSPseudoElement
+                       :cljs t/CSSPseudoElement))
+
+(def IPseudoClassFn #?(:clj  CSSPseudoClassFn
+                       :cljs t/CSSPseudoClassFn))
 
 (def ^{:dynamic true
        :doc     "The current flags for a tornado build compilation:
@@ -108,24 +135,24 @@
   [selector]
   (name selector))
 
-(defmethod compile-selector CSSAttributeSelector
+(defmethod compile-selector IAttribute
   [{:keys [compiles-to tag attribute subvalue]}]
   (let [maybe-subvalue (when subvalue (str "\"" (name subvalue) "\""))]
     (str (util/get-str-form tag) "[" (util/get-str-form attribute) compiles-to maybe-subvalue "]")))
 
-(defmethod compile-selector CSSPseudoClass
+(defmethod compile-selector IPseudoClass
   [{:keys [pseudoclass]}]
   (str ":" pseudoclass))
 
-(defmethod compile-selector CSSPseudoElement
+(defmethod compile-selector IPseudoElement
   [{:keys [pseudoelement]}]
   (str "::" pseudoelement))
 
-(defmethod compile-selector CSSPseudoClassFn
+(defmethod compile-selector IPseudoClassFn
   [{:keys [compiles-to arg]}]
   (str ":" compiles-to "(" (compile-expression arg) ")"))
 
-(defmethod compile-selector CSSCombinator
+(defmethod compile-selector ICombinator
   [{:keys [compiles-to children]}]
   (->> children (map #(str compiles-to " " (name %)))
        util/str-spacejoin))
@@ -138,8 +165,8 @@
                                     (assert (or (sel/selector? next-selector)
                                                 (sel/id-class-tag? next-selector))
                                             (str "Expected a selector while compiling: " next-selector))
-                                    (let [selectors (if (util/some-instance? next-selector CSSPseudoClass
-                                                                             CSSPseudoClassFn CSSPseudoElement)
+                                    (let [selectors (if (util/some-instance? next-selector IPseudoClass
+                                                                             IPseudoClassFn IPseudoElement)
                                                       selectors
                                                       (util/conjv selectors " "))]
                                       (util/conjv selectors (compile-selector next-selector))))
@@ -206,7 +233,7 @@
   [record]
   (throw (IllegalArgumentException. (str "Not a valid tornado record: " record " with a class: " (class record)))))
 
-(defmethod compile-css-record CSSUnit
+(defmethod compile-css-record IUnit
   [{:keys [value compiles-to]}]
   (str (util/int* value) compiles-to))
 
@@ -216,15 +243,15 @@
   (str compiles-to "(" (->> args (map compile-expression)
                             util/str-commajoin) ")"))
 
-(defmethod compile-css-record CSSFunction
+(defmethod compile-css-record IFunction
   [{:keys [compile-fn] :or {compile-fn commajoin} :as CSSFn-record}]
   (compile-fn CSSFn-record))
 
-(defmethod compile-css-record CSSAtRule
+(defmethod compile-css-record IAtRule
   [at-rule-record]
   (compile-at-rule at-rule-record))
 
-(defmethod compile-css-record CSSColor
+(defmethod compile-css-record IColor
   [color-record]
   (compile-color color-record))
 
