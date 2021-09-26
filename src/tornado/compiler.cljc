@@ -317,7 +317,7 @@
 
 (defmulti compile-at-rule
           "Generates CSS from a CSSAtRule record, at the moment, these are available:
-          @media, @keyframes, @font-face.
+          at-media, at-keyframes, at-font-face.
 
           E.g.:
           #tornado.types.CSSAtRule{:identifier \"media\"
