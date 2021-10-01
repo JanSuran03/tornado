@@ -90,7 +90,7 @@ ClojureScript:
 
 ## Plans for the future:
 
-- Make it work in both Clojure and ClojureScript.
+- Rewrite java-only functions on a few places to cljc.
 - Add html <... style="..."/> data generator.
 - Docs to CSS functions, better docs overall.
 - More common utility functions (currently only 'important' and 'grid-areas'.
