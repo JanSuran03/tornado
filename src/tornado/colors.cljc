@@ -339,12 +339,12 @@
   [{:keys [type value] :as color}]
   (if (instance? IColor color)
     (case type "rgb" (let [{:keys [red green blue]} value
-                           [red green blue] (map #(Math/round %) [red green blue])
+                           [red green blue] (map util/math-round [red green blue])
                            in-hex (map util/base10->double-hex-map [red green blue])]
                        (apply str "#" in-hex))
                "rgba" (let [{:keys [red green blue alpha]} value
-                            [red green blue] (map #(Math/round %) [red green blue])
-                            alpha (Math/round (float (* 255 alpha)))
+                            [red green blue] (map util/math-round [red green blue])
+                            alpha (util/math-round (* 255 alpha))
                             in-hex (map util/base10->double-hex-map [red green blue alpha])]
                         (apply str "#" in-hex))
                :else (do (println (str "Unable to convert " color " to a hex-string -"
@@ -354,22 +354,19 @@
 
 (defn hsl->rgb
   "https://www.rapidtables.com/convert/color/hsl-to-rgb.html
-  Hsl to rgb. hsla to rgba.
-
-  Unfortunately, Math/round abs Math/abs would throw an error
-  with ratios, they need to be converted to floats first."
+  Hsl -> rgb, hsla -> rgba."
   [{:keys [value] :as hsl-color}]
   {:pre [(or (hsl? hsl-color) (hsla? hsl-color))]}
   (let [{:keys [hue saturation lightness alpha]} value
-        C (* (- 1 (Math/abs (float (- (* 2 lightness) 1)))) saturation)
-        X (* C (- 1 (Math/abs (float (- (mod (/ hue 60) 2) 1)))))
+        C (* (- 1 (util/math-abs (- (* 2 lightness) 1))) saturation)
+        X (* C (- 1 (util/math-abs (- (mod (/ hue 60) 2) 1))))
         m (- lightness (/ C 2))
         idx0 (mod (int (/ (+ 240 hue) 120)) 3)
         idxC (int (mod (+ idx0 1 (mod (/ hue 60) 2)) 3))
         idxX (int (mod (+ idx0 1 (mod (inc (/ hue 60)) 2)) 3))
         c-x-m [[0 idx0] [C idxC] [X idxX]]
         [[R' _] [G' _] [B' _]] (sort-by second < c-x-m)
-        [R G B] (map #(Math/round (float (* (+ % m) 255))) [R' G' B'])]
+        [R G B] (map #(util/math-round (* (+ % m) 255)) [R' G' B'])]
     (if (hsl? hsl-color)
       (rgb R G B)
       (rgba R G B alpha))))
@@ -389,8 +386,8 @@
                   (= Cmax G') (* 60 (+ (/ (- B' R') Crange) 2))
                   :else (* 60 (+ (/ (- R' G') Crange) 4)))
         lightness (util/average Cmax Cmin)
-        saturation (if (zero? Crange) 0 (/ Crange (- 1 (Math/abs (float (- (* 2 lightness) 1))))))
-        [H S L] [(Math/round (float hue)) (util/round saturation) (util/round lightness)]]
+        saturation (if (zero? Crange) 0 (/ Crange (- 1 (util/math-abs (- (* 2 lightness) 1)))))
+        [H S L] [(util/math-round hue) (util/round saturation) (util/round lightness)]]
     (if (rgb? rgb-color)
       (hsl H S L)
       (hsla H S L alpha))))

@@ -176,19 +176,17 @@
           otherwise prints out a warning and returns a string form of that keyword."
           colors/get-color-type)
 
-(defn round [x] (-> x float Math/round))
-
 (defmethod compile-color "rgb"
   [{:keys [value]}]
   (let [{:keys [red green blue]} value
-        [red green blue] (map round [red green blue])]
+        [red green blue] (map util/math-round [red green blue])]
     (str "rgb(" red ", " green ", " blue ")")))
 
 (defmethod compile-color "rgba"
   [{:keys [value]}]
   (let [{:keys [red green blue alpha]} value
         alpha (util/percent->number alpha)
-        [red green blue alpha] (map round [red green blue alpha])]
+        [red green blue alpha] (map util/math-round [red green blue alpha])]
     (str "rgba(" red ", " green ", " blue ", " alpha ")")))
 
 (defmethod compile-color "hsl"
@@ -196,7 +194,7 @@
   (let [{:keys [hue saturation lightness]} value
         saturation (util/percent-with-symbol-append saturation)
         lightness (util/percent-with-symbol-append lightness)
-        hue (round hue)]
+        hue (util/math-round hue)]
     (str "hsl(" hue ", " saturation ", " lightness ")")))
 
 (defmethod compile-color "hsla"
@@ -205,7 +203,7 @@
         saturation (util/percent-with-symbol-append saturation)
         lightness (util/percent-with-symbol-append lightness)
         alpha (util/percent->number alpha)
-        hue (round hue)]
+        hue (util/math-round hue)]
     (str "hsla(" hue ", " saturation ", " lightness ", " alpha ")")))
 
 (defmulti compile-css-record

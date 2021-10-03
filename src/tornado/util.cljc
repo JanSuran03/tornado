@@ -8,12 +8,18 @@
   #?(:clj (:import (tornado.types CSSUnit))))
 
 (defn math-round [x]
-  (#?(:clj  Math/round
-      :cljs js/Math.round) x))
+  #?(:clj  (Math/round (float x))
+     :cljs (js/Math.round x)))
 
 (defn math-pow [x y]
   (#?(:clj  Math/pow
       :cljs js/Math.pow) x y))
+
+(defn math-abs [x]
+  #?(:clj  (Math/abs (if (ratio? x)
+                       (float x)
+                       x))
+     :cljs js/Math.abs))
 
 (defn parse-float [s]
   (#?(:clj  Float/parseFloat
@@ -121,9 +127,10 @@
              (/ (math-round (* x scale)) scale)))))
 
 (defn round
-  "Rounds a given number to 4 decimal digits, which should be enough in most cases."
+  "Rounds a given number to 4 decimal digits, which should be enough in most cases.
+  Used for inaccurate calculations, e.g.: (* 1.0 100)"
   [x]
-  (->fixed (float x) 4))
+  (->fixed x 4))
 
 (defn- -average
   "Computes the average of 1 or more numbers."
