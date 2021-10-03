@@ -269,8 +269,12 @@
   (and (hex? x)
        (= (count x) 9)))
 
+(defn keyword-color? [x]
+  (when (util/valid? x)
+    (contains? default-colors (color->1-wd x))))
+
 (defn color? [x]
-  ((some-fn rgb? rgba? hsl? hsla? hex?) x))
+  ((some-fn rgb? rgba? hsl? hsla? hex? keyword-color?) x))
 
 (defn rgb->rgba
   "Rgb with alpha 1."
@@ -548,8 +552,7 @@
                        the colors are converted to the same type by a function 'mix-colors'"
             :arglists '([color-type colors])}
           -mix-colors
-          (fn [color-type _]
-            color-type))
+          first)
 
 (defmethod -mix-colors "rgb"
   [_ colors]
@@ -604,7 +607,9 @@
      (unknown-color-type color)))
   ([color1 & more]
    (let [colors (cons color1 more)
-         colors (map #(cond-> % ((some-fn symbol? string?) %) keyword) colors)
+         colors (map #(if (and (util/valid? %) (not (str/starts-with? (name %) "#")))
+                        (try-keyword-color %)
+                        %) colors)
          types (->> colors (map get-color-type) (filter string?) (#(if (seq %) % ["rgba"])))
          colors (->> colors (map (fn [color]
                                    (if (util/valid? color)

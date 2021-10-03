@@ -1,6 +1,14 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.2.2
+There was explicit java Math class on a few places - replaced with reader conditionals for java's Math and javascript's js/Math respectively.
+
+Fixed mixing keyword, string or symbol colors which can be found in tornado.colors/default-colors.
+
+## 0.2.1
+@rules in one of the documentations replaced with at-rules to avoid collisions with the Closure compiler trying to parse it somehow.
+
 # 0.2.0 ClojureScript support
 Added support for ClojureScript. There are a few limitations that you have to require macros from a different file etc.
 
@@ -21,6 +29,7 @@ Small improvements in code, updated README with plans for the future.
 
 ## 0.1.3
 Added more flexibility to colors (e.g. :font-black, :fontblack, "font-black" "fontblack", 'font-black, 'fontblack) can all represent the same color.
+
 Removed an information in README about upcoming lein-tornado plugin - the plugin is already released.
 
 ## 0.1.2
