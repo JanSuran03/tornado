@@ -115,7 +115,8 @@
                              ([attr# subval#] (CSSAttributeSelector. ~compiles-to nil attr# subval#))
                              ([tag# attr# subval#] (CSSAttributeSelector. ~compiles-to tag# attr# subval#))))
        (alter-meta! #'~selector-name assoc :arglists '([~'attribute ~'subvalue]
-                                                       [~'tag ~'attribute ~'subvalue]))))
+                                                       [~'tag ~'attribute ~'subvalue]))
+       #'~selector-name))
 
 (defmacro defpseudoclass
   "Defines a CSS pseudoclass. A CSS pseudoclass can activate some CSS properties on

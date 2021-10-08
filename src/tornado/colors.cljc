@@ -396,6 +396,8 @@
       (hsl H S L)
       (hsla H S L alpha))))
 
+
+
 (defn- unknown-color-type
   "Throws an exception when the color type is not supported."
   [{:keys [type] :or {type "undefined"} :as color}]
@@ -470,6 +472,25 @@
   (cond (or (rgb? color) (rgba? color)) (->rgba color)
         (or (hsl? color) (hsla? color)) (->hsla color)
         (hex? color) (hex->rgba color)
+        :else (unknown-color-type color)))
+
+(defn maybe-without-alpha [color]
+  (cond (rgba? color) (let [{:keys [red green blue alpha]} (:value color)]
+                        (if (= alpha 1)
+                          (rgb red green blue)
+                          color))
+        (hsla? color) (let [{:keys [hue saturation lightness alpha]} (:value color)]
+                        (if (= alpha 1)
+                          (hsl hue saturation lightness)
+                          color))
+        (rgba? color) (let [{:keys [red green blue alpha]} (:value color)]
+                        (if (= alpha 1)
+                          (rgb red green blue)
+                          color))
+        (alpha-hex? color) (if (some #(= (subs color 7 9) %) ["ff" "fF" "Ff" "FF"])
+                             (subs color 0 7)
+                             color)
+        ((some-fn rgb? hsl? non-alpha-hex? try-keyword-color) color) color
         :else (unknown-color-type color)))
 
 (defn ->hsl?a

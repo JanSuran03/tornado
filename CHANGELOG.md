@@ -1,6 +1,9 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.2.3
+Fixed rgba color compilation. Added color compression to hex-format if :pretty-print? flag is set to false.
+
 ## 0.2.2
 There was explicit java Math class on a few places - replaced with reader conditionals for java's Math and javascript's js/Math respectively.
 

@@ -65,6 +65,22 @@
                   int-x
                   x))))
 
+(defn ->fixed
+  "Rounds a given number x to d decimal digits, or 0 by default."
+  ([x] (if (int? x)
+         x
+         (math-round x)))
+  ([x d] (if (zero? d)
+           (math-round x)
+           (let [scale (math-pow 10 d)]
+             (/ (math-round (* x scale)) scale)))))
+
+(defn round
+  "Rounds a given number to 4 decimal digits, which should be enough in most cases.
+  Used for inaccurate calculations, e.g.: (* 1.0 100)"
+  [x]
+  (->fixed x 4))
+
 (defn to-percent-float
   "Parses a percentage from a string or multiplies a number with 100 to get
   a percentage value of it:
@@ -84,7 +100,7 @@
   a string form of it with \"%\" appended. Non-numbers are returned unaffected."
   [value]
   (if (number? value)
-    (str (int* (* value 100)) "%")
+    (str (int* (round (* value 100))) "%")
     value))
 
 (defn percent->number
@@ -115,22 +131,6 @@
          throw-if-no-match (exception
                              (str "Not a valid value for conversion from percent to number: " value))
          :else value)))
-
-(defn ->fixed
-  "Rounds a given number x to d decimal digits, or 0 by default."
-  ([x] (if (int? x)
-         x
-         (math-round x)))
-  ([x d] (if (zero? d)
-           (math-round x)
-           (let [scale (math-pow 10 d)]
-             (/ (math-round (* x scale)) scale)))))
-
-(defn round
-  "Rounds a given number to 4 decimal digits, which should be enough in most cases.
-  Used for inaccurate calculations, e.g.: (* 1.0 100)"
-  [x]
-  (->fixed x 4))
 
 (defn- -average
   "Computes the average of 1 or more numbers."
@@ -228,15 +228,6 @@
   corresponding border which is nearer to the value, otherwise returns the value."
   [val min-val max-val]
   (min max-val (max val min-val)))
-
-(defmacro cartesian-product
-  "Given any number of seqs, this function returns a lazy sequence of all possible
-  combinations of taking 1 element from each of the input sequences."
-  [& seqs]
-  (let [w-bindings (map #(vector (gensym) %) seqs)
-        binding-syms (mapv first w-bindings)
-        for-bindings (vec (apply concat w-bindings))]
-    `(for ~for-bindings ~binding-syms)))
 
 (defn some-instance?
   "Returns true if the expression is an instance of any of the instances."

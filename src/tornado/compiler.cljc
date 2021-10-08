@@ -60,6 +60,18 @@
            :pretty-print? true
            :output-to     nil})
 
+(defn compress? []
+  (not (:pretty-print? *flags*)))
+
+(defn update-in-keys
+  "Given a map or a record, a function, a common partial path and keys which will be
+  appended to that path, updates all keys in the given map with that function."
+  [m f path & ks]
+  (reduce (fn [m k]
+            (update-in m (conj path k) f))
+          m
+          ks))
+
 (defn indent
   "The actual globally used indent in a string form of *X* spaces."
   []
@@ -177,44 +189,63 @@
           colors/get-color-type)
 
 (defmethod compile-color "rgb"
-  [{:keys [value]}]
-  (let [{:keys [red green blue]} value
-        [red green blue] (map util/math-round [red green blue])]
-    (str "rgb(" red ", " green ", " blue ")")))
+  [{:keys [value] :as color}]
+  (if (compress?)
+    (-> color (update-in-keys util/math-round [:value] :red :green :blue)
+        colors/rgb->hex)
+    (let [{:keys [red green blue]} value
+          [red green blue] (map util/math-round [red green blue])]
+      (str "rgb(" red ", " green ", " blue ")"))))
 
 (defmethod compile-color "rgba"
-  [{:keys [value]}]
-  (let [{:keys [red green blue alpha]} value
-        alpha (util/percent->number alpha)
-        [red green blue alpha] (map util/math-round [red green blue alpha])]
-    (str "rgba(" red ", " green ", " blue ", " alpha ")")))
+  [{:keys [value] :as color}]
+  (if (compress?)
+    (-> color (update-in-keys util/math-round [:value] :red :green :blue)
+        (update-in [:value :alpha] util/percent->number)
+        colors/maybe-without-alpha
+        colors/rgb->hex)
+    (let [{:keys [red green blue alpha]} value
+          alpha (util/percent->number alpha)
+          [red green blue] (map util/math-round [red green blue])]
+      (str "rgba(" red ", " green ", " blue ", " alpha ")"))))
 
 (defmethod compile-color "hsl"
-  [{:keys [value]}]
-  (let [{:keys [hue saturation lightness]} value
-        saturation (util/percent-with-symbol-append saturation)
-        lightness (util/percent-with-symbol-append lightness)
-        hue (util/math-round hue)]
-    (str "hsl(" hue ", " saturation ", " lightness ")")))
+  [{:keys [value] :as color}]
+  (if (compress?)
+    (-> color (update-in-keys util/percent-with-symbol-append [:value] :saturation :lightness)
+        (update-in [:value :hue] util/math-round)
+        colors/hsl->rgb
+        colors/rgb->hex)
+    (let [{:keys [hue saturation lightness]} value
+          saturation (util/percent-with-symbol-append saturation)
+          lightness (util/percent-with-symbol-append lightness)
+          hue (util/math-round hue)]
+      (str "hsl(" hue ", " saturation ", " lightness ")"))))
 
 (defmethod compile-color "hsla"
-  [{:keys [value]}]
-  (let [{:keys [hue saturation lightness alpha]} value
-        saturation (util/percent-with-symbol-append saturation)
-        lightness (util/percent-with-symbol-append lightness)
-        alpha (util/percent->number alpha)
-        hue (util/math-round hue)]
-    (str "hsla(" hue ", " saturation ", " lightness ", " alpha ")")))
+  [{:keys [value] :as color}]
+  (if (compress?)
+    (-> color (update-in [:value :hue] util/math-round)
+        colors/maybe-without-alpha
+        colors/hsl->rgb
+        colors/rgb->hex)
+    (let [{:keys [hue saturation lightness alpha]} value
+          saturation (util/percent-with-symbol-append saturation)
+          lightness (util/percent-with-symbol-append lightness)
+          alpha (util/percent->number alpha)
+          hue (util/math-round hue)]
+      (str "hsla(" hue ", " saturation ", " lightness ", " alpha ")"))))
 
 (defmulti compile-css-record
           "Compiles a CSS record (unit, function, at-rule, color). For 4 different types of
           CSS selectors, there is a different multifunction \"compile-selector\"."
           #?(:clj  class
-             :cljs (fn [rec]
-                       (cond (instance? IUnit rec) IUnit
-                             (instance? IFunction rec) IFunction
-                             (instance? IAtRule rec) IAtRule
-                             (instance? IColor rec) IColor))))
+             :cljs (fn [record]
+                       (cond (instance? IUnit record) IUnit
+                             (instance? IFunction record) IFunction
+                             (instance? IAtRule record) IAtRule
+                             (instance? IColor record) IColor
+                             :else record))))
 
 (defmethod compile-css-record :default
   [record]
@@ -384,8 +415,8 @@
 
 (defn expand-seqs
   "Expands lists and lazy sequences in a nested structure. Always expands the first
-   collection. When any more deeply nested collection is neither a list nor a lazy-seq,
-   this function does not expand it.
+   collection. If any more deeply nested collection is not a seq, this function does
+   not expand it.
    See clojure.core/flatten."
   [coll]
   (mapcat (fn [coll]
@@ -573,9 +604,9 @@
    (css nil css-hiccup))
   ([flags css-hiccup]
    (binding [*flags* (merge *flags* flags)]
-     (let [{:keys [pretty-print? output-to]} *flags*]
+     (let [{:keys [output-to]} *flags*]
        (cond->> css-hiccup true just-css
-                (not pretty-print?) compression/compress
+                (compress?) compression/compress
                 output-to ((fn [x] #?(:clj  (do (spit output-to x)
                                                 (println "   Wrote: " output-to))
                                       :cljs (util/exception "Cannot save compiled stylesheet in ClojureScript.")))))))))
