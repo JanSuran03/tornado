@@ -1,16 +1,22 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.2.4
+Added a function `compile-params` for more convenient description of CSS styles in ClojureScript (Reagent).
+
+Added functions `with-hue`, `with-saturation`, `with-lightness`, `with-alpha` you can use if you wanted to change e.g. only lightness of a color
+(e.g. `(with-hue (rgb 50 100 150) 120)`, `(with-lightness "#FF0000" 0.3)`, `(with-alpha :black 0.5)`).
+
 ## 0.2.3
-Fixed rgba color compilation. Added color compression to hex-format if :pretty-print? flag is set to false.
+Fixed rgba color compilation. Added color compression to hex-format if `:pretty-print?` flag is set to false.
 
 ## 0.2.2
-There was explicit java Math class on a few places - replaced with reader conditionals for java's Math and javascript's js/Math respectively.
+There was explicit java `Math` class on a few places - replaced with reader conditionals for java's `Math` and javascript's `js/Math` respectively.
 
-Fixed mixing keyword, string or symbol colors which can be found in tornado.colors/default-colors.
+Fixed mixing keyword, string or symbol colors which can be found in `tornado.colors/default-colors`.
 
 ## 0.2.1
-@rules in one of the documentations replaced with at-rules to avoid collisions with the Closure compiler trying to parse it somehow.
+`@rules` in one of the documentations replaced with at-rules to avoid collisions with the Closure compiler trying to parse it somehow.
 
 # 0.2.0 ClojureScript support
 Added support for ClojureScript. There are a few limitations that you have to require macros from a different file etc.
@@ -31,7 +37,7 @@ Small improvements in code.
 Small improvements in code, updated README with plans for the future.
 
 ## 0.1.3
-Added more flexibility to colors (e.g. :font-black, :fontblack, "font-black" "fontblack", 'font-black, 'fontblack) can all represent the same color.
+Added more flexibility to colors (e.g. `:font-black`, `:fontblack`, `"font-black"` `"fontblack"`, `'font-black`, `'fontblack`) can all represent the same color.
 
 Removed an information in README about upcoming lein-tornado plugin - the plugin is already released.
 

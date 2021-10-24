@@ -3,9 +3,14 @@
 A Clojure library designed to generate CSS using [hiccup-like](https://github.com/weavejester/hiccup)
 data structures with focus on simplicity.
 
-The library is very new, but I will try to update it depending on how my time works out.
+## Changelog
+is available [here](CHANGELOG.md)
 
-There are some limitations for ClojureScript, see below.
+## Benefits
+- works in both Clojure and ClojureScript
+- the CSS data description is very simple - similar to Hiccup or Garden + everything can be found in a single namespace, you do not have to think about where to find what you need
+- the code is easy to read, the compilation part is logical
+- the library is very fast
 
 ## Usage
 
@@ -69,14 +74,12 @@ ClojureScript:
 ;; viewport width, compiles to "vw", string form of the unit function
 (defunit vw)
 
-(def cex t/compile-expression)
-
 (defn root []
-  [:h2 {:style {:color     (cex :chocolate)
-                :font-size (cex (em 15))
-                :position  (cex :position/absolute)
-                :top       (cex (viewport-height -60))
-                :left      (cex (vw 25))}}
+  [:h2 {:style (compile-params {:color     :chocolate
+                                :font-size (em 15)
+                                :position  :position/absolute
+                                :top       (viewport-height -60)
+                                :left      (vw 25)})}
    "Abc"])
 
 (defn render []

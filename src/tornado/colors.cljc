@@ -269,12 +269,15 @@
   (and (hex? x)
        (= (count x) 9)))
 
-(defn keyword-color? [x]
+(defn named-color?
+  "Returns true if the given color is in the name form and if it is contained in the
+  default colors (e.g. :crimson, \"dark-orchid\", 'chocolate)."
+  [x]
   (when (util/valid? x)
     (contains? default-colors (color->1-wd x))))
 
 (defn color? [x]
-  ((some-fn rgb? rgba? hsl? hsla? hex? keyword-color?) x))
+  ((some-fn rgb? rgba? hsl? hsla? hex? named-color?) x))
 
 (defn rgb->rgba
   "Rgb with alpha 1."
@@ -403,7 +406,7 @@
   [{:keys [type] :or {type "undefined"} :as color}]
   (util/exception (str "Unknown color type: " type " of color " color)))
 
-(defn- try-keyword-color
+(defn- try-named-color
   "Tries to get a hex-code color from default-colors map under the given key. If it does
   not find the color, throws an expception. Otherwise, this function returns the color
   in hex code."
@@ -425,7 +428,7 @@
                       (str "Error: an hsla color is not convertible to rgb: " color))
              (if (non-alpha-hex? color)
                (-> color hex->rgba rgba->rgb)
-               (->rgb (try-keyword-color color)))))
+               (->rgb (try-named-color color)))))
 
 (defn ->rgba
   "Converts a color to rgba."
@@ -436,7 +439,7 @@
              "hsla" (hsl->rgb color)
              (if (hex? color)
                (hex->rgba color)
-               (->rgba (try-keyword-color color)))))
+               (->rgba (try-named-color color)))))
 (defn ->hsl
   "Converts a color to hsl."
   [{:keys [type] :as color}]
@@ -448,7 +451,7 @@
                       (str "Error: an hsla color is not convertible to hsl: " color))
              (if (non-alpha-hex? color)
                (-> color hex->rgba rgba->rgb rgb->hsl)
-               (->hsl (try-keyword-color color)))))
+               (->hsl (try-named-color color)))))
 (defn ->hsla
   "Converts a color to hsla."
   [{:keys [type] :as color}]
@@ -458,23 +461,26 @@
              "hsla" color
              (if (hex? color)
                (-> color hex->rgba rgb->hsl)
-               (->hsla (try-keyword-color color)))))
+               (->hsla (try-named-color color)))))
 
 (defn has-alpha?
   "Returns true if the color has an alpha parameter."
   [color]
   (or (rgba? color) (hsla? color) (alpha-hex? color)))
 
-(defn with-alpha
-  "Returns the color with alpha = 1 if it does not have an alpha
-  value already. Hex color gets converted to rgba."
+(defn with-alpha-param
+  "Returns the color with alpha = 1 if it does not have an alpha value already.
+  Hex or named color gets converted to rgba."
   [color]
   (cond (or (rgb? color) (rgba? color)) (->rgba color)
         (or (hsl? color) (hsla? color)) (->hsla color)
         (hex? color) (hex->rgba color)
+        (named-color? color) (->rgba color)
         :else (unknown-color-type color)))
 
-(defn maybe-without-alpha [color]
+(defn maybe-without-alpha
+  "If the color's alpha is 1, returns the same color without the alpha value."
+  [color]
   (cond (rgba? color) (let [{:keys [red green blue alpha]} (:value color)]
                         (if (= alpha 1)
                           (rgb red green blue)
@@ -483,14 +489,10 @@
                         (if (= alpha 1)
                           (hsl hue saturation lightness)
                           color))
-        (rgba? color) (let [{:keys [red green blue alpha]} (:value color)]
-                        (if (= alpha 1)
-                          (rgb red green blue)
-                          color))
         (alpha-hex? color) (if (some #(= (subs color 7 9) %) ["ff" "fF" "Ff" "FF"])
                              (subs color 0 7)
                              color)
-        ((some-fn rgb? hsl? non-alpha-hex? try-keyword-color) color) color
+        ((some-fn rgb? hsl? non-alpha-hex? try-named-color) color) color
         :else (unknown-color-type color)))
 
 (defn ->hsl?a
@@ -558,7 +560,7 @@
 (defn opacify
   "Opacifies a color by a given value: 0.15, (percent 15), \"15%\" work the same way."
   [color value]
-  (-> color with-alpha (update-in [:value :alpha] #(range-0-1 (+ % value)))))
+  (-> color with-alpha-param (update-in [:value :alpha] #(range-0-1 (+ % value)))))
 
 (defn transparentize
   "Same as (opacify color value), but the value is subtracted instead."
@@ -567,7 +569,27 @@
 
 (defn scale-alpha
   "Multiplies a color's alpha by a given value. "
-  [color value] (-> color with-alpha (update-in [:value :alpha] #(range-0-1 (* % value)))))
+  [color value] (-> color with-alpha-param (update-in [:value :alpha] #(range-0-1 (* % value)))))
+
+(defn with-hue
+  "Given a color, transforms it into HSL and sets its hue to a given value."
+  [color hue]
+  (-> color ->hsl?a (update :value assoc :hue hue)))
+
+(defn with-saturation
+  "Given a color, transforms it into HSL and sets its saturation to a given value."
+  [color saturation]
+  (-> color ->hsl?a (update :value assoc :saturation saturation)))
+
+(defn with-lightness
+  "Given a color, transforms it into HSL and sets its saturation to a given value."
+  [color lightness]
+  (-> color ->hsl?a (update :value assoc :lightness lightness)))
+
+(defn with-alpha
+  "Given a color, sets its alpha to a given value."
+  [color alpha]
+  (-> color with-alpha-param (update :value assoc :alpha alpha)))
 
 (defmulti ^{:doc      "Calls a relevant function to compute the average of more colors. Presumes that
                        the colors are converted to the same type by a function 'mix-colors'"
@@ -629,7 +651,7 @@
   ([color1 & more]
    (let [colors (cons color1 more)
          colors (map #(if (and (util/valid? %) (not (str/starts-with? (name %) "#")))
-                        (try-keyword-color %)
+                        (try-named-color %)
                         %) colors)
          types (->> colors (map get-color-type) (filter string?) (#(if (seq %) % ["rgba"])))
          colors (->> colors (map (fn [color]

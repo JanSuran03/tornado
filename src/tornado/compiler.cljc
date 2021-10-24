@@ -328,6 +328,26 @@
          (str/join (str "\n" (indent) *at-media-indent*))
          (str *keyframes-indent*))))
 
+(defn compile-params
+  "Given a map of HTML style attributes described in Tornado, compiles all the values
+  of the parameters, but the parameters names remain the same. This function is useful
+  for Reagent to allow you describing the style with Tornado.
+  Example usage:
+
+  (compile-params {:width            (px 500)
+                   :background-color (important (rgb 100 150 200))
+                   :border           [[(px 1) :solid :black]]
+                   :display          :flex})
+
+  => {:width            \"500px\",
+      :background-color \"rgb(100, 150, 200) !important\",
+      :border           \"1px solid #000000\",
+      :display          \"flex\"}"
+  [attributes-map]
+  (->> (for [[attr val] attributes-map]
+         [attr (compile-expression val)])
+       (into {})))
+
 (defn html-style
   "Can be used for compilation of a map of style parameters to a single string of html
   style=\"...\" attribute. Receives the styles map as its argument and returns a string

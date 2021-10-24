@@ -8,7 +8,7 @@
             [tornado.functions :as f]
             [tornado.at-rules :as at-rules]
             [tornado.common :as common]
-            #?(:clj [tornado.macros :as m])))
+            #?(:clj [tornado.macros :as macros])))
 
 ;; COMPILER FUNCTIONS
 
@@ -50,6 +50,23 @@
        :arglists '([styles-map])}
   html-style compiler/html-style)
 
+(def ^{:doc "Given a map of HTML style attributes described in Tornado, compiles all the values
+             of the parameters, but the parameters names remain the same. This function is useful
+             for Reagent to allow you describing the style with Tornado.
+             Example usage:
+
+             {:style (compile-params {:width            (px 500)
+                                      :background-color (important (rgb 100 150 200))
+                                      :border           [[(px 1) :solid :black]]
+                                      :display          :flex})}
+
+             => {:style {:width            \"500px\",
+                         :background-color \"rgb(100, 150, 200) !important\",
+                         :border           \"1px solid #000000\",
+                         :display          \"flex\"}"
+       :arglists '([attributes-map])}
+  compile-params compiler/compile-params)
+
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 ;; UNITS
@@ -70,7 +87,7 @@
                :arglists '([unit] [identifier css-unit])}
      defunit
      [& args]
-     `(m/defunit ~@args)))
+     `(macros/defunit ~@args)))
 
 ;; absolute size units
 
@@ -200,7 +217,7 @@
                :arglists '([fn-name] [fn-name css-fn-or-fn-tail] [clojure-fn-name compiles-to compile-fn])}
      defcssfn
      [& args]
-     `(m/defcssfn ~@args)))
+     `(macros/defcssfn ~@args)))
 
 ;; single arg functions
 
@@ -388,7 +405,7 @@
                :arglists '([selector-name compiles-to])}
      defattributeselector
      [& args]
-     `(m/defattributeselector ~@args)))
+     `(macros/defattributeselector ~@args)))
 
 (def ^{:doc      "An attribute selector which selects all elements which have a given
                   attribute with any value, or all html elements on/below the current
@@ -447,7 +464,7 @@
                :arglists '([pseudoclass] [identifier css-pseudoclass])}
      defpseudoclass
      [& args]
-     `(m/defpseudoclass ~@args)))
+     `(macros/defpseudoclass ~@args)))
 
 (def ^{:doc "CSS pseudoselector \"active\". Used as a value, e.g.:
              [:.some-sel {:width (px 100)}
@@ -623,7 +640,7 @@
                :arglists '([pseudoclass] [pseudoclass compiles-to])}
      defpseudoclassfn
      [& args]
-     `(m/defpseudoclassfn ~@args)))
+     `(macros/defpseudoclassfn ~@args)))
 
 (def ^{:doc      "Coming soon"
        :arglists '([arg])}
@@ -666,7 +683,7 @@
                :arglists '([pseudoelement])}
      defpseudoelement
      [& args]
-     `(m/defpseudoelement ~@args)))
+     `(macros/defpseudoelement ~@args)))
 
 (def ^{:doc "Coming soon"}
   after sel/after)
@@ -710,7 +727,7 @@
                :arglists '([selector-name compiles-to])}
      defcombinatorselector
      [& args]
-     `(m/defcombinatorselector ~@args)))
+     `(macros/defcombinatorselector ~@args)))
 
 (def ^{:doc      "Coming soon"
        :arglists '([& selectors])} child-selector sel/child-selector)
@@ -809,6 +826,26 @@
        :arglists '([color value])}
   scale-alpha colors/scale-alpha)
 
+(def ^{:doc "Given a color, transforms it into HSL and sets its hue to a given value.
+             E.g.: (with-hue :red 150), (with-hue (rgba 200 150 100 0.3) 75)"
+       :arglists '([color hue])}
+  with-hue colors/with-hue)
+
+(def ^{:doc "Given a color, transforms it into HSL and sets its saturation to a given value.
+             E.g.: (with-saturation :red 0.5), (with-saturation (rgba 200 150 100 0.3) 0.5)"
+       :arglists '([color hue])}
+  with-saturation colors/with-saturation)
+
+(def ^{:doc "Given a color, transforms it into HSL and sets its lightness to a given value.
+             E.g.: (with-lightness :red 0.8), (with-lightness (rgba 200 150 100 0.3) 0.8)"
+       :arglists '([color hue])}
+  with-lightness colors/with-lightness)
+
+(def ^{:doc "Given a color, sets its alpha to a given value.
+             E.g.: (with-alpha :red 0.4), (with-alpha \"#FF7FCF\" 0.4)"
+       :arglists '([color hue])}
+  with-alpha colors/with-alpha)
+
 (def ^{:doc      "Given any number of colors in any form (alpha-hex, non-alpha-hex, rgb, rgba,
                   hsl, hsla), converts them to the most frequent type and mixes them."
        :arglists '([color & more])}
@@ -900,7 +937,7 @@
                :arglists '([animation-name & frames])}
      defkeyframes
      [& args]
-     `(m/defkeyframes ~@args)))
+     `(macros/defkeyframes ~@args)))
 
 ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ;; COMMON UTILITY FUNCTIONS
