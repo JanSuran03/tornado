@@ -60,8 +60,7 @@
            :pretty-print? true
            :output-to     nil})
 
-(defn compress? []
-  (not (:pretty-print? *flags*)))
+(def ^:dynamic *compress?* false)
 
 (defn update-in-keys
   "Given a map or a record, a function, a common partial path and keys which will be
@@ -72,10 +71,7 @@
           m
           ks))
 
-(defn indent
-  "The actual globally used indent in a string form of *X* spaces."
-  []
-  (apply str (repeat (:indent-length *flags*) " ")))
+(def ^:dynamic *indent* (apply str (repeat (:indent-length *flags*) " ")))
 
 (def ^:dynamic *media-query-parents*
   "Current parents Used for compiling @media to temporarily store parents
@@ -190,7 +186,7 @@
 
 (defmethod compile-color "rgb"
   [{:keys [value] :as color}]
-  (if (compress?)
+  (if *compress?*
     (-> color (update-in-keys util/math-round [:value] :red :green :blue)
         colors/rgb->hex)
     (let [{:keys [red green blue]} value
@@ -199,7 +195,7 @@
 
 (defmethod compile-color "rgba"
   [{:keys [value] :as color}]
-  (if (compress?)
+  (if *compress?*
     (-> color (update-in-keys util/math-round [:value] :red :green :blue)
         (update-in [:value :alpha] util/percent->number)
         colors/maybe-without-alpha
@@ -211,9 +207,8 @@
 
 (defmethod compile-color "hsl"
   [{:keys [value] :as color}]
-  (if (compress?)
-    (-> color (update-in-keys util/percent-with-symbol-append [:value] :saturation :lightness)
-        (update-in [:value :hue] util/math-round)
+  (if *compress?*
+    (-> color (update-in [:value :hue] util/math-round)
         colors/hsl->rgb
         colors/rgb->hex)
     (let [{:keys [hue saturation lightness]} value
@@ -224,7 +219,7 @@
 
 (defmethod compile-color "hsla"
   [{:keys [value] :as color}]
-  (if (compress?)
+  (if *compress?*
     (-> color (update-in [:value :hue] util/math-round)
         colors/maybe-without-alpha
         colors/hsl->rgb
@@ -256,14 +251,14 @@
   [{:keys [value compiles-to]}]
   (str (util/int* value) compiles-to))
 
-(defn commajoin
-  "Redefining functions/commajoin because there would be a cyclic dependency otherwise."
+(defn comma-join
+  "Redefining functions/comma-join because there would be a cyclic dependency otherwise."
   [{:keys [compiles-to args]}]
   (str compiles-to "(" (->> args (map compile-expression)
                             util/str-commajoin) ")"))
 
 (defmethod compile-css-record IFunction
-  [{:keys [compile-fn] :or {compile-fn commajoin} :as CSSFn-record}]
+  [{:keys [compile-fn] :or {compile-fn comma-join} :as CSSFn-record}]
   (compile-fn CSSFn-record))
 
 (defmethod compile-css-record IAtRule
@@ -275,7 +270,7 @@
   (compile-color color-record))
 
 (def calc-keywords
-  "A special map for calc keywords"
+  "A special map for calc keywords."
   {:add "+"
    :sub "-"
    :mul "*"
@@ -284,7 +279,7 @@
 (defn compile-expression
   "Compiles an expression: a number, string, symbol or a record. If the expression is
   a vector of sequential structures, compiles each of the structures and str/joins them
-  with a space. Then, str/joins all these str/spacejoined structures with a comma.
+  with a space. Then, str/joins all these str/space-joined structures with a comma.
 
   E.g.:
   (compile-expression [[(u/px 15) (u/percent 20)] [:red :chocolate]])
@@ -325,7 +320,7 @@
     (->> attributes-map compile-attributes-map
          (map util/str-colonjoin)
          (map #(str *keyframes-indent* *at-media-indent* % ";"))
-         (str/join (str "\n" (indent) *at-media-indent*))
+         (str/join (str "\n" *indent* *at-media-indent*))
          (str *keyframes-indent*))))
 
 (defn compile-params
@@ -415,15 +410,15 @@
 (defmethod compile-at-rule "font-face"
   [{:keys [value]}]
   (let [compiled-params (->> value (map attr-map-to-css)
-                             (str/join (str "\n" (indent))))]
-    (str "@font-face {\n" (indent) compiled-params "\n}")))
+                             (str/join (str "\n" *indent*)))]
+    (str "@font-face {\n" *indent* compiled-params "\n}")))
 
 (defmethod compile-at-rule "keyframes"
   [{:keys [value]}]
   (let [{:keys [anim-name frames]} value]
     (if *in-params-context*
       anim-name
-      (binding [*keyframes-indent* (indent)]
+      (binding [*keyframes-indent* *indent*]
         (let [compiled-frames (->> frames (map (fn [[progress params]]
                                                  (let [compiled-progress (compile-expression progress)
                                                        compiled-params (attr-map-to-css params)]
@@ -433,15 +428,15 @@
                                    (str *keyframes-indent*))]
           (str "@keyframes " anim-name " {\n" compiled-frames "\n}"))))))
 
-(defn expand-seqs
-  "Expands lists and lazy sequences in a nested structure. Always expands the first
-   collection. If any more deeply nested collection is not a seq, this function does
-   not expand it.
-   See clojure.core/flatten."
+(defn flatten-seqs
+  "Recursively expands collections for which `(seq? coll)` returns true. Always expands
+  the first collection, even if it is e.g. a vector ((seq? []) is false); all more
+  deeply nested collections will not be expanded.
+  See clojure.core/flatten."
   [coll]
   (mapcat (fn [coll]
             (if (seq? coll)
-              (expand-seqs coll)
+              (flatten-seqs coll)
               (list coll)))
           coll))
 
@@ -569,13 +564,13 @@
       }"
   [{:keys [paths params at-media at-font-face at-keyframes]}]
   (cond at-media (binding [*media-query-parents* paths
-                           *at-media-indent* (indent)]
+                           *at-media-indent* *indent*]
                    (compile-at-rule at-media))
         at-font-face (compile-css-record at-font-face)
         at-keyframes (compile-css-record at-keyframes)
         :else (when params (let [compiled-selectors (compile-selectors paths)
                                  compiled-params (attr-map-to-css params)]
-                             (str compiled-selectors " {\n" (indent) compiled-params "\n" *at-media-indent* "}")))))
+                             (str compiled-selectors " {\n" *indent* compiled-params "\n" *at-media-indent* "}")))))
 
 (defn compile-all-selectors-params-combinations
   "Given a prepared hiccup vector (with precalculated and simplified combinations of all
@@ -597,7 +592,7 @@
   inserts all these combinations to the unevaluated hiccup and returns it updated with
   the combinations inserted."
   [parents unevaluated-hiccup nested-hiccup-vectors-list]
-  (let [expanded-list (expand-seqs nested-hiccup-vectors-list)]
+  (let [expanded-list (flatten-seqs nested-hiccup-vectors-list)]
     (reduce (fn [current-unevaluated-hiccup hiccup-vector]
               (expand-hiccup-vector parents current-unevaluated-hiccup hiccup-vector))
             unevaluated-hiccup
@@ -624,12 +619,14 @@
    (css nil css-hiccup))
   ([flags css-hiccup]
    (binding [*flags* (merge *flags* flags)]
-     (let [{:keys [output-to]} *flags*]
-       (cond->> css-hiccup true just-css
-                (compress?) compression/compress
-                output-to ((fn [x] #?(:clj  (do (spit output-to x)
-                                                (println "   Wrote: " output-to))
-                                      :cljs (util/exception "Cannot save compiled stylesheet in ClojureScript.")))))))))
+     (let [{:keys [output-to pretty-print? indent-length]} *flags*]
+       (binding [*compress?* (not pretty-print?)
+                 *indent* (apply str (repeat indent-length " "))]
+         (cond->> css-hiccup true just-css
+                  *compress?* compression/compress
+                  output-to ((fn [x] #?(:clj  (do (spit output-to x)
+                                                  (println "   Wrote: " output-to))
+                                        :cljs (util/exception "Cannot save compiled stylesheet in ClojureScript."))))))))))
 
 (defn repl-css
   "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup

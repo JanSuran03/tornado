@@ -1,6 +1,5 @@
-(defproject org.clojars.jansuran03/tornado "0.2.4"
-  :description "A Clojure library similar to garden with focus on simplicity and comfort of the programmer. Still very
-                new, but I improve it as my time allows me to."
+(defproject org.clojars.jansuran03/tornado "0.2.5"
+  :description "A Clojure library similar to garden with focus on simplicity and comfort of the programmer."
   :url "https://github.com/JanSuran03/tornado"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
             :url  "https://www.eclipse.org/legal/epl-2.0/"}

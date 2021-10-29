@@ -12,8 +12,8 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="Maven: org.clojure:clojure:1.10.1" level="project" />
-    <orderEntry type="library" name="Maven: org.clojure:spec.alpha:0.2.176" level="project" />
-    <orderEntry type="library" name="Maven: org.clojure:core.specs.alpha:0.2.44" level="project" />
+    <orderEntry type="library" name="Maven: org.clojure:clojure:1.10.3" level="project" />
+    <orderEntry type="library" name="Maven: org.clojure:spec.alpha:0.2.194" level="project" />
+    <orderEntry type="library" name="Maven: org.clojure:core.specs.alpha:0.2.56" level="project" />
   </component>
 </module>

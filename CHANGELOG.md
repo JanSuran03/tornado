@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.2.5
+**Bugfix**: Fixed hsl color compilation with pretty-print? set to false.
+
+Functions on a few places replaced with dynamic bindings (*indent*, *compress?*).
+
 ## 0.2.4
 Added a function `compile-params` for more convenient description of CSS styles in ClojureScript (Reagent).
 

@@ -141,7 +141,7 @@
 
 (defn average
   "Computes the average of 1 or more numbers. Accepts elements directly,
-  use apply-avg for a sequence.."
+  use apply-avg for a sequence."
   [& args]
   (let [avg (apply -average args)]
     (round avg)))

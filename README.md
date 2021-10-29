@@ -7,6 +7,7 @@ data structures with focus on simplicity.
 is available [here](CHANGELOG.md)
 
 ## Benefits
+- if you know Garden or Hiccup, nothing new can surprise you in Tornado
 - works in both Clojure and ClojureScript
 - the CSS data description is very simple - similar to Hiccup or Garden + everything can be found in a single namespace, you do not have to think about where to find what you need
 - the code is easy to read, the compilation part is logical
@@ -55,7 +56,7 @@ For compiling **and saving** the stylesheet, there is a function tornado.compile
 
 ```clojure
 ;; First, you have to ensure that the path "resources/css" exists. In the plugin
-;;  Lein-tornado, this is not a problem anymore, the library creates the folders for you.
+;; Lein-tornado, this is not a problem anymore, the library creates the folders for you.
 (css {:output-to "resources/css/example.css"} styles)
 => nil
 ```
@@ -68,12 +69,13 @@ ClojureScript:
     [tornado.core :as t :refer [em]]) ; in ClojureScript, you cannot refer the whole namespace tornado.core
   (:require-macros [tornado.macros :refer [defunit]])) ; note that you cannot refer macros from tornado.core, like in Clojure
 
-;; is defined in tornado.core, but I want to redefine it as an example
+;; is defined in tornado.core, but redefined here as an example
 (defunit viewport-height "vh")   ; compiles to "vh"
 
 ;; viewport width, compiles to "vw", string form of the unit function
 (defunit vw)
 
+;; Reagent does not support fully compilated params of every kind, but you can precompile :style.
 (defn root []
   [:h2 {:style (compile-params {:color     :chocolate
                                 :font-size (em 15)
@@ -93,10 +95,8 @@ ClojureScript:
 
 ## Plans for the future:
 
-- Rewrite java-only functions on a few places to cljc.
-- Add html <... style="..."/> data generator.
 - Docs to CSS functions, better docs overall.
-- More common utility functions (currently only 'important' and 'grid-areas'.
+- More common utility functions (currently only 'important' and 'grid-areas').
 - More at-rules functions (currently @media, @font-face, @keyframes).
 - The code could be simpler on some places.
 - More examples in the OrgPad document.
