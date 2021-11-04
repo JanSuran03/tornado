@@ -1,6 +1,13 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.2.8
+Added much more dynamism to the "join" common function:
+```clojure
+[[(em 3) (px 15) (fr 4) (px 3)]] ; with join:
+(join (em 3) 15 (fr 4) 3)
+```
+
 ## 0.2.7
 If any unit has a zero value, it will be compiled to 0 instead of 0<unit-name>
 

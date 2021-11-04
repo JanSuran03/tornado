@@ -42,16 +42,23 @@
   Example usage:
 
   (require '[tornado.compiler :refer [compile-expression]]
-           '[tornado.units :refer [em]])
+           '[tornado.units :refer [em fr]])
 
   (compile-expression (join 1 2 3))      ; is equal to [[(px 1) (px 2) (px 3)]]
-   => \"1px 2px 3px\"
+  => \"1px 2px 3px\"
 
   (compile-expression (join em 1 2 3))      ; is equal to [[(em 1) (em 2) (em 3)]]
-   => \"1em 2em 3em\""
+  => \"1em 2em 3em\"
+
+  (compile-expression (join (em 3) 15 (fr 4) 3)
+  ; is equal to [[(em 3) (px 15) (fr 4) (px 3)]]
+  => \"1em 2em 3em\""
   ([value]
    (px value))
   ([unit-or-value & more-values]
    (if (fn? unit-or-value)
      [(map unit-or-value more-values)]
-     [(map px (cons unit-or-value more-values))])))
+     [(map #(if (number? %)
+              (px %)
+              %)
+           (cons unit-or-value more-values))])))
