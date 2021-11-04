@@ -249,7 +249,9 @@
 
 (defmethod compile-css-record IUnit
   [{:keys [value compiles-to]}]
-  (str (util/int* value) compiles-to))
+  (if (zero? value)
+    0
+    (str (util/int* value) compiles-to)))
 
 (defn comma-join
   "Redefining functions/comma-join because there would be a cyclic dependency otherwise."

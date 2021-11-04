@@ -1,7 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
-## 0.26.6
+## 0.2.7
+If any unit has a zero value, it will be compiled to 0 instead of 0<unit-name>
+
+## 0.2.6
 Added a convenient function "join" which can be used for much simpler description of structures like
 ```clojure
 [[(px 5) (px 10) (px 15) (px 20)]] ; with join:
