@@ -1,6 +1,16 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.26.6
+Added a convenient function "join" which can be used for much simpler description of structures like
+```clojure
+[[(px 5) (px 10) (px 15) (px 20)]] ; with join:
+(join 5 10 15 20)
+
+[[(em 15) (em 20) (em 45)]] ; with join:
+(join em 15 20 45)
+```
+
 ## 0.2.5
 **Bugfix**: Fixed hsl color compilation with pretty-print? set to false.
 

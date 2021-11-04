@@ -38,6 +38,8 @@ run it with a function "repl-css" to see the compiled CSS:
 (def styles
   [:#some-id {:width            (px 15)
               :color            :font-black
+              :padding          (join 5 10 15 20)
+              :gap              (join em 4 2)
               :background-color (rgb 100 150 200)}])
 => #'user/styles
 
@@ -46,6 +48,8 @@ run it with a function "repl-css" to see the compiled CSS:
 #some-id {
     width: 15px;
     color: #1A1B1F;
+    padding: 5px 10px 15px 20px;
+    gap: 4em 2em;
     background-color: rgb(100, 150, 200);
 }
 
@@ -69,19 +73,16 @@ ClojureScript:
     [tornado.core :as t :refer [em]]) ; in ClojureScript, you cannot refer the whole namespace tornado.core
   (:require-macros [tornado.macros :refer [defunit]])) ; note that you cannot refer macros from tornado.core, like in Clojure
 
-;; is defined in tornado.core, but redefined here as an example
-(defunit viewport-height "vh")   ; compiles to "vh"
-
-;; viewport width, compiles to "vw", string form of the unit function
-(defunit vw)
+(defunit vw) ; (viewport width) compiles to "vw", string form of the reference function
+(defunit celsius "°C") ; `celsius` is the reference, compiles to "°C"
 
 ;; Reagent does not support fully compilated params of every kind, but you can precompile :style.
 (defn root []
-  [:h2 {:style (compile-params {:color     :chocolate
-                                :font-size (em 15)
-                                :position  :position/absolute
-                                :top       (viewport-height -60)
-                                :left      (vw 25)})}
+  [:h2 {:style (compile-params {:color           :chocolate
+                                :font-size       (em 15)
+                                :position        :relative
+                                :left            (vw 25)
+                                :air-temperature (celsius 22)})}
    "Abc"])
 
 (defn render []
@@ -96,7 +97,7 @@ ClojureScript:
 ## Plans for the future:
 
 - Docs to CSS functions, better docs overall.
-- More common utility functions (currently only 'important' and 'grid-areas').
+- More common utility functions (currently only 3).
 - More at-rules functions (currently @media, @font-face, @keyframes).
 - The code could be simpler on some places.
 - More examples in the OrgPad document.
