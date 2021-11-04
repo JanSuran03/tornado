@@ -17,7 +17,7 @@
                   with a space. Then, str/joins all these str/spacejoined structures with a comma.
 
                   E.g.:
-                  (compile-expression [[(u/px 15) (u/percent 20)] [:red :chocolate]])
+                  (compile-expression [[(px 15) (percent 20)] [:red :chocolate]])
                   => \"15px 20%, #FF0000 #D2691E\""
        :arglists '([expr])}
   compile-expression compiler/compile-expression)
@@ -677,7 +677,7 @@
                           selectors sequence will look like this: \".abc #def::first-letter\".
 
                           So, what does it even do? We can give the first letter of an element a special value:
-                          ... [:.abc :p first-letter {:font-size (u/px 60)} ...] - this causes the first letter
+                          ... [:.abc :p first-letter {:font-size (px 60)} ...] - this causes the first letter
                           of every paragraph in an element with class .abc to have the first letter significantly
                           bigger than the rest of the paragraph."
                :arglists '([pseudoelement])}
@@ -859,13 +859,13 @@
                   with \"media\" identifier:
 
                   (at-media {:screen    :only
-                           :max-width (u/px 600)
-                           :min-width (u/px 800}
-                           [:& {:margin [[(u/px 15 0 (u/px 15) (u/px 20]]
-                           [:.abc #:def {:margin  (u/px 20)
-                                         :padding [[(u/px 30) (u/px 15)]]
-                             [:span {:background-color (colors/mix :red :green)]]
-                           [:footer {:font-size (u/em 1)])
+                           :max-width (px 600)
+                           :min-width (px 800}
+                           [:& {:margin [[(px 15 0 (px 15) (px 20]]
+                           [:.abc #:def {:margin  (px 20)
+                                         :padding [[(px 30) (px 15)]]
+                             [:span {:background-color (mix-colors :red :green)]]
+                           [:footer {:font-size (em 1)])
 
                   The :& selector selects the current element.
                   As you can see, you can nest the affected CSS hiccup how you only want.
@@ -875,8 +875,8 @@
 
                   {:screen    true
                    :speech    false
-                   :max-width (u/px 600)
-                   :min-width (u/px 800}
+                   :max-width (px 600)
+                   :min-width (px 800}
                    => @media screen and not speech and (min-width: 600px) and (max-width: 800px) {..."
        :arglists '([rules & changes])}
   at-media at-rules/at-media)
@@ -906,11 +906,11 @@
                           for later reference to it and then animation frames in a format [progress params]:
 
                           (defkeyframes fade-in-opacity
-                                        [(u/percent 0) {:opacity 0}]
-                                        [(u/percent 25) {:opacity 0.1}]
-                                        [(u/percent 50) {:opacity 0.25}]
-                                        [(u/percent 75) {:opacity 0.5}]
-                                        [(u/percent 100) {:opacity 1}])
+                                        [(percent 0) {:opacity 0}]
+                                        [(percent 25) {:opacity 0.1}]
+                                        [(percent 50) {:opacity 0.25}]
+                                        [(percent 75) {:opacity 0.5}]
+                                        [(percent 100) {:opacity 1}])
 
                           Then, insert it to the CSS hiccup list to make tornado compile it for later usage:
 
