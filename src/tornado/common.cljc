@@ -2,7 +2,8 @@
   "Common CSS functions which do not belong to any of the other namespaces
   but might be useful in some cases."
   (:require [clojure.string :as str]
-            [tornado.util :as util]))
+            [tornado.util :as util]
+            [tornado.units :refer [px]]))
 
 (defn grid-areas
   "Given a sequence of grid-rows sequences, where each the element is represented by
@@ -32,3 +33,25 @@
   (important \"yellow\" =>   \"yellow !important\""
   [expr]
   [[expr "!important"]])
+
+(defn join
+  "A convenient function for simpler description of margin, padding or any similar CSS
+  block which can can look like \"1px 2px 3px 4px\" after compilation. This function
+  processes the input to create such a structure for much simpler description of the data.
+
+  Example usage:
+
+  (require '[tornado.compiler :refer [compile-expression]]
+           '[tornado.units :refer [em]])
+
+  (compile-expression (join 1 2 3))      ; is equal to [[(px 1) (px 2) (px 3)]]
+   => \"1px 2px 3px\"
+
+  (compile-expression (join em 1 2 3))      ; is equal to [[(em 1) (em 2) (em 3)]]
+   => \"1em 2em 3em\""
+  ([value]
+   (px value))
+  ([unit-or-value & more-values]
+   (if (fn? unit-or-value)
+     [(map unit-or-value more-values)]
+     [(map px (cons unit-or-value more-values))])))

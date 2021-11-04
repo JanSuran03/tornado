@@ -50,20 +50,20 @@
        :arglists '([styles-map])}
   html-style compiler/html-style)
 
-(def ^{:doc "Given a map of HTML style attributes described in Tornado, compiles all the values
-             of the parameters, but the parameters names remain the same. This function is useful
-             for Reagent to allow you describing the style with Tornado.
-             Example usage:
+(def ^{:doc      "Given a map of HTML style attributes described in Tornado, compiles all the values
+                  of the parameters, but the parameters names remain the same. This function is useful
+                  for Reagent to allow you describing the style with Tornado.
+                  Example usage:
 
-             {:style (compile-params {:width            (px 500)
-                                      :background-color (important (rgb 100 150 200))
-                                      :border           [[(px 1) :solid :black]]
-                                      :display          :flex})}
+                  {:style (compile-params {:width            (px 500)
+                                           :background-color (important (rgb 100 150 200))
+                                           :border           [[(px 1) :solid :black]]
+                                           :display          :flex})}
 
-             => {:style {:width            \"500px\",
-                         :background-color \"rgb(100, 150, 200) !important\",
-                         :border           \"1px solid #000000\",
-                         :display          \"flex\"}"
+                  => {:style {:width            \"500px\",
+                              :background-color \"rgb(100, 150, 200) !important\",
+                              :border           \"1px solid #000000\",
+                              :display          \"flex\"}"
        :arglists '([attributes-map])}
   compile-params compiler/compile-params)
 
@@ -73,15 +73,15 @@
 
 #?(:clj
    (defmacro ^{:doc      "Creates a unit function which takes 1 argument and creates a CSSUnit record for future
-                       compilation. Defunit can take 1 arg: (defunit px)
-                                                 or 2 args: (defunit percent \"%\").
+                          compilation. Defunit can take 1 arg: (defunit px)
+                                                    or 2 args: (defunit percent \"%\").
 
-                       Usage of the defined units: (px 15)       ...  compiles to \"15px\"
-                                                   (percent 33)  ...  compiles to \"33%\"
+                          Usage of the defined units: (px 15)       ...  compiles to \"15px\"
+                                                      (percent 33)  ...  compiles to \"33%\"
 
-                       CSSUnits can be added, subtracted, multiplied or divided by using function calc (you can
-                       also use these 4 keywords - they are defined just for better search in code:
-                       :add, :sub, :mul, :div
+                          CSSUnits can be added, subtracted, multiplied or divided by using function calc (you can
+                          also use these 4 keywords - they are defined just for better search in code:
+                          :add, :sub, :mul, :div
 
                        E.g. (calc (px 500) :add 3 :mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"."
                :arglists '([unit] [identifier css-unit])}
@@ -195,25 +195,25 @@
 
 #?(:clj
    (defmacro ^{:doc      "Creates a cssfn function which which takes any number of arguments and creates
-                       a CSSFunction record for future compilation.
+                          a CSSFunction record for future compilation.
 
-                       Defcssfn can take 1 argument, which creates the function with the same name in CSS
-                       and it will be expanded with str/join \", \" (default function - commajoin):
-                       (defcssfn some-fn) => my.namespace/some-fn
-                       (some-fn \"arg1\" 42 (px 15)) ... compiles to   \"some-fn(arg1, 42, 15px)\"
+                          Defcssfn can take 1 argument, which creates the function with the same name in CSS
+                          and it will be expanded with str/join \", \" (default function - commajoin):
+                          (defcssfn some-fn) => my.namespace/some-fn
+                          (some-fn \"arg1\" 42 (px 15)) ... compiles to   \"some-fn(arg1, 42, 15px)\"
 
-                       or it can take 2 arguments:
-                       (defcssfn css-min \"min\") => my.namespace/css-min
-                       (css-min (px 500) (vw 60)) ... compiles to   \"min(500px, 60vw)\"
+                          or it can take 2 arguments:
+                          (defcssfn css-min \"min\") => my.namespace/css-min
+                          (css-min (px 500) (vw 60)) ... compiles to   \"min(500px, 60vw)\"
 
-                       or the 2nd argument can be a compiling function (most commonly spacejoin, commajoin
-                       or single-arg for separating the args, you can also define a special function for
-                       that, but it should not ever be needed; read docs to these 3 functions):
-                       (defcssfn calc spacejoin)
-                       (calc (px 500) add 3 mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"
+                          or the 2nd argument can be a compiling function (most commonly spacejoin, commajoin
+                          or single-arg for separating the args, you can also define a special function for
+                          that, but it should not ever be needed; read docs to these 3 functions):
+                          (defcssfn calc spacejoin)
+                          (calc (px 500) add 3 mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"
 
-                       you can also give defcssfn 3 arguments, where the 2nd one will be a special string
-                       for translation to CSS and the 3rd one the compiling function."
+                          you can also give defcssfn 3 arguments, where the 2nd one will be a special string
+                          for translation to CSS and the 3rd one the compiling function."
                :arglists '([fn-name] [fn-name css-fn-or-fn-tail] [clojure-fn-name compiles-to compile-fn])}
      defcssfn
      [& args]
@@ -389,19 +389,19 @@
 
 #?(:clj
    (defmacro ^{:doc      "Defines a CSS attribute selector. Those select all descendant elements containing
-                       a given attribute, of which the value matches a given substring. All attribute
-                       selectors have different conditions for matching:
-                       Start with a word, start with a substring, contain a word, contain a substring,
-                       end with a substring, have a given value, have a given attribute with any value.
+                          a given attribute, of which the value matches a given substring. All attribute
+                          selectors have different conditions for matching:
+                          Start with a word, start with a substring, contain a word, contain a substring,
+                          end with a substring, have a given value, have a given attribute with any value.
 
-                       By attributes, it is meant html attributes,
-                       e.g. span[class~=\"info\"]
-                       selects all spans with a class containing a whole word \"info\".
-                       In tornado, we can represent this by (contains-word :span :class \"info\").
+                          By attributes, it is meant html attributes,
+                          e.g. span[class~=\"info\"]
+                          selects all spans with a class containing a whole word \"info\".
+                          In tornado, we can represent this by (contains-word :span :class \"info\").
 
-                       We can also use (contains-word :class \"info\") to mark all elements with that
-                       class ... compiles to [class~=\"info\"] and affects all elements with that
-                       class (divs, spans, iframes, everything)."
+                          We can also use (contains-word :class \"info\") to mark all elements with that
+                          class ... compiles to [class~=\"info\"] and affects all elements with that
+                          class (divs, spans, iframes, everything)."
                :arglists '([selector-name compiles-to])}
      defattributeselector
      [& args]
@@ -448,19 +448,19 @@
 
 #?(:clj
    (defmacro ^{:doc      "Defines a CSS pseudoclass. A CSS pseudoclass can activate some CSS properties on
-                       a css-class/css-id/html-element based on some current special state of the element.
+                          a css-class/css-id/html-element based on some current special state of the element.
 
-                       For example, hover: (defpseudoclass hover)
-                       When compiling a selectors sequence, e.g. [:.abc :#def hover], the resulting CSS
-                       selectors sequence will look like this: \".abc #def:hover\".
+                          For example, hover: (defpseudoclass hover)
+                          When compiling a selectors sequence, e.g. [:.abc :#def hover], the resulting CSS
+                          selectors sequence will look like this: \".abc #def:hover\".
 
-                       So, what does it even do? We can give the element a special value on hover:
-                       ... [:a hover {:color :blue} ...] - when we hover over a link with our mouse, the
-                       text color of the link will turn blue until we put our mouse away.
+                          So, what does it even do? We can give the element a special value on hover:
+                          ... [:a hover {:color :blue} ...] - when we hover over a link with our mouse, the
+                          text color of the link will turn blue until we put our mouse away.
 
-                       Defpseudoclass can also take 2 parameters, where the 2nd one will be the translation
-                       to CSS to avoid collisions between Clojure and CSS -
-                       e.g.(defpseudolass css-empty \"empty\")."
+                          Defpseudoclass can also take 2 parameters, where the 2nd one will be the translation
+                          to CSS to avoid collisions between Clojure and CSS -
+                          e.g.(defpseudolass css-empty \"empty\")."
                :arglists '([pseudoclass] [identifier css-pseudoclass])}
      defpseudoclass
      [& args]
@@ -621,22 +621,22 @@
 
 #?(:clj
    (defmacro ^{:doc      "Creates a special CSS pseudoclass function, which compiles similarly as a standard
-                       CSS pseudoclass, but it is pseudoclass function with an argument.
+                          CSS pseudoclass, but it is pseudoclass function with an argument.
 
-                       For example. if you wanted to only select every n-th argument:
-                       (defpseudoclassfn nth-child)
-                       (nth-child :odd)     ... compiles to   \"<parent>:nth-child(odd)\"
-                       (nth-child \"3n+1\")   ... compiles to   \"<parent>:nth-child(3n+1)\"
+                          For example. if you wanted to only select every n-th argument:
+                          (defpseudoclassfn nth-child)
+                          (nth-child :odd)     ... compiles to   \"<parent>:nth-child(odd)\"
+                          (nth-child \"3n+1\")   ... compiles to   \"<parent>:nth-child(3n+1)\"
 
-                       Or if you wanted to show something based on the current language of the browser:
-                       (defpseudoclass lang)
-                       (lang \"en\") ... compiles to   \"<parent>:lang(en)\"
+                          Or if you wanted to show something based on the current language of the browser:
+                          (defpseudoclass lang)
+                          (lang \"en\") ... compiles to   \"<parent>:lang(en)\"
 
-                       To avoid collisions with some Clojure functions, you can give a second argument
-                       to defpseudoclassfn for a different translation to CSS:
-                       (defpseudoclass css-not \"not\")
-                       (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
-                       not a paragraph."
+                          To avoid collisions with some Clojure functions, you can give a second argument
+                          to defpseudoclassfn for a different translation to CSS:
+                          (defpseudoclass css-not \"not\")
+                          (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
+                          not a paragraph."
                :arglists '([pseudoclass] [pseudoclass compiles-to])}
      defpseudoclassfn
      [& args]
@@ -670,16 +670,16 @@
 
 #?(:clj
    (defmacro ^{:doc      "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
-                      a special part of a css-class/css-id/html-element.
+                          a special part of a css-class/css-id/html-element.
 
-                      For example, first-letter: (defpseudoclass first-letter)
-                      When compiling a selectors sequence, e.g. [:.abc :#def first-letter], the resulting CSS
-                      selectors sequence will look like this: \".abc #def::first-letter\".
+                          For example, first-letter: (defpseudoclass first-letter)
+                          When compiling a selectors sequence, e.g. [:.abc :#def first-letter], the resulting CSS
+                          selectors sequence will look like this: \".abc #def::first-letter\".
 
-                      So, what does it even do? We can give the first letter of an element a special value:
-                      ... [:.abc :p first-letter {:font-size (u/px 60)} ...] - this causes the first letter
-                      of every paragraph in an element with class .abc to have the first letter significantly
-                      bigger than the rest of the paragraph."
+                          So, what does it even do? We can give the first letter of an element a special value:
+                          ... [:.abc :p first-letter {:font-size (u/px 60)} ...] - this causes the first letter
+                          of every paragraph in an element with class .abc to have the first letter significantly
+                          bigger than the rest of the paragraph."
                :arglists '([pseudoelement])}
      defpseudoelement
      [& args]
@@ -707,23 +707,23 @@
 
 #?(:clj
    (defmacro ^{:doc      "Defines a combinator selector function which describes relationships between its
-                       arguments depending on the selector type:
+                          arguments depending on the selector type:
 
-                      :#abc :.def is the default combinator selector - descendant selector. Affects all
-                       children with a class .def.
+                         :#abc :.def is the default combinator selector - descendant selector. Affects all
+                          children with a class .def.
 
-                       child-selector \">\": is active when the given selectors are every of them a direct
-                       child of the previous one.
+                          child-selector \">\": is active when the given selectors are every of them a direct
+                          child of the previous one.
 
-                       adjacent-sibling (selector) \"+\": is active when the given html blocks elements or
-                       elements with a given class/id connected with the \"+\" sign are adjacent siblings.
+                          adjacent-sibling (selector) \"+\": is active when the given html blocks elements or
+                          elements with a given class/id connected with the \"+\" sign are adjacent siblings.
 
-                       general-sibling (selector) \"~\" is active when the given selectors are on the same
-                       level of nesting; they do not have to be adjacent necessarily.
+                          general-sibling (selector) \"~\" is active when the given selectors are on the same
+                          level of nesting; they do not have to be adjacent necessarily.
 
-                       Usage: [:.abc
-                                [:.def (child-selector :p :#ghi)]]
-                       compiles to   \".abc .def, .abc > p > #ghi\""
+                          Usage: [:.abc
+                                  [:.def (child-selector :p :#ghi)]]
+                          compiles to   \".abc .def, .abc > p > #ghi\""
                :arglists '([selector-name compiles-to])}
      defcombinatorselector
      [& args]
@@ -826,22 +826,22 @@
        :arglists '([color value])}
   scale-alpha colors/scale-alpha)
 
-(def ^{:doc "Given a color, transforms it into HSL and sets its hue to a given value.
+(def ^{:doc      "Given a color, transforms it into HSL and sets its hue to a given value.
              E.g.: (with-hue :red 150), (with-hue (rgba 200 150 100 0.3) 75)"
        :arglists '([color hue])}
   with-hue colors/with-hue)
 
-(def ^{:doc "Given a color, transforms it into HSL and sets its saturation to a given value.
+(def ^{:doc      "Given a color, transforms it into HSL and sets its saturation to a given value.
              E.g.: (with-saturation :red 0.5), (with-saturation (rgba 200 150 100 0.3) 0.5)"
        :arglists '([color hue])}
   with-saturation colors/with-saturation)
 
-(def ^{:doc "Given a color, transforms it into HSL and sets its lightness to a given value.
+(def ^{:doc      "Given a color, transforms it into HSL and sets its lightness to a given value.
              E.g.: (with-lightness :red 0.8), (with-lightness (rgba 200 150 100 0.3) 0.8)"
        :arglists '([color hue])}
   with-lightness colors/with-lightness)
 
-(def ^{:doc "Given a color, sets its alpha to a given value.
+(def ^{:doc      "Given a color, sets its alpha to a given value.
              E.g.: (with-alpha :red 0.4), (with-alpha \"#FF7FCF\" 0.4)"
        :arglists '([color hue])}
   with-alpha colors/with-alpha)
@@ -882,58 +882,58 @@
   at-media at-rules/at-media)
 
 (def ^{:doc      "Can be used for more convenient describing of @font-face. This is how example
-             props-maps look like:
+                  props-maps look like:
 
-             {:src         [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]
-                            [(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]]
-              :font-family \"Roboto\"
-              :font-weight :normal
-              :font-style  :italic}
+                  {:src         [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]
+                                 [(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]]
+                   :font-family \"Roboto\"
+                   :font-weight :normal
+                   :font-style  :italic}
 
-              This function can receive any number of props maps so that you can also write
-              the example above this way:
+                  This function can receive any number of props maps so that you can also write
+                  the example above this way:
 
-              {:src         [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]]}
-              {:src         [[(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]]
-                            :font-family \"Roboto\"
-                            :font-weight :normal
-                            :font-style  :italic}"
+                  {:src         [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]]}
+                  {:src         [[(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]]
+                   :font-family \"Roboto\"
+                   :font-weight :normal
+                   :font-style  :italic}"
        :arglists '([& props-maps])}
   at-font-face at-rules/at-font-face)
 
 #?(:clj
    (defmacro ^{:doc      "Defines a CSS @keyframes animation. The animation name should have a unique symbol
-                  for later reference to it and then animation frames in a format [progress params]:
+                          for later reference to it and then animation frames in a format [progress params]:
 
-                  (defkeyframes fade-in-opacity
-                                [(u/percent 0) {:opacity 0}]
-                                [(u/percent 25) {:opacity 0.1}]
-                                [(u/percent 50) {:opacity 0.25}]
-                                [(u/percent 75) {:opacity 0.5}]
-                                [(u/percent 100) {:opacity 1}])
+                          (defkeyframes fade-in-opacity
+                                        [(u/percent 0) {:opacity 0}]
+                                        [(u/percent 25) {:opacity 0.1}]
+                                        [(u/percent 50) {:opacity 0.25}]
+                                        [(u/percent 75) {:opacity 0.5}]
+                                        [(u/percent 100) {:opacity 1}])
 
-                  Then, insert it to the CSS hiccup list to make tornado compile it for later usage:
+                          Then, insert it to the CSS hiccup list to make tornado compile it for later usage:
 
-                  (def styles
-                     (list
-                        fade-in-opacity
-                        ...))
+                          (def styles
+                             (list
+                                fade-in-opacity
+                                ...))
 
-                  After that, you can assign this animation to whatever element you want:
+                          After that, you can assign this animation to whatever element you want:
 
-                  (def styles
-                     (list
-                        fade-in-opacity
-                        [:.some-element {:animation-duration (ms 500)
-                                         :animation-name     fade-in-opacity)}]
-                        [:#another-element {:animation-name  fade-in-opacity
-                                            :animation-delay (s 1.5)}]))
+                          (def styles
+                             (list
+                                fade-in-opacity
+                                [:.some-element {:animation-duration (ms 500)
+                                                 :animation-name     fade-in-opacity)}]
+                                [:#another-element {:animation-name  fade-in-opacity
+                                                    :animation-delay (s 1.5)}]))
 
-                  You can also define from & to progress animations:
+                          You can also define from & to progress animations:
 
-                  (defkeyframes translate-animation
-                                [:from {:transform (translate (px 100) (px 200)}]
-                                [:to {:transform (translate (px 200) (px 400)}])"
+                          (defkeyframes translate-animation
+                                        [:from {:transform (translate (px 100) (px 200)}]
+                                        [:to {:transform (translate (px 200) (px 400)}])"
                :arglists '([animation-name & frames])}
      defkeyframes
      [& args]
@@ -952,8 +952,24 @@
 
 (def ^{:doc      "After the expression is compiled, \" !important\" is appended to it:
 
-                 (important [(repeat 3 :auto)])   =>   \"auto auto auto !important\"
-                 (important :none   =>   \"none !important\"
-                 (important \"yellow\"   =>   \"yellow !important\""
+                  (important [(repeat 3 :auto)])   =>   \"auto auto auto !important\"
+                  (important :none   =>   \"none !important\"
+                  (important \"yellow\"   =>   \"yellow !important\""
        :arglists '([expr])}
   important common/important)
+
+(def ^{:doc      "A convenient function for simpler description of margin, padding or any similar CSS
+                  block which can can look like \"1px 2px 3px 4px\" after compilation. This function
+                  processes the input to create such a structure for much simpler description of the data.
+
+                  Example usage:
+
+                  (compile-expression (join 1 2 3))      ; is equal to [[(px 1) (px 2) (px 3)]]
+                   => \"1px 2px 3px\"
+
+
+                  (compile-expression (join em 1 2 3))      ; is equal to [[(em 1) (em 2) (em 3)]]
+
+                   => \"1em 2em 3em\""
+       :arglists '([value] [unit-or-value & more-values])}
+  join common/join)
