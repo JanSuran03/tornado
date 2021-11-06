@@ -22,18 +22,17 @@
        :arglists '([expr])}
   compile-expression compiler/compile-expression)
 
-(def ^{:doc      "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
-                  vectors (and/or with @keyframes, @font-face). If pretty-print? is set to false,
-                  compresses it as well. Then saves the compiled CSS string to a given file path.
+(def ^{:doc      "Generates CSS from a standard Tornado vector (or a list of hiccup vectors). If
+                  pretty-print? is set to false, compresses it as well. Then saves the compiled CSS
+                  to a given file path, if provided in the flags.
 
-                  You can also call this function without flags whenever you want to to just get
-                  the whole compiled CSS string printed out."
+                  You can also call this function only with the hiccup vector, without any flags."
        :arglists '([css-hiccup] [flags css-hiccup])}
   css compiler/css)
 
-(def ^{:doc      "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
-                  vectors (and/or with @keyframes, @font-face). It then pretty prints the output string,
-                  which is useful for evaluating any tornado code in REPL."
+(def ^{:doc      "Generates CSS from a standard Tornado hiccup vector (or a list of hiccup vectors)
+                  and pretty prints the output CSS string, which is useful for evaluating any tornado
+                  code in the REPL."
        :arglists '([css-hiccup])}
   repl-css compiler/repl-css)
 
@@ -973,6 +972,6 @@
 
                   (compile-expression (join (em 3) 15 (fr 4) 3)
                   ; is equal to [[(em 3) (px 15) (fr 4) (px 3)]]
-                  => \"1em 2em 3em\""
+                  => \"3em 15px 4fr 3px\""
        :arglists '([value] [unit-or-value & more-values])}
   join common/join)

@@ -153,18 +153,18 @@
   "Given a selectors path, which can contain special selectors, this function
   generates a CSS string from the selectors."
   [selectors-path]
-  (as-> selectors-path <> (reduce (fn [selectors next-selector]
-                                    (assert (or (sel/selector? next-selector)
-                                                (sel/id-class-tag? next-selector))
-                                            (str "Expected a selector while compiling: " next-selector))
-                                    (let [selectors (if (util/some-instance? next-selector IPseudoClass
-                                                                             IPseudoClassFn IPseudoElement)
-                                                      selectors
-                                                      (util/conjv selectors " "))]
-                                      (util/conjv selectors (compile-selector next-selector))))
-                                  [] <>)
-        (apply str <>)
-        (str/trim <>)))
+  (->> selectors-path (reduce (fn [selectors next-selector]
+                                (assert (or (sel/selector? next-selector)
+                                            (sel/id-class-tag? next-selector))
+                                        (str "Expected a selector while compiling: " next-selector))
+                                (let [selectors (if (util/some-instance? next-selector IPseudoClass
+                                                                         IPseudoClassFn IPseudoElement)
+                                                  selectors
+                                                  (util/conjv selectors " "))]
+                                  (util/conjv selectors (compile-selector next-selector))))
+                              [])
+       (apply str)
+       str/trim))
 
 (defn compile-selectors
   "Given a sequence of selectors paths, e.g. '([:iframe :.abc] [:#def sel/after :.ghi]),
@@ -611,12 +611,11 @@
        compile-all-selectors-params-combinations))
 
 (defn css
-  "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
-  vectors (and/or with @keyframes, @font-face). If pretty-print? is set to false,
-  compresses it as well. Then saves the compiled CSS string to a given file path.
+  "Generates CSS from a standard Tornado vector (or a list of hiccup vectors). If
+  pretty-print? is set to false, compresses it as well. Then saves the compiled CSS
+  to a given file path, if provided in the flags.
 
-  You can also call this function without flags whenever you want to to just get
-  the whole compiled CSS string printed out."
+  You can also call this function only with the hiccup vector, without any flags."
   ([css-hiccup]
    (css nil css-hiccup))
   ([flags css-hiccup]
@@ -631,9 +630,9 @@
                                         :cljs (util/exception "Cannot save compiled stylesheet in ClojureScript."))))))))))
 
 (defn repl-css
-  "Generates CSS from a hiccup vector or a (maybe multiple times) nested list of hiccup
-  vectors (and/or with @keyframes, @font-face). It then pretty prints the output string,
-  which is useful for evaluating any tornado code in REPL."
+  "Generates CSS from a standard Tornado hiccup vector (or a list of hiccup vectors)
+  and pretty prints the output CSS string, which is useful for evaluating any tornado
+  code in the REPL."
   [css-hiccup]
   (let [compiled-and-split-css-string (->> css-hiccup just-css
                                            str/split-lines)]

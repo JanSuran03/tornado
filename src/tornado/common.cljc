@@ -52,7 +52,7 @@
 
   (compile-expression (join (em 3) 15 (fr 4) 3)
   ; is equal to [[(em 3) (px 15) (fr 4) (px 3)]]
-  => \"1em 2em 3em\""
+  => \"3em 15px 4fr 3px\""                                       ;; TODO: wrong
   ([value]
    (px value))
   ([unit-or-value & more-values]
