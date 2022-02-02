@@ -15,32 +15,32 @@
                     (clojure.lang Keyword Symbol))
      :cljs (:require-macros [tornado.macros :refer [cartesian-product]])))
 
-(def IUnit #?(:clj  CSSUnit
-              :cljs t/CSSUnit))
+(def CSS-Unit #?(:clj CSSUnit
+              :cljs   t/CSSUnit))
 
-(def IAtRule #?(:clj  CSSAtRule
-                :cljs t/CSSAtRule))
+(def CSS-AtRule #?(:clj CSSAtRule
+                :cljs   t/CSSAtRule))
 
-(def IFunction #?(:clj  CSSFunction
-                  :cljs t/CSSFunction))
+(def CSS-Function #?(:clj CSSFunction
+                  :cljs   t/CSSFunction))
 
-(def IColor #?(:clj  CSSColor
-               :cljs t/CSSColor))
+(def CSS-Color #?(:clj CSSColor
+               :cljs   t/CSSColor))
 
-(def ICombinator #?(:clj  CSSCombinator
-                    :cljs t/CSSCombinator))
+(def CSS-Combinator #?(:clj CSSCombinator
+                    :cljs   t/CSSCombinator))
 
-(def IAttribute #?(:clj  CSSAttributeSelector
-                   :cljs t/CSSAttributeSelector))
+(def CSS-Attribute #?(:clj CSSAttributeSelector
+                   :cljs   t/CSSAttributeSelector))
 
-(def IPseudoClass #?(:clj  CSSPseudoClass
-                     :cljs t/CSSPseudoClass))
+(def CSS-PseudoClass #?(:clj CSSPseudoClass
+                     :cljs   t/CSSPseudoClass))
 
-(def IPseudoElement #?(:clj  CSSPseudoElement
-                       :cljs t/CSSPseudoElement))
+(def CSS-PseudoElement #?(:clj CSSPseudoElement
+                       :cljs   t/CSSPseudoElement))
 
-(def IPseudoClassFn #?(:clj  CSSPseudoClassFn
-                       :cljs t/CSSPseudoClassFn))
+(def CSS-PseudoClassFn #?(:clj CSSPseudoClassFn
+                       :cljs   t/CSSPseudoClassFn))
 
 (def ^{:dynamic true
        :doc     "The current flags for a tornado build compilation:
@@ -108,11 +108,11 @@
                        (cond (keyword? sel) Keyword
                              (symbol? sel) Symbol
                              (string? sel) (type "")
-                             (instance? IAttribute sel) IAttribute
-                             (instance? IPseudoClass sel) IPseudoClass
-                             (instance? IPseudoElement sel) IPseudoElement
-                             (instance? IPseudoClassFn sel) IPseudoClassFn
-                             (instance? ICombinator sel) ICombinator))))
+                             (instance? CSS-Attribute sel) CSS-Attribute
+                             (instance? CSS-PseudoClass sel) CSS-PseudoClass
+                             (instance? CSS-PseudoElement sel) CSS-PseudoElement
+                             (instance? CSS-PseudoClassFn sel) CSS-PseudoClassFn
+                             (instance? CSS-Combinator sel) CSS-Combinator))))
 
 (defmethod compile-selector Keyword
   [selector]
@@ -127,27 +127,27 @@
   [selector]
   (name selector))
 
-(defmethod compile-selector IAttribute
+(defmethod compile-selector CSS-Attribute
   [{:keys [compiles-to tag attribute subvalue]}]
   (let [maybe-subvalue (when subvalue (str "\"" (name subvalue) "\""))]
     (str (util/get-str-form tag) "[" (util/get-str-form attribute) compiles-to maybe-subvalue "]")))
 
-(defmethod compile-selector IPseudoClass
+(defmethod compile-selector CSS-PseudoClass
   [{:keys [pseudoclass]}]
   (str ":" pseudoclass))
 
-(defmethod compile-selector IPseudoElement
+(defmethod compile-selector CSS-PseudoElement
   [{:keys [pseudoelement]}]
   (str "::" pseudoelement))
 
-(defmethod compile-selector IPseudoClassFn
+(defmethod compile-selector CSS-PseudoClassFn
   [{:keys [compiles-to arg]}]
   (str ":" compiles-to "(" (compile-expression arg) ")"))
 
-(defmethod compile-selector ICombinator
+(defmethod compile-selector CSS-Combinator
   [{:keys [compiles-to children]}]
   (->> children (map #(str compiles-to " " (name %)))
-       util/str-spacejoin))
+       util/str-space-join))
 
 (defn compile-selectors-sequence
   "Given a selectors path, which can contain special selectors, this function
@@ -157,8 +157,8 @@
                                 (assert (or (sel/selector? next-selector)
                                             (sel/id-class-tag? next-selector))
                                         (str "Expected a selector while compiling: " next-selector))
-                                (let [selectors (if (util/some-instance? next-selector IPseudoClass
-                                                                         IPseudoClassFn IPseudoElement)
+                                (let [selectors (if (util/some-instance? next-selector CSS-PseudoClass
+                                                                         CSS-PseudoClassFn CSS-PseudoElement)
                                                   selectors
                                                   (util/conjv selectors " "))]
                                   (util/conjv selectors (compile-selector next-selector))))
@@ -173,7 +173,7 @@
   parameters. ... => \"iframe .abc, #def::after .ghi\""
   [selectors-sequences]
   (let [compiled-selectors (->> selectors-sequences (map compile-selectors-sequence)
-                                util/str-commajoin)]
+                                util/str-comma-join)]
     (str *at-media-indent* compiled-selectors)))
 
 (defmulti compile-color
@@ -236,10 +236,10 @@
           CSS selectors, there is a different multifunction \"compile-selector\"."
           #?(:clj  class
              :cljs (fn [record]
-                       (cond (instance? IUnit record) IUnit
-                             (instance? IFunction record) IFunction
-                             (instance? IAtRule record) IAtRule
-                             (instance? IColor record) IColor
+                       (cond (instance? CSS-Unit record) CSS-Unit
+                             (instance? CSS-Function record) CSS-Function
+                             (instance? CSS-AtRule record) CSS-AtRule
+                             (instance? CSS-Color record) CSS-Color
                              :else record))))
 
 (defmethod compile-css-record :default
@@ -247,7 +247,7 @@
   (util/exception (str "Not a valid tornado record: " record " with a class: " #?(:clj  (class record)
                                                                                   :cljs (type record)))))
 
-(defmethod compile-css-record IUnit
+(defmethod compile-css-record CSS-Unit
   [{:keys [value compiles-to]}]
   (if (zero? value)
     0
@@ -257,17 +257,17 @@
   "Redefining functions/comma-join because there would be a cyclic dependency otherwise."
   [{:keys [compiles-to args]}]
   (str compiles-to "(" (->> args (map compile-expression)
-                            util/str-commajoin) ")"))
+                            util/str-comma-join) ")"))
 
-(defmethod compile-css-record IFunction
+(defmethod compile-css-record CSS-Function
   [{:keys [compile-fn] :or {compile-fn comma-join} :as CSSFn-record}]
   (compile-fn CSSFn-record))
 
-(defmethod compile-css-record IAtRule
+(defmethod compile-css-record CSS-AtRule
   [at-rule-record]
   (compile-at-rule at-rule-record))
 
-(defmethod compile-css-record IColor
+(defmethod compile-css-record CSS-Color
   [color-record]
   (compile-color color-record))
 
@@ -295,8 +295,8 @@
         (record? expr) (compile-css-record expr)
         (and (sequential? expr)
              (every? sequential? expr)) (->> expr (map #(->> % (map compile-expression)
-                                                             util/str-spacejoin))
-                                             util/str-commajoin)
+                                                             util/str-space-join))
+                                             util/str-comma-join)
         :else (util/exception
                 (str "None of a CSS unit, CSS function, CSS at-rule, a keyword a string, a number or"
                      " a sequential structure consisting of more sequential structures:\n" expr))))
@@ -320,7 +320,7 @@
   [attributes-map]
   (when attributes-map
     (->> attributes-map compile-attributes-map
-         (map util/str-colonjoin)
+         (map util/str-colon-join)
          (map #(str *keyframes-indent* *at-media-indent* % ";"))
          (str/join (str "\n" *indent* *at-media-indent*))
          (str *keyframes-indent*))))

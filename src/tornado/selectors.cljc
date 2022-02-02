@@ -5,18 +5,18 @@
             [tornado.util :as util]
             [clojure.string :as str]
             #?(:clj [tornado.macros :refer [defattributeselector defpseudoclass defpseudoclassfn
-                                                defpseudoelement defcombinatorselector]]))
+                                            defpseudoelement defcombinatorselector]]))
   #?(:clj  (:import (tornado.types CSSPseudoClass CSSPseudoElement
                                    CSSAttributeSelector CSSCombinator CSSPseudoClassFn))
      :cljs (:require-macros [tornado.macros :refer [defattributeselector defpseudoclass defpseudoclassfn
-                                                         defpseudoelement defcombinatorselector]])))
+                                                    defpseudoelement defcombinatorselector]])))
 
 ;; Lists of special selectors can be found on https://www.w3schools.com/css/css_selectors.asp
 ;; On https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors, you can find even more of them
 ;; I did not include all of them because I do not think they are all needed, but if you would like me
 ;; to include more of them, you can contact me via e-mail: see https://github.com/JanSuran03/tornado/#contact
 
-(defn IAttr [compiles-to tag attr subval]
+(defn cssattributeselector [compiles-to tag attr subval]
   #?(:clj  (CSSAttributeSelector. compiles-to tag attr subval)
      :cljs (t/CSSAttributeSelector. compiles-to tag attr subval)))
 
@@ -24,8 +24,8 @@
   "An attribute selector which selects all elements which have a given
   attribute with any value, or all html elements on/below the current
   nested selectors level which have a given attribute with any value."
-  ([attribute] (IAttr nil nil attribute nil))
-  ([tag attribute] (IAttr nil tag attribute nil)))
+  ([attribute] (cssattributeselector nil nil attribute nil))
+  ([tag attribute] (cssattributeselector nil tag attribute nil)))
 
 (defattributeselector has-val "=")
 (defattributeselector contains-word "~=")

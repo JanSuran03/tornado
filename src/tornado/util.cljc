@@ -75,7 +75,7 @@
            (let [scale (math-pow 10 d)]
              (/ (math-round (* x scale)) scale)))))
 
-(defn round
+(defn round-4d
   "Rounds a given number to 4 decimal digits, which should be enough in most cases.
   Used for inaccurate calculations, e.g.: (* 1.0 100)"
   [x]
@@ -100,7 +100,7 @@
   a string form of it with \"%\" appended. Non-numbers are returned unaffected."
   [value]
   (if (number? value)
-    (str (int* (round (* value 100))) "%")
+    (str (int* (round-4d (* value 100))) "%")
     value))
 
 (defn percent->number
@@ -144,7 +144,7 @@
   use apply-avg for a sequence."
   [& args]
   (let [avg (apply -average args)]
-    (round avg)))
+    (round-4d avg)))
 
 (defn apply-avg
   "Same as (apply average coll)"
@@ -158,18 +158,18 @@
 
 ;; HEXCODE TO DECIMAL NUMBERS CONVERSION, USED FOR HEX->RGBA AND RGBA->HEX COLOR CONVERSIONS
 
-(defn c->int [x]
+(defn char->int [x]
   #?(:clj  (int x)
      :cljs (.charCodeAt x)))
 
 (def base16-chars "0123456789ABCDEF")
 (def uppercase-base16-set (set "ABCDEF"))
-(def lowercase-uppercase-difference (- (c->int \a) (c->int \A)))
+(def lowercase-uppercase-difference (- (char->int \a) (char->int \A)))
 (defn toLower
   "Characters [A-F] will be transformed to [a-f], other chars will be returned unchanged."
   [c]
   (if (contains? uppercase-base16-set c)
-    (char (+ (c->int c) lowercase-uppercase-difference))
+    (char (+ (char->int c) lowercase-uppercase-difference))
     c))
 
 (def double-hex->base10-map
@@ -198,30 +198,30 @@
        (let [pairs (->> str-expr (partition 2) (map #(apply str %)))]
          (every? double-hex->base10-map pairs))))
 
-(defn str-spacejoin
+(defn str-space-join
   "str/join with \" \""
   [coll]
   (str/join " " coll))
 
-(defn str-commajoin
+(defn str-comma-join
   "str/join with \", \""
   [coll]
   (str/join ", " coll))
 
-(defn str-colonjoin
+(defn str-colon-join
   "str/join with \": \""
   [coll]
   (str/join ": " coll))
 
 (defn conjv
-  "Equal to (conj (vec vect) value)."
-  [vect value]
-  (cond (sequential? vect) (conj (if (vector? vect)
-                                   vect
-                                   (vec vect))
+  "Equal to (conj (vec v) value)."
+  [v value]
+  (cond (sequential? v) (conj (if (vector? v)
+                                   v
+                                   (vec v))
                                  value)
-        (nil? vect) [value]
-        :else (exception (str "Not sequential, nor `nil`: " vect))))
+        (nil? v) [value]
+        :else (exception (str "Not sequential, nor `nil`: " v))))
 
 (defn in-range
   "If the value is not in range of min-val and max-val, returns the value of the
@@ -230,7 +230,7 @@
   (min max-val (max val min-val)))
 
 (defn some-instance?
-  "Returns true if the expression is an instance of any of the instances."
+  "Returns true if the expression is an instance of any from the given classes."
   [expr & instances]
   (some #(instance? % expr) instances))
 

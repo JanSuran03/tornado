@@ -8,8 +8,8 @@
   #?(:clj (:import (tornado.types CSSColor)
                    (clojure.lang Keyword Symbol))))
 
-(def IColor #?(:clj  CSSColor
-               :cljs t/CSSColor))
+(def CSS-Color #?(:clj CSSColor
+               :cljs   t/CSSColor))
 
 (defn color [type value]
   #?(:clj  (CSSColor. type value)
@@ -19,7 +19,7 @@
   "Returns the type of a given color, either :type of a CSSColor record or the
   argument's class. If the class cannot represent a CSS color, throws an exception."
   [color]
-  (condp = (type color) IColor (:type color)
+  (condp = (type color) CSS-Color (:type color)
                         #?(:clj  String
                            :cljs (type "")) #?(:clj  String
                                                :cljs (type ""))
@@ -243,16 +243,16 @@
    (hsla [hue saturation lightness alpha])))
 
 (defn rgb? [x]
-  (and (instance? IColor x)
+  (and (instance? CSS-Color x)
        (= (:type x) "rgb")))
 (defn rgba? [x]
-  (and (instance? IColor x)
+  (and (instance? CSS-Color x)
        (= (:type x) "rgba")))
 (defn hsl? [x]
-  (and (instance? IColor x)
+  (and (instance? CSS-Color x)
        (= (:type x) "hsl")))
 (defn hsla? [x]
-  (and (instance? IColor x)
+  (and (instance? CSS-Color x)
        (= (:type x) "hsla")))
 
 (defn hex? [x]
@@ -344,7 +344,7 @@
   "Converts an rgb/rgba CSSColor record to a hex-string. Rounds the hex-alpha of
   the color if the color is in rgba format."
   [{:keys [type value] :as color}]
-  (if (instance? IColor color)
+  (if (instance? CSS-Color color)
     (case type "rgb" (let [{:keys [red green blue]} value
                            [red green blue] (map util/math-round [red green blue])
                            in-hex (map util/base10->double-hex-map [red green blue])]
@@ -394,7 +394,7 @@
                   :else (* 60 (+ (/ (- R' G') Crange) 4)))
         lightness (util/average Cmax Cmin)
         saturation (if (zero? Crange) 0 (/ Crange (- 1 (util/math-abs (- (* 2 lightness) 1)))))
-        [H S L] [(util/math-round hue) (util/round saturation) (util/round lightness)]]
+        [H S L] [(util/math-round hue) (util/round-4d saturation) (util/round-4d lightness)]]
     (if (rgb? rgb-color)
       (hsl H S L)
       (hsla H S L alpha))))

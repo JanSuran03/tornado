@@ -11,14 +11,14 @@
   function to a form <fn-name>(arg1, arg2, arg3, ...),"
   [{:keys [compiles-to args]}]
   (str compiles-to "(" (->> args (map compile-expression)
-                            util/str-commajoin) ")"))
+                            util/str-comma-join) ")"))
 
 (defn space-join
   "A CSSFunction util/str-spacejoin compile function. Compiles the
   function to a form <fn-name>(arg1 arg2 arg3 ...),"
   [{:keys [compiles-to args]}]
   (str compiles-to "(" (->> args (map compile-expression)
-                            util/str-spacejoin) ")"))
+                            util/str-space-join) ")"))
 
 (defn single-arg
   "A CSSFunction compile function. Presumes that only one arg is given.
