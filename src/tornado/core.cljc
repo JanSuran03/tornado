@@ -832,17 +832,17 @@
 
 (def ^{:doc      "Given a color, transforms it into HSL and sets its saturation to a given value.
              E.g.: (with-saturation :red 0.5), (with-saturation (rgba 200 150 100 0.3) 0.5)"
-       :arglists '([color hue])}
+       :arglists '([color saturation])}
   with-saturation colors/with-saturation)
 
 (def ^{:doc      "Given a color, transforms it into HSL and sets its lightness to a given value.
              E.g.: (with-lightness :red 0.8), (with-lightness (rgba 200 150 100 0.3) 0.8)"
-       :arglists '([color hue])}
+       :arglists '([color lightness])}
   with-lightness colors/with-lightness)
 
 (def ^{:doc      "Given a color, sets its alpha to a given value.
              E.g.: (with-alpha :red 0.4), (with-alpha \"#FF7FCF\" 0.4)"
-       :arglists '([color hue])}
+       :arglists '([color alpha])}
   with-alpha colors/with-alpha)
 
 (def ^{:doc      "Given any number of colors in any form (alpha-hex, non-alpha-hex, rgb, rgba,
