@@ -1,6 +1,14 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.2.9
+Added test namespaces (right at the beginning of patch 0.2.9) which will be run before every release and extended as new features come out.
+
+A lot of defs and fully variadic defmacros in tornado.core were rewritten to defns and defmacros with stable arglists to enable arglist checks for Cursive
+(a Clojure IDE plugin for IntelliJ IDEA) and maybe some more.
+
+Some clj?s defs were rewritten to better match conventions by correctly differentiating between records and protocols.
+
 ## 0.2.8
 Added much more dynamism to the "join" common function:
 ```clojure
