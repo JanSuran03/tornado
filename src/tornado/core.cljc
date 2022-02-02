@@ -12,44 +12,46 @@
 
 ;; COMPILER FUNCTIONS
 
-(def ^{:doc      "Compiles an expression: a number, string, symbol or a record. If the expression is
-                  a vector of sequential structures, compiles each of the structures and str/joins them
-                  with a space. Then, str/joins all these str/spacejoined structures with a comma.
+(defn compile-expression
+  "Compiles an expression: a number, string, symbol or a record. If the expression is
+  a vector of sequential structures, compiles each of the structures and str/joins them
+  with a space. Then, str/joins all these str/spacejoined structures with a comma.
 
-                  E.g.:
-                  (compile-expression [[(px 15) (percent 20)] [:red :chocolate]])
-                  => \"15px 20%, #FF0000 #D2691E\""
-       :arglists '([expr])}
-  compile-expression compiler/compile-expression)
+  E.g.:
+  (compile-expression [[(px 15) (percent 20)] [:red :chocolate]])
+  => \"15px 20%, #FF0000 #D2691E\""
+  [expr] (compiler/compile-expression expr))
 
-(def ^{:doc      "Generates CSS from a standard Tornado vector (or a list of hiccup vectors). If
-                  pretty-print? is set to false, compresses it as well. Then saves the compiled CSS
-                  to a given file path, if provided in the flags.
+(defn css
+  "Generates CSS from a standard Tornado vector (or a list of hiccup vectors). If
+  pretty-print? is set to false, compresses it as well. Then saves the compiled CSS
+  to a given file path, if provided in the flags.
 
-                  You can also call this function only with the hiccup vector, without any flags."
-       :arglists '([css-hiccup] [flags css-hiccup])}
-  css compiler/css)
+  You can also call this function only with the hiccup vector, without any flags."
+  ([css-hiccup] (compiler/css css-hiccup))
+  ([flags css-hiccup] (compiler/css flags css-hiccup)))
 
-(def ^{:doc      "Generates CSS from a standard Tornado hiccup vector (or a list of hiccup vectors)
+(defn repl-css
+  "Generates CSS from a standard Tornado hiccup vector (or a list of hiccup vectors)
                   and pretty prints the output CSS string, which is useful for evaluating any tornado
                   code in the REPL."
-       :arglists '([css-hiccup])}
-  repl-css compiler/repl-css)
+  [css-hiccup] (compiler/repl-css css-hiccup))
 
-(def ^{:doc      "Can be used for compilation of a map of style parameters to a single string of html
-                  style=\"...\" attribute. Receives the styles map as its argument and returns a string
-                  of compiled style:
+(defn html-style
+  "Can be used for compilation of a map of style parameters to a single string of html
+  style=\"...\" attribute. Receives the styles map as its argument and returns a string
+  of compiled style:
 
-                  (html-style {:width            (px 500)
-                               :height           (percent 15)
-                               :color            :font-black
-                               :background-color :teal})
+  (html-style {:width            (px 500)
+               :height           (percent 15)
+               :color            :font-black
+               :background-color :teal})
 
-                  => \"width:500px;height:15%;color:#1A1B1F;background-color:#008080\""
-       :arglists '([styles-map])}
-  html-style compiler/html-style)
+  => \"width:500px;height:15%;color:#1A1B1F;background-color:#008080\""
+  [styles-map] (compiler/html-style styles-map))
 
-(def ^{:doc      "Given a map of HTML style attributes described in Tornado, compiles all the values
+(defn compile-params
+  "Given a map of HTML style attributes described in Tornado, compiles all the values
                   of the parameters, but the parameters names remain the same. This function is useful
                   for Reagent to allow you describing the style with Tornado.
                   Example usage:
@@ -63,323 +65,172 @@
                               :background-color \"rgb(100, 150, 200) !important\",
                               :border           \"1px solid #000000\",
                               :display          \"flex\"}"
-       :arglists '([attributes-map])}
-  compile-params compiler/compile-params)
+  [attributes-map] (compiler/compile-params attributes-map))
 
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 ;; UNITS
 
 #?(:clj
-   (defmacro ^{:doc      "Creates a unit function which takes 1 argument and creates a CSSUnit record for future
-                          compilation. Defunit can take 1 arg: (defunit px)
-                                                    or 2 args: (defunit percent \"%\").
+   (defmacro defunit
+     "Creates a unit function which takes 1 argument and creates a CSSUnit record for future
+     compilation. Defunit can take 1 arg: (defunit px)
+                               or 2 args: (defunit percent \"%\").
 
-                          Usage of the defined units: (px 15)       ...  compiles to \"15px\"
-                                                      (percent 33)  ...  compiles to \"33%\"
+     Usage of the defined units: (px 15)       ...  compiles to \"15px\"
+                                 (percent 33)  ...  compiles to \"33%\"
 
-                          CSSUnits can be added, subtracted, multiplied or divided by using function calc (you can
-                          also use these 4 keywords - they are defined just for better search in code:
-                          :add, :sub, :mul, :div
+     CSSUnits can be added, subtracted, multiplied or divided by using function calc (you can
+     also use these 4 keywords - they are defined just for better search in code:
+     :add, :sub, :mul, :div
 
-                       E.g. (calc (px 500) :add 3 :mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"."
-               :arglists '([unit] [identifier css-unit])}
-     defunit
-     [& args]
-     `(macros/defunit ~@args)))
+     E.g. (calc (px 500) :add 3 :mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"."
+     ([unit] `(macros/defunit ~unit))
+     ([identifier css-unit] `(macros/defunit ~identifier ~css-unit))))
 
 ;; absolute size units
 
-(def ^{:doc      "An absolute length unit, \"pixel\"."
-       :arglists '([value])} px u/px)
-
-(def ^{:doc      "An absolute length unit, \"point\"."
-       :arglists '([value])} pt u/pt)
-
-(def ^{:doc      "An absolute length unit, \"pica\"."
-       :arglists '([value])} pc u/pc)
-
-(def ^{:doc      "An absolute length unit, \"inch\""
-       :arglists '([value])} in u/in)
-
-(def ^{:doc      "An absolute length unit, \"centimeter\"."
-       :arglists '([value])} cm u/cm)
-
-(def ^{:doc      "An absolute length unit, \"millimeter\"."
-       :arglists '([value])} mm u/mm)
+(defn px "An absolute length unit, \"pixel\"." [value] (u/px value))
+(defn pt "An absolute length unit, \"point\"." [value] (u/pt value))
+(defn pc "An absolute length unit, \"pica\"." [value] (u/pc value))
+(defn in "An absolute length unit, \"inch\"" [value] (u/in value))
+(defn cm "An absolute length unit, \"centimeter\"." [value] (u/cm value))
+(defn mm "An absolute length unit, \"millimeter\"." [value] (u/mm value))
 
 ;; relative size units
 
-(def ^{:doc      "An absolute length unit, \"percent\" (\"%\"), can be used as color alpha in this library."
-       :arglists '([value])} percent u/percent)
+(defn percent
+  "An absolute length unit, \"percent\" (\"%\"), can also be used as color alpha
+  or in defining keyframes in this library." [value] (u/percent value))
+(defn css-rem "A relative length unit, \"rem\", depending on the size of the root element" [value] (u/css-rem value))
+(defn em "A relative length unit, \"em\", depending on the size of the parent element." [value] (u/em value))
 
-(def ^{:doc      "A relative length unit, \"rem\", depending on the size of the root element"
-       :arglists '([value])} css-rem u/css-rem)
-
-(def ^{:doc      "A relative length unit, \"em\", depending on the size of the parent element."
-       :arglists '([value])} em u/em)
-
-(def ^{:doc      "A relative length unit, \"fraction\", depending on the size of the parent element."
-       :arglists '([value])} fr u/fr)
-
-(def ^{:doc      "A relative length unit, \"viewport width\", based on the width of the window."
-       :arglists '([value])} vw u/vw)
-
-(def ^{:doc      "A relative length unit, \"viewport height\", based on the height of the window."
-       :arglists '([value])} vh u/vh)
-
-(def ^{:doc      "A relative length unit, minimum of vw and vh."
-       :arglists '([value])} vmin u/vmin)
-
-(def ^{:doc      "A relative length unit, maximum of vw and vh."
-       :arglists '([value])} vmax u/vmax)
-
-(def ^{:doc      "A relative length unit, equal to the line height."
-       :arglists '([value])} lh u/lh)
+(defn fr "A relative length unit, \"fraction\", depending on the size of the parent element." [value] (u/fr value))
+(defn vw "A relative length unit, \"viewport width\", based on the width of the window." [value] (u/vw value))
+(defn vh "A relative length unit, \"viewport height\", based on the height of the window." [value] (u/vh value))
+(defn vmin "A relative length unit, minimum of vw and vh." [value] (u/vmin value))
+(defn vmax "A relative length unit, maximum of vw and vh." [value] (u/vmax value))
+(defn lh "A relative length unit, equal to the line height." [value] (u/lh value))
 
 ;; time units
 
-(def ^{:doc      "A time unit, \"second\"."
-       :arglists '([value])} s u/s)
-
-(def ^{:doc      "A time unit, \"millisecond\"."
-       :arglists '([value])} ms u/ms)
+(defn s "A time unit, \"second\"." [value] (u/s value))
+(defn ms "A time unit, \"millisecond\"." [value] (u/ms value))
 
 ;; angular units
 
-(def ^{:doc      "An angular unit, \"degree\"."
-       :arglists '([value])} deg u/deg)
-
-(def ^{:doc      "An angular unit, \"radian\". Equal to 360°/2π"
-       :arglists '([value])} rad u/rad)
-
-(def ^{:doc      "An angular unit, \"gradian\". 100 gradians are equal to 90 degrees."
-       :arglists '([value])} grad u/grad)
-
-(def ^{:doc      "An angular unit, \"turn\". Represents one whole turn, equal to 360 degrees."
-       :arglists '([value])} turn u/turn)
+(defn deg "An angular unit, \"degree\"." [value] (u/deg value))
+(defn rad "An angular unit, \"radian\". Equal to 360°/2π" [value] (u/rad value))
+(defn grad "An angular unit, \"gradian\". 100 gradians are equal to 90 degrees." [value] (u/grad value))
+(defn turn "An angular unit, \"turn\". Represents one whole turn, equal to 360 degrees." [value] (u/turn value))
 
 ;; frequency units
 
-(def ^{:doc      "A frequency unit, \"Hertz."
-       :arglists '([value])} Hz u/Hz)
-
-(def ^{:doc      "A frequency unit, \"kiloHertz."
-       :arglists '([value])} kHz u/kHz)
+(defn Hz "A frequency unit, \"Hertz." [value] (u/Hz value))
+(defn kHz "A frequency unit, \"kiloHertz." [value] (u/kHz value))
 
 ;; resolution units
-(def ^{:doc      "A resolution unit, \"dots per inches\"."
-       :arglists '([value])} dpi u/dpi)
-
-(def ^{:doc      "A resolution unit, \"dots per pixels\"."
-       :arglists '([value])} dppx u/dppx)
-
-(def ^{:doc      "A resolution unit, \"dots per centimeter\"."
-       :arglists '([value])} dpcm u/dpcm)
+(defn dpi "A resolution unit, \"dots per inches\"." [value] (u/dpi value))
+(defn dppx "A resolution unit, \"dots per pixels\"." [value] (u/dppx value))
+(defn dpcm "A resolution unit, \"dots per centimeter\"." [value] (u/dpcm value))
 
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ;; FUNCTIONS
 
-(def ^{:doc      "Coming soon"
-       :arglists '([{:keys [compiles-to args]}])}
-  single-arg f/single-arg)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([{:keys [compiles-to args]}])}
-  comma-join f/comma-join)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([{:keys [compiles-to args]}])}
-  space-join f/space-join)
+(defn single-arg "Coming soon" ([arg] (f/single-arg arg)) ([arg & more] (apply f/single-arg arg more)))
+(alter-meta! #'single-arg assoc :arglists '([arg]))
+(defn comma-join "Coming soon" [& args] (apply f/comma-join args))
+(defn space-join "Coming soon" [& args] (apply f/space-join args))
 
 #?(:clj
-   (defmacro ^{:doc      "Creates a cssfn function which which takes any number of arguments and creates
-                          a CSSFunction record for future compilation.
+   (defmacro defcssfn
+     "Creates a cssfn function which which takes any number of arguments and creates
+     a CSSFunction record for future compilation.
 
-                          Defcssfn can take 1 argument, which creates the function with the same name in CSS
-                          and it will be expanded with str/join \", \" (default function - commajoin):
-                          (defcssfn some-fn) => my.namespace/some-fn
-                          (some-fn \"arg1\" 42 (px 15)) ... compiles to   \"some-fn(arg1, 42, 15px)\"
+     Defcssfn can take 1 argument, which creates the function with the same name in CSS
+     and it will be expanded with str/join \", \" (default function - commajoin):
+     (defcssfn some-fn) => my.namespace/some-fn
+     (some-fn \"arg1\" 42 (px 15)) ... compiles to   \"some-fn(arg1, 42, 15px)\"
 
-                          or it can take 2 arguments:
-                          (defcssfn css-min \"min\") => my.namespace/css-min
-                          (css-min (px 500) (vw 60)) ... compiles to   \"min(500px, 60vw)\"
+     or it can take 2 arguments:
+     (defcssfn css-min \"min\") => my.namespace/css-min
+     (css-min (px 500) (vw 60)) ... compiles to   \"min(500px, 60vw)\"
 
-                          or the 2nd argument can be a compiling function (most commonly spacejoin, commajoin
-                          or single-arg for separating the args, you can also define a special function for
-                          that, but it should not ever be needed; read docs to these 3 functions):
-                          (defcssfn calc spacejoin)
-                          (calc (px 500) add 3 mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"
+     or the 2nd argument can be a compiling function (most commonly spacejoin, commajoin
+     or single-arg for separating the args, you can also define a special function for
+     that, but it should not ever be needed; read docs to these 3 functions):
+     (defcssfn calc spacejoin)
+     (calc (px 500) add 3 mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"
 
-                          you can also give defcssfn 3 arguments, where the 2nd one will be a special string
-                          for translation to CSS and the 3rd one the compiling function."
-               :arglists '([fn-name] [fn-name css-fn-or-fn-tail] [clojure-fn-name compiles-to compile-fn])}
-     defcssfn
-     [& args]
-     `(macros/defcssfn ~@args)))
+     you can also give defcssfn 3 arguments, where the 2nd one will be a special string
+     for translation to CSS and the 3rd one the compiling function."
+     ([fn-name] `(macros/defcssfn ~fn-name))
+     ([fn-name css-fn-or-fn-tail] `(macros/defcssfn ~fn-name ~css-fn-or-fn-tail))
+     ([clojure-fn-name compiles-to compile-fn] `(macros/defcssfn ~clojure-fn-name ~compiles-to ~compile-fn))))
 
 ;; single arg functions
 
-^{:doc      "Coming soon"
-  :arglists '([arg])}
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} blur f/blur)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} brightness f/brightness)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} contrast f/contrast)
-
-(def ^{:dpc      "A special function for @font-face."
-       :arglists '([arg])} css-format f/css-format)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} grayscale f/grayscale)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} hue-rotate f/hue-rotate)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} invert f/invert)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} perspective f/perspective)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} rotate f/rotate)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} rotateX f/rotateX)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} rotateY f/rotateY)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} rotateZ f/rotateZ)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} sepia f/sepia)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} skewX f/skewX)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} skewY f/skewY)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} scaleX f/scaleX)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} scaleY f/scaleY)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} scaleZ f/scaleZ)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} translateX f/translateX)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} translateY f/translateY)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])} translateZ f/translateZ)
-
+(defn blur "Coming soon" ([arg] (f/blur arg)) ([arg & more] (apply f/blur arg more)))
+(defn brightness "Coming soon" ([arg] (f/brightness arg)) ([arg & more] (apply f/brightness arg more)))
+(defn contrast "Coming soon" ([arg] (f/contrast arg)) ([arg & more] (apply f/contrast arg more)))
+(defn css-format "A special function for @font-face." ([arg] (f/css-format arg)) ([arg & more] (apply f/css-format arg more)))
+(defn grayscale "Coming soon" ([arg] (f/grayscale arg)) ([arg & more] (apply f/grayscale arg more)))
+(defn hue-rotate "Coming soon" ([arg] (f/hue-rotate arg)) ([arg & more] (apply f/hue-rotate arg more)))
+(defn invert "Coming soon" ([arg] (f/invert arg)) ([arg & more] (apply f/invert arg more)))
+(defn perspective "Coming soon" ([arg] (f/perspective arg)) ([arg & more] (apply f/perspective arg more)))
+(defn rotate "Coming soon" ([arg] (f/rotate arg)) ([arg & more] (apply f/rotate arg more)))
+(defn rotateX "Coming soon" ([arg] (f/rotateX arg)) ([arg & more] (apply f/rotateX arg more)))
+(defn rotateY "Coming soon" ([arg] (f/rotateY arg)) ([arg & more] (apply f/rotateY arg more)))
+(defn rotateZ "Coming soon" ([arg] (f/rotateZ arg)) ([arg & more] (apply f/rotateZ arg more)))
+(defn sepia "Coming soon" ([arg] (f/sepia arg)) ([arg & more] (apply f/sepia arg more)))
+(defn skewX "Coming soon" ([arg] (f/skewX arg)) ([arg & more] (apply f/skewX arg more)))
+(defn skewY "Coming soon" ([arg] (f/skewY arg)) ([arg & more] (apply f/skewY arg more)))
+(defn scaleX "Coming soon" ([arg] (f/scaleX arg)) ([arg & more] (apply f/scaleX arg more)))
+(defn scaleY "Coming soon" ([arg] (f/scaleY arg)) ([arg & more] (apply f/scaleY arg more)))
+(defn scaleZ "Coming soon" ([arg] (f/scaleZ arg)) ([arg & more] (apply f/scaleZ arg more)))
+(defn translateX "Coming soon" ([arg] (f/translateX arg)) ([arg & more] (apply f/translateX arg more)))
+(defn translateY "Coming soon" ([arg] (f/translateY arg)) ([arg & more] (apply f/translateY arg more)))
+(defn translateZ "Coming soon" ([arg] (f/translateZ arg)) ([arg & more] (apply f/translateZ arg more)))
+(do #?@(:clj [(defmacro alter-meta-arglists! [& fs]
+                `(do ~@(map (fn [f] (list `alter-meta! (list 'var f) `assoc :arglists (list 'quote '([arg])))) fs)))
+              (defmacro do-meta-alters! []
+                `(alter-meta-arglists! blur brightness contrast css-format grayscale hue-rotate invert perspective rotate rotateX
+                                       rotateY rotateZ sepia skewX skewY scaleX scaleY scaleZ translateX translateY translateZ))
+              (do-meta-alters!)]))
 ;; comma-join functions
 
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} attr f/attr)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} counter f/counter)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} counters f/counters)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} cubic-bezier f/cubic-bezier)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} css-filter f/css-filter)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} hwb f/hwb)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} linear-gradient f/linear-gradient)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} matrix f/matrix)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} matrix3d f/matrix3d)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} css-max f/css-max)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} css-min f/css-min)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} polygon f/polygon)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} radial-gradient f/radial-gradient)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} repeating-linear-gradient f/repeating-linear-gradient)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} repeating-radial-gradient f/repeating-radial-gradient)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} rotate3d f/rotate3d)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} scale f/scale)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} scale3d f/scale3d)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} skew f/skew)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} translate f/translate)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} translate3d f/translate3d)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} url f/url)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} css-var f/css-var)
+(defn attr "Coming soon" [& args] (apply f/attr args))
+(defn counter "Coming soon" [& args] (apply f/counter args))
+(defn counters "Coming soon" [& args] (apply f/counters args))
+(defn cubic-bezier "Coming soon" [& args] (apply f/cubic-bezier args))
+(defn css-filter "Coming soon" [& args] (apply f/css-filter args))
+(defn hwb "Coming soon" [& args] (apply f/hwb args))
+(defn linear-gradient "Coming soon" [& args] (apply f/linear-gradient args))
+(defn matrix "Coming soon" [& args] (apply f/matrix args))
+(defn matrix3d "Coming soon" [& args] (apply f/matrix3d args))
+(defn css-max "Coming soon" [& args] (apply f/css-max args))
+(defn css-min "Coming soon" [& args] (apply f/css-min args))
+(defn polygon "Coming soon" [& args] (apply f/polygon args))
+(defn radial-gradient "Coming soon" [& args] (apply f/radial-gradient args))
+(defn repeating-linear-gradient "Coming soon" [& args] (apply f/repeating-linear-gradient args))
+(defn repeating-radial-gradient "Coming soon" [& args] (apply f/repeating-radial-gradient args))
+(defn rotate3d "Coming soon" [& args] (apply f/rotate3d args))
+(defn scale "Coming soon" [& args] (apply f/scale args))
+(defn scale3d "Coming soon" [& args] (apply f/scale3d args))
+(defn skew "Coming soon" [& args] (apply f/skew args))
+(defn translate "Coming soon" [& args] (apply f/translate args))
+(defn translate3d "Coming soon" [& args] (apply f/translate3d args))
+(defn url "Coming soon" [& args] (apply f/url args))
+(defn css-var "Coming soon" [& args] (apply f/css-var args))
 
 ;; space-join functions
 
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} calc f/calc)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} circle f/circle)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} drop-shadow f/drop-shadow)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} ellipse f/ellipse)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} image f/image)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} inset f/inset)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& args])} symbols f/symbols)
-
+(defn calc "Coming soon" [& args] (apply f/calc args))
+(defn circle "Coming soon" [& args] (apply f/circle args))
+(defn drop-shadow "Coming soon" [& args] (apply f/drop-shadow args))
+(defn ellipse "Coming soon" [& args] (apply f/ellipse args))
+(defn image "Coming soon" [& args] (apply f/image args))
+(defn inset "Coming soon" [& args] (apply f/inset args))
+(defn symbols "Coming soon" [& args] (apply f/symbols args))
 
 ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ;; SELECTORS
@@ -387,61 +238,67 @@
 ;; attribute selectors
 
 #?(:clj
-   (defmacro ^{:doc      "Defines a CSS attribute selector. Those select all descendant elements containing
-                          a given attribute, of which the value matches a given substring. All attribute
-                          selectors have different conditions for matching:
-                          Start with a word, start with a substring, contain a word, contain a substring,
-                          end with a substring, have a given value, have a given attribute with any value.
+   (defmacro defattributeselector
+     "Defines a CSS attribute selector. Those select all descendant elements containing
+     a given attribute, of which the value matches a given substring. All attribute
+     selectors have different conditions for matching:
+     Start with a word, start with a substring, contain a word, contain a substring,
+     end with a substring, have a given value, have a given attribute with any value.
 
-                          By attributes, it is meant html attributes,
-                          e.g. span[class~=\"info\"]
-                          selects all spans with a class containing a whole word \"info\".
-                          In tornado, we can represent this by (contains-word :span :class \"info\").
+     By attributes, it is meant html attributes,
+     e.g. span[class~=\"info\"]
+     selects all spans with a class containing a whole word \"info\".
+     In tornado, we can represent this by (contains-word :span :class \"info\").
 
-                          We can also use (contains-word :class \"info\") to mark all elements with that
-                          class ... compiles to [class~=\"info\"] and affects all elements with that
-                          class (divs, spans, iframes, everything)."
-               :arglists '([selector-name compiles-to])}
-     defattributeselector
-     [& args]
-     `(macros/defattributeselector ~@args)))
+     We can also use (contains-word :class \"info\") to mark all elements with that
+     class ... compiles to [class~=\"info\"] and affects all elements with that
+     class (divs, spans, iframes, everything)."
+     [selector-name compiles-to]
+     `(macros/defattributeselector ~selector-name ~compiles-to)))
 
-(def ^{:doc      "An attribute selector which selects all elements which have a given
-                  attribute with any value, or all html elements on/below the current
-                  nested selectors level which have a given attribute with any value."
-       :arglists '([attribute] [tag attribute])}
-  has-attr sel/has-attr)
+(defn has-attr
+  "An attribute selector which selects all elements which have a given
+  attribute with any value, or all html elements on/below the current
+  nested selectors level which have a given attribute with any value."
+  ([attribute] (sel/has-attr attribute))
+  ([tag attribute] (sel/has-attr tag attribute)))
 
-(def ^{:doc      "Selects all descendants of a html tag which have a given parameter with a given value."
-       :arglists '([attribute subvalue] [tag attribute subvalue])}
-  has-val sel/has-val)
+(defn has-val
+  "Selects all descendants of a html tag which have a given parameter with a given value."
+  ([attribute subvalue] (sel/has-val attribute subvalue))
+  ([tag attribute subvalue] (sel/has-val tag attribute subvalue)))
 
-(def ^{:doc      "Selects all descendant elements which have a given parameter with a value containing
-                  a given word (substring is not enough - a matching word separated by commas or spaces)."
-       :arglists '([attribute subvalue] [tag attribute subvalue])}
-  contains-word sel/contains-word)
+(defn contains-word
+  "Selects all descendant elements which have a given parameter with a value containing
+  a given word (substring is not enough - a matching word separated by commas or spaces)."
+  ([attribute subvalue] (sel/contains-word attribute subvalue))
+  ([tag attribute subvalue] (sel/contains-word tag attribute subvalue)))
 
-(def ^{:doc      "Selects all descendant elements which have a given parameter with a value containing
-                  a given substring (unlike the contains-word selector, the substring does not have to
-                  be a whole word)."
-       :arglists '([attribute subvalue] [tag attribute subvalue])}
-  contains-subs sel/contains-subs)
+(defn contains-subs
+  "Selects all descendant elements which have a given parameter with a value containing
+  a given substring (unlike the contains-word selector, the substring does not have to
+  be a whole word)."
+  ([attribute subvalue] (sel/contains-subs attribute subvalue))
+  ([tag attribute subvalue] (sel/contains-subs tag attribute subvalue)))
 
-(def ^{:doc      "Selects all descendant elements which have a given parameter with a value starting with
-                  a given word (substring is not enough - a matching word separated by commas or spaces)."
-       :arglists '([attribute subvalue] [tag attribute subvalue])}
-  starts-with-word sel/starts-with-word)
+(defn starts-with-word
+  "Selects all descendant elements which have a given parameter with a value starting with
+  a given word (substring is not enough - a matching word separated by commas or spaces)."
+  ([attribute subvalue] (sel/starts-with-word attribute subvalue))
+  ([tag attribute subvalue] (sel/starts-with-word tag attribute subvalue)))
 
-(def ^{:doc      "Selects all descendant elements which have a given parameter with a value starting with
-                  a given substring (unlike the contains-word selector, the substring does not have to be
-                  a whole matching word."
-       :arglists '([attribute subvalue] [tag attribute subvalue])}
-  starts-with sel/starts-with)
+(defn starts-with
+  "Selects all descendant elements which have a given parameter with a value starting with
+  a given substring (unlike the contains-word selector, the substring does not have to be
+  a whole matching word."
+  ([attribute subvalue] (sel/starts-with attribute subvalue))
+  ([tag attribute subvalue] (sel/starts-with tag attribute subvalue)))
 
-(def ^{:doc      "Selects all descendant elements which have a given parameter with a value ending
-                  with a given substring. The substring does not have to be a whole matching word."
-       :arglists '([attribute subvalue] [tag attribute subvalue])}
-  ends-with sel/ends-with)
+(defn ends-with
+  "Selects all descendant elements which have a given parameter with a value ending
+  with a given substring. The substring does not have to be a whole matching word."
+  ([attribute subvalue] (sel/ends-with attribute subvalue))
+  ([tag attribute subvalue] (sel/ends-with tag attribute subvalue)))
 
 ;; pseudoclass selectors
 
