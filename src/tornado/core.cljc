@@ -303,24 +303,23 @@
 ;; pseudoclass selectors
 
 #?(:clj
-   (defmacro ^{:doc      "Defines a CSS pseudoclass. A CSS pseudoclass can activate some CSS properties on
-                          a css-class/css-id/html-element based on some current special state of the element.
+   (defmacro defpseudoclass
+     "Defines a CSS pseudoclass. A CSS pseudoclass can activate some CSS properties on
+     a css-class/css-id/html-element based on some current special state of the element.
 
-                          For example, hover: (defpseudoclass hover)
-                          When compiling a selectors sequence, e.g. [:.abc :#def hover], the resulting CSS
-                          selectors sequence will look like this: \".abc #def:hover\".
+     For example, hover: (defpseudoclass hover)
+     When compiling a selectors sequence, e.g. [:.abc :#def hover], the resulting CSS
+     selectors sequence will look like this: \".abc #def:hover\".
 
-                          So, what does it even do? We can give the element a special value on hover:
-                          ... [:a hover {:color :blue} ...] - when we hover over a link with our mouse, the
-                          text color of the link will turn blue until we put our mouse away.
+     So, what does it even do? We can give the element a special value on hover:
+     ... [:a hover {:color :blue} ...] - when we hover over a link with our mouse, the
+     text color of the link will turn blue until we put our mouse away.
 
-                          Defpseudoclass can also take 2 parameters, where the 2nd one will be the translation
-                          to CSS to avoid collisions between Clojure and CSS -
-                          e.g.(defpseudolass css-empty \"empty\")."
-               :arglists '([pseudoclass] [identifier css-pseudoclass])}
-     defpseudoclass
-     [& args]
-     `(macros/defpseudoclass ~@args)))
+     Defpseudoclass can also take 2 parameters, where the 2nd one will be the translation
+     to CSS to avoid collisions between Clojure and CSS -
+     e.g.(defpseudolass css-empty \"empty\")."
+     ([pseudoclass] `(macros/defpseudoclass ~pseudoclass))
+     ([identifier css-pseudoclass] `(macros/defpseudoclass ~identifier ~css-pseudoclass))))
 
 (def ^{:doc "CSS pseudoselector \"active\". Used as a value, e.g.:
              [:.some-sel {:width (px 100)}
@@ -476,359 +475,320 @@
 ;; pseudoclass selectors functions
 
 #?(:clj
-   (defmacro ^{:doc      "Creates a special CSS pseudoclass function, which compiles similarly as a standard
-                          CSS pseudoclass, but it is pseudoclass function with an argument.
+   (defmacro defpseudoclassfn
+     "Creates a special CSS pseudoclass function, which compiles similarly as a standard
+     CSS pseudoclass, but it is pseudoclass function with an argument.
 
-                          For example. if you wanted to only select every n-th argument:
-                          (defpseudoclassfn nth-child)
-                          (nth-child :odd)     ... compiles to   \"<parent>:nth-child(odd)\"
-                          (nth-child \"3n+1\")   ... compiles to   \"<parent>:nth-child(3n+1)\"
+     For example. if you wanted to only select every n-th argument:
+     (defpseudoclassfn nth-child)
+     (nth-child :odd)     ... compiles to   \"<parent>:nth-child(odd)\"
+     (nth-child \"3n+1\")   ... compiles to   \"<parent>:nth-child(3n+1)\"
 
-                          Or if you wanted to show something based on the current language of the browser:
-                          (defpseudoclass lang)
-                          (lang \"en\") ... compiles to   \"<parent>:lang(en)\"
+     Or if you wanted to show something based on the current language of the browser:
+     (defpseudoclass lang)
+     (lang \"en\") ... compiles to   \"<parent>:lang(en)\"
 
-                          To avoid collisions with some Clojure functions, you can give a second argument
-                          to defpseudoclassfn for a different translation to CSS:
-                          (defpseudoclass css-not \"not\")
-                          (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
-                          not a paragraph."
-               :arglists '([pseudoclass] [pseudoclass compiles-to])}
-     defpseudoclassfn
-     [& args]
-     `(macros/defpseudoclassfn ~@args)))
+     To avoid collisions with some Clojure functions, you can give a second argument
+     to defpseudoclassfn for a different translation to CSS:
+     (defpseudoclass css-not \"not\")
+     (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
+     not a paragraph."
+     ([pseudoclass] `(macros/defpseudoclassfn ~pseudoclass))
+     ([pseudoclass compiles-to] `(macros/defpseudoclassfn ~pseudoclass ~compiles-to))))
 
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])}
-  lang sel/lang)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])}
-  css-not sel/css-not)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])}
-  nth-child sel/nth-child)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])}
-  nth-last-child sel/nth-last-child)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])}
-  nth-last-of-type sel/nth-last-of-type)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([arg])}
-  nth-of-type sel/nth-of-type)
+(defn lang "Coming soon" [arg] (sel/lang arg))
+(defn css-not "Coming soon" [arg] (sel/css-not arg))
+(defn nth-child "Coming soon" [arg] (sel/nth-child arg))
+(defn nth-last-child "Coming soon" [arg] (sel/nth-last-child arg))
+(defn nth-last-of-type "Coming soon" [arg] (sel/nth-last-of-type arg))
+(defn nth-of-type "Coming soon" [arg] (sel/nth-of-type arg))
 
 ;; pseudoelement selectors
 
 #?(:clj
-   (defmacro ^{:doc      "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
-                          a special part of a css-class/css-id/html-element.
+   (defmacro defpseudoelement
+     "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
+     a special part of a css-class/css-id/html-element.
 
-                          For example, first-letter: (defpseudoclass first-letter)
-                          When compiling a selectors sequence, e.g. [:.abc :#def first-letter], the resulting CSS
-                          selectors sequence will look like this: \".abc #def::first-letter\".
+     For example, first-letter: (defpseudoclass first-letter)
+     When compiling a selectors sequence, e.g. [:.abc :#def first-letter], the resulting CSS
+     selectors sequence will look like this: \".abc #def::first-letter\".
 
-                          So, what does it even do? We can give the first letter of an element a special value:
-                          ... [:.abc :p first-letter {:font-size (px 60)} ...] - this causes the first letter
-                          of every paragraph in an element with class .abc to have the first letter significantly
-                          bigger than the rest of the paragraph."
-               :arglists '([pseudoelement])}
-     defpseudoelement
-     [& args]
-     `(macros/defpseudoelement ~@args)))
+     So, what does it even do? We can give the first letter of an element a special value:
+     ... [:.abc :p first-letter {:font-size (px 60)} ...] - this causes the first letter
+     of every paragraph in an element with class .abc to have the first letter significantly
+     bigger than the rest of the paragraph."
+     [pseudoelement] `(macros/defpseudoelement ~pseudoelement)))
 
-(def ^{:doc "Coming soon"}
-  after sel/after)
-
-(def ^{:doc "Coming soon"}
-  before sel/before)
-
-(def ^{:doc "Coming soon"}
-  first-letter sel/first-letter)
-
-(def ^{:doc "Coming soon"}
-  first-line sel/first-line)
-
-(def ^{:doc "Coming soon"}
-  marker sel/marker)
-
-(def ^{:doc "Coming soon"}
-  selection sel/selection)
+(def after "Coming soon" sel/after)
+(def before "Coming soon" sel/before)
+(def first-letter "Coming soon" sel/first-letter)
+(def first-line "Coming soon" sel/first-line)
+(def marker "Coming soon" sel/marker)
+(def selection "Coming soon" sel/selection)
 
 ;; combinator selectors
 
 #?(:clj
-   (defmacro ^{:doc      "Defines a combinator selector function which describes relationships between its
-                          arguments depending on the selector type:
+   (defmacro defcombinatorselector
+     "Defines a combinator selector function which describes relationships between its
+     arguments depending on the selector type:
 
-                         :#abc :.def is the default combinator selector - descendant selector. Affects all
-                          children with a class .def.
+     :#abc :.def is the default combinator selector - descendant selector. Affects all
+     children with a class .def.
 
-                          child-selector \">\": is active when the given selectors are every of them a direct
-                          child of the previous one.
+     child-selector \">\": is active when the given selectors are every of them a direct
+     child of the previous one.
 
-                          adjacent-sibling (selector) \"+\": is active when the given html blocks elements or
-                          elements with a given class/id connected with the \"+\" sign are adjacent siblings.
+     adjacent-sibling (selector) \"+\": is active when the given html blocks elements or
+     elements with a given class/id connected with the \"+\" sign are adjacent siblings.
 
-                          general-sibling (selector) \"~\" is active when the given selectors are on the same
-                          level of nesting; they do not have to be adjacent necessarily.
+     general-sibling (selector) \"~\" is active when the given selectors are on the same
+     level of nesting; they do not have to be adjacent necessarily.
 
-                          Usage: [:.abc
-                                  [:.def (child-selector :p :#ghi)]]
-                          compiles to   \".abc .def, .abc > p > #ghi\""
-               :arglists '([selector-name compiles-to])}
-     defcombinatorselector
-     [& args]
-     `(macros/defcombinatorselector ~@args)))
+     Usage: [:.abc
+             [:.def (child-selector :p :#ghi)]]
+     compiles to   \".abc .def, .abc > p > #ghi\""
+     [selector-name compiles-to]
+     `(macros/defcombinatorselector ~selector-name ~compiles-to)))
 
-(def ^{:doc      "Coming soon"
-       :arglists '([& selectors])} child-selector sel/child-selector)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& selectors])} adjacent-sibling sel/adjacent-sibling)
-
-(def ^{:doc      "Coming soon"
-       :arglists '([& selectors])} general-sibling sel/general-sibling)
+(defn child-selector "Coming soon" [& selectors] (apply sel/child-selector selectors))
+(defn adjacent-sibling "Coming soon" [& selectors] (apply sel/adjacent-sibling selectors))
+(defn general-sibling "Coming soon" [& selectors] (apply sel/general-sibling selectors))
 
 ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ;; COLORS
 
-(def ^{:doc      "Creates an rgb color."
-       :arglists '([red green blue] [[red green blue]])}
-  rgb colors/rgb)
+(defn rgb "Creates an rgb color."
+  ([red green blue] (colors/rgb red green blue))
+  ([[red green blue]] (colors/rgb red green blue)))
 
-(def ^{:doc      "Creates an rgba color."
-       :arglists '([red green blue] [red green blue alpha] [[red green blue]] [[red green blue alpha]])}
-  rgba colors/rgba)
+(defn rgba
+  "Creates an rgba color."
+  ([red green blue] (colors/rgba red green blue))
+  ([red green blue alpha] (colors/rgba red green blue alpha))
+  ([[red green blue alpha]] (colors/rgba red green blue alpha)))
 
-(def ^{:doc      "Creates an hsl color."
-       :arglists '([hue saturation lightness] [[hue saturation lightness]])}
-  hsl colors/hsl)
+(defn hsl "Creates an hsl color."
+  ([hue saturation lightness] (colors/hsl hue saturation lightness))
+  ([[hue saturation lightness]] (colors/hsl hue saturation lightness)))
 
-(def ^{:doc      "Creates an hsla color."
-       :arglists '([hue saturation lightness] [hue saturation lightness alpha] [[hue saturation lightness]] [[hue saturation lightness alpha]])}
-  hsla colors/hsla)
+(defn hsla "Creates an hsla color."
+  ([hue saturation lightness] (colors/hsla hue saturation lightness))
+  ([hue saturation lightness alpha] (colors/hsla hue saturation lightness alpha))
+  ([[hue saturation lightness alpha]] (colors/hsla hue saturation lightness alpha)))
+(alter-meta! #'rgba update :arglists conj '[[hue saturation lightness]])
+(alter-meta! #'hsla update :arglists conj '[[hue saturation lightness]])
 
-(def ^{:doc      "Transforms a color to hsl/hsla and rotates its hue by an angle."
-       :arglists '([color angle])}
-  rotate-hue colors/rotate-hue)
+(defn rotate-hue "Transforms a color to hsl/hsla and rotates its hue by an angle." [color angle] (colors/rotate-hue color angle))
 
-(def ^{:doc      "Transforms a color to hsl/hsla and rotates its hue by a third clockwise."
-       :arglists '([color])}
-  triad-next colors/triad-next)
+(defn triad-next "Transforms a color to hsl/hsla and rotates its hue by a third clockwise." [color] (colors/triad-next color))
 
-(def ^{:doc      "Transforms a color to hsl/hsla and rotates its hue by a third counterclockwise."
-       :arglists '([color])}
-  triad-previous colors/triad-previous)
+(defn triad-previous "Transforms a color to hsl/hsla and rotates its hue by a third counterclockwise." [color] (colors/triad-previous color))
 
-(def ^{:doc      "Transforms a color to hsl/hsla and rotates its hue by a half."
-       :arglists '([color])}
-  opposite-hue colors/opposite-hue)
+(defn opposite-hue "Transforms a color to hsl/hsla and rotates its hue by a half." [color] (colors/opposite-hue color))
 
-(def ^{:doc      "Transforms a color to hsl/hsla and adds an absolute saturation to it.
-                  E.g.: (saturate (rgb 50 100 150) \"15%\"),
-                  (saturate :gray 0.35), (saturate \"#123456\" (percent 50))"
-       :arglists '([color value])}
-  saturate colors/saturate)
+(defn saturate
+  "Transforms a color to hsl/hsla and adds an absolute saturation to it.
+  E.g.: (saturate (rgb 50 100 150) \"15%\"),
+  (saturate :gray 0.35), (saturate \"#123456\" (percent 50))"
+  [color value] (colors/saturate color value))
 
-(def ^{:doc      "Transforms a color to hsl/hsla and subtracts an absolute saturation from it.
-                  E.g.: (desaturate (rgb 50 100 150) \"15%\"),
-                  (desaturate :gray 0.35), (desaturate \"#123456\" (percent 50))"
-       :arglists '([color value])}
-  desaturate colors/desaturate)
+(defn desaturate
+  "Transforms a color to hsl/hsla and subtracts an absolute saturation from it.
+  E.g.: (desaturate (rgb 50 100 150) \"15%\"),
+  (desaturate :gray 0.35), (desaturate \"#123456\" (percent 50))"
+  [color value] (colors/desaturate color value))
 
-(def ^{:doc      "Transforms a color to hsl/hsla and adds multiplies its saturation with
-                  a numeric value.  E.g.: (saturate (rgb 50 100 150) \"15%\"),
-                  (saturate :gray 0.35), (saturate \"#123456\" (percent 50))"
-       :arglists '([color value])}
-  scale-saturation colors/scale-saturation)
+(defn scale-saturation
+  "Transforms a color to hsl/hsla and adds multiplies its saturation with
+  a numeric value.  E.g.: (saturate (rgb 50 100 150) \"15%\"),
+  (saturate :gray 0.35), (saturate \"#123456\" (percent 50))"
+  [color value] (colors/scale-saturation color value))
 
-(def ^{:doc      "Transforms a color to hsl/hsla and adds an absolute lightness to it.
-                  E.g.: (lighten (rgb 50 100 150) \"15%\"),
-                  (lighten :gray 0.35), (lighten \"#123456\" (percent 50))"
-       :arglists '([color value])}
-  lighten colors/lighten)
+(defn lighten
+  "Transforms a color to hsl/hsla and adds an absolute lightness to it.
+  E.g.: (lighten (rgb 50 100 150) \"15%\"),
+  (lighten :gray 0.35), (lighten \"#123456\" (percent 50))"
+  [color value] (colors/lighten color value))
 
-(def ^{:doc      "Transforms a color to hsl/hsla and subtracts an absolute lightness from it. E.g.:
-                  (darken (rgb 50 100 150) \"15%\"), (darken :gray 0.35), (darken \"#123456\" (percent 50))"
-       :arglists '([color value])}
-  darken colors/darken)
+(defn darken
+  "Transforms a color to hsl/hsla and subtracts an absolute lightness from it. E.g.:
+  (darken (rgb 50 100 150) \"15%\"), (darken :gray 0.35), (darken \"#123456\" (percent 50))"
+  [color value] (colors/darken color value))
 
-(def ^{:doc      "Transforms a color to hsl/hsla and adds multiplies its lightness with
-                  a numeric value.  E.g.: (scale-lightness (rgb 50 100 150) \"15%\"),
-                  (scale-lightness :gray 0.35), (scale-lightness \"#123456\" (percent 50))"
-       :arglists '([color value])}
-  scale-lightness colors/scale-lightness)
+(defn scale-lightness
+  "Transforms a color to hsl/hsla and adds multiplies its lightness with
+  a numeric value.  E.g.: (scale-lightness (rgb 50 100 150) \"15%\"),
+  (scale-lightness :gray 0.35), (scale-lightness \"#123456\" (percent 50))"
+  [color value] (colors/scale-lightness color value))
 
-(def ^{:doc      "Transforms a color to its with-alpha form and adds an absolute alpha to it.
-                  E.g.: (opacify(rgb 50 100 150) \"15%\"),
-                  (opacify :gray 0.35), (opacify \"#123456\" (percent 50))"
-       :arglists '([color value])}
-  opacify colors/opacify)
+(defn opacify
+  "Transforms a color to its with-alpha form and adds an absolute alpha to it.
+  E.g.: (opacify(rgb 50 100 150) \"15%\"),
+  (opacify :gray 0.35), (opacify \"#123456\" (percent 50))"
+  [color value] (colors/opacify color value))
 
-(def ^{:doc      "Transforms a color to its with-alpha form and subtracts an absolute alpha from it.
-                  E.g.: (transparentize (rgb 50 100 150) \"15%\"),
-                  (transparentize :gray 0.35), (transparentize \"#123456\" (percent 50))"
-       :arglists '([color value])}
-  transparentize colors/transparentize)
+(defn transparentize
+  "Transforms a color to its with-alpha form and subtracts an absolute alpha from it.
+  E.g.: (transparentize (rgb 50 100 150) \"15%\"),
+  (transparentize :gray 0.35), (transparentize \"#123456\" (percent 50))"
+  [color value] (colors/transparentize color value))
 
-(def ^{:doc      "Transforms a color to its with-alpha form and adds multiplies its alpha with
-                  a numeric value.  E.g.: (scale-alpha (rgb 50 100 150) \"15%\"),
-                  (scale-alpha :gray 0.35), (scale-alpha \"#123456\" (percent 50))"
-       :arglists '([color value])}
-  scale-alpha colors/scale-alpha)
+(defn scale-alpha
+  "Transforms a color to its with-alpha form and adds multiplies its alpha with
+  a numeric value.  E.g.: (scale-alpha (rgb 50 100 150) \"15%\"),
+  (scale-alpha :gray 0.35), (scale-alpha \"#123456\" (percent 50))"
+  [color value] (colors/scale-alpha color value))
 
-(def ^{:doc      "Given a color, transforms it into HSL and sets its hue to a given value.
-             E.g.: (with-hue :red 150), (with-hue (rgba 200 150 100 0.3) 75)"
-       :arglists '([color hue])}
-  with-hue colors/with-hue)
+(defn with-hue
+  "Given a color, transforms it into HSL and sets its hue to a given value.
+  E.g.: (with-hue :red 150), (with-hue (rgba 200 150 100 0.3) 75)"
+  [color hue] (colors/with-hue color hue))
 
-(def ^{:doc      "Given a color, transforms it into HSL and sets its saturation to a given value.
-             E.g.: (with-saturation :red 0.5), (with-saturation (rgba 200 150 100 0.3) 0.5)"
-       :arglists '([color saturation])}
-  with-saturation colors/with-saturation)
+(defn with-saturation
+  "Given a color, transforms it into HSL and sets its saturation to a given value.
+   E.g.: (with-saturation :red 0.5), (with-saturation (rgba 200 150 100 0.3) 0.5)"
+  [color saturation] (colors/with-saturation color saturation))
 
-(def ^{:doc      "Given a color, transforms it into HSL and sets its lightness to a given value.
-             E.g.: (with-lightness :red 0.8), (with-lightness (rgba 200 150 100 0.3) 0.8)"
-       :arglists '([color lightness])}
-  with-lightness colors/with-lightness)
+(defn with-lightness
+  "Given a color, transforms it into HSL and sets its lightness to a given value.
+  E.g.: (with-lightness :red 0.8), (with-lightness (rgba 200 150 100 0.3) 0.8)"
+  [color lightness] (colors/with-lightness color lightness))
 
-(def ^{:doc      "Given a color, sets its alpha to a given value.
-             E.g.: (with-alpha :red 0.4), (with-alpha \"#FF7FCF\" 0.4)"
-       :arglists '([color alpha])}
-  with-alpha colors/with-alpha)
+(defn with-alpha
+  "Given a color, sets its alpha to a given value.
+  E.g.: (with-alpha :red 0.4), (with-alpha \"#FF7FCF\" 0.4)"
+  [color alpha] (colors/with-alpha color alpha))
 
-(def ^{:doc      "Given any number of colors in any form (alpha-hex, non-alpha-hex, rgb, rgba,
-                  hsl, hsla), converts them to the most frequent type and mixes them."
-       :arglists '([color & more])}
-  mix-colors colors/mix-colors)
+(defn mix-colors
+  "Given any number of colors in any form (alpha-hex, non-alpha-hex, rgb, rgba,
+  hsl, hsla), converts them to the most frequent type and mixes them."
+  [color & more] (apply colors/mix-colors color more))
 
 ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ;; AT-RULES: at the moment, these are available:
 ;;           @media, @font-face, @keyframes
 
-(def ^{:doc      "Takes a rules map and any number of media changes and creates a CSSAtRule instance
-                  with \"media\" identifier:
+(defn at-media
+  "Takes a rules map and any number of media changes and creates a CSSAtRule instance
+  with \"media\" identifier:
 
-                  (at-media {:screen    :only
-                           :max-width (px 600)
-                           :min-width (px 800}
-                           [:& {:margin [[(px 15 0 (px 15) (px 20]]
-                           [:.abc #:def {:margin  (px 20)
-                                         :padding [[(px 30) (px 15)]]
-                             [:span {:background-color (mix-colors :red :green)]]
-                           [:footer {:font-size (em 1)])
+  (at-media {:screen    :only
+           :max-width (px 600)
+           :min-width (px 800}
+           [:& {:margin [[(px 15 0 (px 15) (px 20]]
+           [:.abc #:def {:margin  (px 20)
+                         :padding [[(px 30) (px 15)]]
+             [:span {:background-color (mix-colors :red :green)]]
+           [:footer {:font-size (em 1)])
 
-                  The :& selector selects the current element.
-                  As you can see, you can nest the affected CSS hiccup how you only want.
-                  Special rules values: :screen :only => only screen
-                                   :screen true  => screen
-                                   :screen false => not screen
+  The :& selector selects the current element.
+  As you can see, you can nest the affected CSS hiccup how you only want.
+  Special rules values: :screen :only => only screen
+                   :screen true  => screen
+                   :screen false => not screen
 
-                  {:screen    true
-                   :speech    false
-                   :max-width (px 600)
-                   :min-width (px 800}
-                   => @media screen and not speech and (min-width: 600px) and (max-width: 800px) {..."
-       :arglists '([rules & changes])}
-  at-media at-rules/at-media)
+  {:screen    true
+   :speech    false
+   :max-width (px 600)
+   :min-width (px 800}
+   => @media screen and not speech and (min-width: 600px) and (max-width: 800px) {..."
+  [rules & changes] (apply at-rules/at-media rules changes))
 
-(def ^{:doc      "Can be used for more convenient describing of @font-face. This is how example
-                  props-maps look like:
+(defn at-font-face
+  "Can be used for more convenient describing of @font-face. This is how example
+  props-maps look like:
 
-                  {:src         [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]
-                                 [(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]]
-                   :font-family \"Roboto\"
-                   :font-weight :normal
-                   :font-style  :italic}
+  {:src         [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]
+                 [(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]]
+   :font-family \"Roboto\"
+   :font-weight :normal
+   :font-style  :italic}
 
-                  This function can receive any number of props maps so that you can also write
-                  the example above this way:
+  This function can receive any number of props maps so that you can also write
+  the example above this way:
 
-                  {:src         [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]]}
-                  {:src         [[(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]]
-                   :font-family \"Roboto\"
-                   :font-weight :normal
-                   :font-style  :italic}"
-       :arglists '([& props-maps])}
-  at-font-face at-rules/at-font-face)
+  {:src         [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]]}
+  {:src         [[(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]]
+   :font-family \"Roboto\"
+   :font-weight :normal
+   :font-style  :italic}"
+  [& props-maps]
+  (apply at-rules/at-font-face props-maps))
 
 #?(:clj
-   (defmacro ^{:doc      "Defines a CSS @keyframes animation. The animation name should have a unique symbol
-                          for later reference to it and then animation frames in a format [progress params]:
+   (defmacro defkeyframes
+     "Defines a CSS @keyframes animation. The animation name should have a unique symbol
+     for later reference to it and then animation frames in a format [progress params]:
 
-                          (defkeyframes fade-in-opacity
-                                        [(percent 0) {:opacity 0}]
-                                        [(percent 25) {:opacity 0.1}]
-                                        [(percent 50) {:opacity 0.25}]
-                                        [(percent 75) {:opacity 0.5}]
-                                        [(percent 100) {:opacity 1}])
+     (defkeyframes fade-in-opacity
+                   [(percent 0) {:opacity 0}]
+                   [(percent 25) {:opacity 0.1}]
+                   [(percent 50) {:opacity 0.25}]
+                   [(percent 75) {:opacity 0.5}]
+                   [(percent 100) {:opacity 1}])
 
-                          Then, insert it to the CSS hiccup list to make tornado compile it for later usage:
+     Then, insert it to the CSS hiccup list to make tornado compile it for later usage:
 
-                          (def styles
-                             (list
-                                fade-in-opacity
-                                ...))
+     (def styles
+        (list
+           fade-in-opacity
+           ...))
 
-                          After that, you can assign this animation to whatever element you want:
+     After that, you can assign this animation to whatever element you want:
 
-                          (def styles
-                             (list
-                                fade-in-opacity
-                                [:.some-element {:animation-duration (ms 500)
-                                                 :animation-name     fade-in-opacity)}]
-                                [:#another-element {:animation-name  fade-in-opacity
-                                                    :animation-delay (s 1.5)}]))
+     (def styles
+        (list
+           fade-in-opacity
+           [:.some-element {:animation-duration (ms 500)
+                            :animation-name     fade-in-opacity)}]
+           [:#another-element {:animation-name  fade-in-opacity
+                               :animation-delay (s 1.5)}]))
 
-                          You can also define from & to progress animations:
+     You can also define from & to progress animations:
 
-                          (defkeyframes translate-animation
-                                        [:from {:transform (translate (px 100) (px 200)}]
-                                        [:to {:transform (translate (px 200) (px 400)}])"
-               :arglists '([animation-name & frames])}
-     defkeyframes
-     [& args]
-     `(macros/defkeyframes ~@args)))
+     (defkeyframes translate-animation
+                   [:from {:transform (translate (px 100) (px 200)}]
+                   [:to {:transform (translate (px 200) (px 400)}])"
+     [animation-name & frames]
+     `(macros/defkeyframes ~animation-name ~@frames)))
 
 ;; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ;; COMMON UTILITY FUNCTIONS
 
-(def ^{:doc      "Given a sequence of grid-rows sequences, where each the element is represented by
-                  a keyword, a string or a symbol, return a grid-areas string:
+(defn grid-areas
+  "Given a sequence of grid-rows sequences, where each the element is represented by
+  a keyword, a string or a symbol, return a grid-areas string:
 
-                  (grid-areas [(repeat 3 :header) [:. :content :.] (repeat 3 :footer)])
-                  Output CSS string: ``\"header header header\" \". content .\" \"footer footer footer\"``"
-       :arglists '([[first-row & more :as all-rows]])}
-  grid-areas common/grid-areas)
+  (grid-areas [(repeat 3 :header) [:. :content :.] (repeat 3 :footer)])
+  Output CSS string: ``\"header header header\" \". content .\" \"footer footer footer\"``"
+  [[first-row & more :as all-rows]] (common/grid-areas all-rows))
 
-(def ^{:doc      "After the expression is compiled, \" !important\" is appended to it:
+(defn important
+  "After the expression is compiled, \" !important\" is appended to it:
 
-                  (important [(repeat 3 :auto)])   =>   \"auto auto auto !important\"
-                  (important :none   =>   \"none !important\"
-                  (important \"yellow\"   =>   \"yellow !important\""
-       :arglists '([expr])}
-  important common/important)
+  (important [(repeat 3 :auto)])   =>   \"auto auto auto !important\"
+  (important :none   =>   \"none !important\"
+  (important \"yellow\"   =>   \"yellow !important\""
+  [expr] (common/important expr))
 
-(def ^{:doc      "A convenient function for simpler description of margin, padding or any similar CSS
-                  block which can can look like \"1px 2px 3px 4px\" after compilation. This function
-                  processes the input to create such a structure for much simpler description of the data.
+(defn join
+  "A convenient function for simpler description of margin, padding or any similar CSS
+  block which can can look like \"1px 2px 3px 4px\" after compilation. This function
+  processes the input to create such a structure for much simpler description of the data.
 
-                  Example usage:
+  Example usage:
 
-                  (compile-expression (join 1 2 3))      ; is equal to [[(px 1) (px 2) (px 3)]]
-                  => \"1px 2px 3px\"
+  (compile-expression (join 1 2 3))      ; is equal to [[(px 1) (px 2) (px 3)]]
+  => \"1px 2px 3px\"
 
 
-                  (compile-expression (join em 1 2 3))      ; is equal to [[(em 1) (em 2) (em 3)]]
-                  => \"1em 2em 3em\"
+  (compile-expression (join em 1 2 3))      ; is equal to [[(em 1) (em 2) (em 3)]]
+  => \"1em 2em 3em\"
 
-                  (compile-expression (join (em 3) 15 (fr 4) 3)
-                  ; is equal to [[(em 3) (px 15) (fr 4) (px 3)]]
-                  => \"3em 15px 4fr 3px\""
-       :arglists '([value] [unit-or-value & more-values])}
-  join common/join)
+  (compile-expression (join (em 3) 15 (fr 4) 3)
+  ; is equal to [[(em 3) (px 15) (fr 4) (px 3)]]
+  => \"3em 15px 4fr 3px\""
+  ([value] (common/join value))
+  ([unit-or-value & more-values] (apply common/join unit-or-value more-values)))
