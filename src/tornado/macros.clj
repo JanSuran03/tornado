@@ -39,7 +39,7 @@
                 [:to {:transform (f/translate (u/px 200) (u/px 400)}])"
   [animation-name & frames]
   `(def ~animation-name (CSSAtRule. "keyframes" {:anim-name (str '~animation-name)
-                                                :frames     (list ~@frames)})))
+                                                 :frames    (list ~@frames)})))
 
 (defmacro defunit
   "Creates a unit function which takes 1 argument and creates a CSSUnit record for future
@@ -55,10 +55,9 @@
 
    E.g. (calc (px 500) :add 3 :mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"."
   ([unit]
-   (let [compiles-to (str unit)]
-     `(defunit ~unit ~compiles-to)))
+   `(defunit ~unit ~(str unit)))
   ([identifier css-unit]
-   `(def ~identifier (fn [value#] (CSSUnit. ~css-unit value#)))))
+   `(defn ~identifier [value#] (CSSUnit. ~css-unit value#))))
 
 (defmacro defattributeselector
   "Attribute selectors select all descendant elements containing a given attribute,
@@ -111,9 +110,9 @@
      not have to be a whole word).
      In code: <contains-subs>"
   [selector-name compiles-to]
-  `(do (def ~selector-name (fn
-                             ([attr# subval#] (CSSAttributeSelector. ~compiles-to nil attr# subval#))
-                             ([tag# attr# subval#] (CSSAttributeSelector. ~compiles-to tag# attr# subval#))))
+  `(do (defn ~selector-name
+         ([attr# subval#] (CSSAttributeSelector. ~compiles-to nil attr# subval#))
+         ([tag# attr# subval#] (CSSAttributeSelector. ~compiles-to tag# attr# subval#)))
        (alter-meta! #'~selector-name assoc :arglists '([~'attribute ~'subvalue]
                                                        [~'tag ~'attribute ~'subvalue]))
        #'~selector-name))
@@ -134,8 +133,7 @@
   to CSS to avoid collisions between Clojure and CSS -
   e.g.(defpseudolass css-empty \"empty\")."
   ([pseudoclass]
-   (let [compiles-to (str pseudoclass)]
-     `(defpseudoclass ~pseudoclass ~compiles-to)))
+   `(defpseudoclass ~pseudoclass ~(str pseudoclass)))
   ([identifier css-pseudoclass]
    `(def ~identifier (CSSPseudoClass. ~css-pseudoclass))))
 
@@ -158,10 +156,9 @@
   (css-not :p) ... compiles-to   \"not(p)\", which selects all descendants which are
   not a paragraph."
   ([pseudoclass]
-   (let [compiles-to (str pseudoclass)]
-     `(defpseudoclassfn ~pseudoclass ~compiles-to)))
+   `(defpseudoclassfn ~pseudoclass ~(str pseudoclass)))
   ([pseudoclass compiles-to]
-   `(def ~pseudoclass (fn [arg#] (CSSPseudoClassFn. ~compiles-to arg#)))))
+   `(defn ~pseudoclass [arg#] (CSSPseudoClassFn. ~compiles-to arg#))))
 
 (defmacro defpseudoelement
   "Defines a CSS pseudoelement. A CSS pseudoelement activates some CSS properties on
@@ -176,8 +173,7 @@
   of every paragraph in an element with class .abc to have the first letter significantly
   bigger than the rest of the paragraph."
   ([pseudoelement]
-   (let [compiles-to (str pseudoelement)]
-     `(def ~pseudoelement (CSSPseudoElement. ~compiles-to)))))
+   `(def ~pseudoelement (CSSPseudoElement. ~(str pseudoelement)))))
 
 (defmacro defcombinatorselector
   "Defines a combinator selector function which describes relationships between its
@@ -199,7 +195,7 @@
            [:.def (child-selector :p :#ghi)]]
   compiles to   \".abc .def, .abc > p > #ghi\""
   [selector-name compiles-to]
-  `(def ~selector-name (fn [& children#] (CSSCombinator. ~compiles-to children#))))
+  `(defn ~selector-name [& children#] (CSSCombinator. ~compiles-to children#)))
 
 (defmacro defcssfn
   "Defines a CSS function. In most cases, you do NOT need to define a special compile-fn
@@ -224,26 +220,23 @@
   (defcssfn my-clj-fn \"css-fn\" spacejoin)
   (my-clj-fn (u/s 20) (u/ms 500))   ... compiles to   \"css-fn(20s 500ms)\""
   ([fn-name]
-   (let [compiles-to (str fn-name)]
-     `(defcssfn ~fn-name ~compiles-to nil)))
+   `(defcssfn ~fn-name ~(str fn-name) nil))
   ([fn-name css-fn-or-fn-tail]
    (condp instance? css-fn-or-fn-tail String `(defcssfn ~fn-name ~css-fn-or-fn-tail nil)
-                                      PersistentList (let [compiles-to (str fn-name)]
-                                                       `(defcssfn ~fn-name ~compiles-to ~css-fn-or-fn-tail))
-                                      IFn (let [compiles-to (str fn-name)]
-                                            `(defcssfn ~fn-name ~compiles-to ~css-fn-or-fn-tail))
+                                      PersistentList `(defcssfn ~fn-name ~(str fn-name) ~css-fn-or-fn-tail)
+                                      IFn `(defcssfn ~fn-name ~(str fn-name) ~css-fn-or-fn-tail)
                                       (throw (IllegalArgumentException.
                                                (str "Error defining a CSS function " fn-name " with arity(2):"
                                                     "\nThe second argument " css-fn-or-fn-tail " is"
                                                     " neither a string nor a function.")))))
   ([clojure-fn-name compiles-to compile-fn]
-   `(def ~clojure-fn-name (fn [& args#] (CSSFunction. ~compiles-to ~compile-fn args#)))))
+   `(defn ~clojure-fn-name [& args#] (CSSFunction. ~compiles-to ~compile-fn args#))))
 
 (defmacro cartesian-product
   "Given any number of seqs, this function returns a lazy sequence of all possible
   combinations of taking 1 element from each of the input sequences."
   [& seqs]
-  (let [w-bindings (map #(vector (gensym) %) seqs)
-        binding-syms (mapv first w-bindings)
-        for-bindings (vec (apply concat w-bindings))]
-    `(for ~for-bindings ~binding-syms)))
+  (let [with-bindings (map #(vector (gensym) %) seqs)
+        binding-symbols (mapv first with-bindings)
+        for-bindings (vec (apply concat with-bindings))]
+    `(for ~for-bindings ~binding-symbols)))
