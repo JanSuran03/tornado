@@ -143,11 +143,12 @@
 
 #?(:clj
    (defmacro defcssfn
-     "Creates a cssfn function which which takes any number of arguments and creates
+     "Creates a CSS function which takes any number of arguments and
+     creates
      a CSSFunction record for future compilation.
 
      Defcssfn can take 1 argument, which creates the function with the same name in CSS
-     and it will be expanded with str/join \", \" (default function - commajoin):
+     and it will be expanded with str/join \", \" (default function - comma-join):
      (defcssfn some-fn) => my.namespace/some-fn
      (some-fn \"arg1\" 42 (px 15)) ... compiles to   \"some-fn(arg1, 42, 15px)\"
 
@@ -155,10 +156,10 @@
      (defcssfn css-min \"min\") => my.namespace/css-min
      (css-min (px 500) (vw 60)) ... compiles to   \"min(500px, 60vw)\"
 
-     or the 2nd argument can be a compiling function (most commonly spacejoin, commajoin
+     or the 2nd argument can be a compiling function (most commonly space-join, comma-join
      or single-arg for separating the args, you can also define a special function for
      that, but it should not ever be needed; read docs to these 3 functions):
-     (defcssfn calc spacejoin)
+     (defcssfn calc space-join)
      (calc (px 500) add 3 mul (vw 5)) ... \"calc(500px + 3 * 5vw)\"
 
      you can also give defcssfn 3 arguments, where the 2nd one will be a special string
@@ -394,7 +395,7 @@
 (def ^{:doc "CSS pseudoselector \"invalid\". Used as a value, e.g.:
              [:.some-sel {:width (px 100)}
               [invalid
-               [:.err-msg {:display :flex}]]"}
+               [:.err-msg {:display :flex}]]]"}
   invalid sel/invalid)
 
 (def ^{:doc "CSS pseudoselector \"last-child\". Used as a value, e.g.:
@@ -675,13 +676,13 @@
   with \"media\" identifier:
 
   (at-media {:screen    :only
-           :max-width (px 600)
-           :min-width (px 800}
-           [:& {:margin [[(px 15 0 (px 15) (px 20]]
-           [:.abc #:def {:margin  (px 20)
-                         :padding [[(px 30) (px 15)]]
-             [:span {:background-color (mix-colors :red :green)]]
-           [:footer {:font-size (em 1)])
+             :max-width (px 600)
+             :min-width (px 800)}
+             [:& {:margin (join 15 0 15 20)}]
+             [:.abc #:def {:margin  (px 20)
+                           :padding (join 30 15)}
+               [:span {:background-color (mix-colors :red :green)}]]
+             [:footer {:font-size (em 1)}])
 
   The :& selector selects the current element.
   As you can see, you can nest the affected CSS hiccup how you only want.
@@ -692,8 +693,8 @@
   {:screen    true
    :speech    false
    :max-width (px 600)
-   :min-width (px 800}
-   => @media screen and not speech and (min-width: 600px) and (max-width: 800px) {..."
+   :min-width (px 800)}
+   => @media screen and not speech and (min-width: 600px) and (max-width: 800px) {...}"
   [rules & changes] (apply at-rules/at-media rules changes))
 
 (defn at-font-face
@@ -709,8 +710,8 @@
   This function can receive any number of props maps so that you can also write
   the example above this way:
 
-  {:src         [[(url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2)]]}
-  {:src         [[(url \"../webfonts/woff/roboto.woff\") (css-format :woff)]]
+  {:src         (join (url \"../webfonts/woff2/roboto.woff2\") (css-format :woff2))}
+  {:src         (join (url \"../webfonts/woff/roboto.woff\") (css-format :woff))
    :font-family \"Roboto\"
    :font-weight :normal
    :font-style  :italic}"
@@ -742,15 +743,15 @@
         (list
            fade-in-opacity
            [:.some-element {:animation-duration (ms 500)
-                            :animation-name     fade-in-opacity)}]
+                            :animation-name     fade-in-opacity}]
            [:#another-element {:animation-name  fade-in-opacity
                                :animation-delay (s 1.5)}]))
 
      You can also define from & to progress animations:
 
      (defkeyframes translate-animation
-                   [:from {:transform (translate (px 100) (px 200)}]
-                   [:to {:transform (translate (px 200) (px 400)}])"
+                   [:from {:transform (translate (px 100) (px 200))}]
+                   [:to {:transform (translate (px 200) (px 400))}])"
      [animation-name & frames]
      `(macros/defkeyframes ~animation-name ~@frames)))
 

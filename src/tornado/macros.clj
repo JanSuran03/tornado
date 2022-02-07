@@ -199,25 +199,25 @@
 
 (defmacro defcssfn
   "Defines a CSS function. In most cases, you do NOT need to define a special compile-fn
-  function - it should always be enough to use one of single-arg, spacejoin, commajoin.
+  function - it should always be enough to use one of single-arg, space-join, comma-join.
   All of them compile the params, but: Single-arg gives you a warning if you give it more
-  than 1 argument and compiles the args like commajoin. Commajoin compiles all its args
-  and str/joins them with a comma. Spacejoin compiles all its args and str/joins them
+  than 1 argument and compiles the args like comma-join. Comma-join compiles all its args
+  and str/joins them with a comma. Space-join compiles all its args and str/joins them
   with a space. All these function also take the compiles-to argument and put it in front
   of a bracket enclosing the str/joined arguments.
   You can give this function 1, 2 or 3 arguments:
 
-  (defcssfn translate)   (the default compile-fn is commajoin)
+  (defcssfn translate)   (the default compile-fn is comma-join)
   (translate (u/px 80) (u/css-rem 6))   ... compiles to    \"translate(80px, 6rem)\"
 
   (defcssfn css-min \"min\")
   (css-min (u/px 500) (u/vw 40) (u/cm 20))   ... compiles to   \"min(500px, 40vw, 20cm)\"
 
-  (defcssfn calc spacejoin)
+  (defcssfn calc space-join)
   (calc (u/px 200) add 3 mul (u/percent 20))   ... compiles to   \"calc(200px + 3 * 20%)\"
 
   The arity(3) can be used like this to combine both previous features of the arity(2):
-  (defcssfn my-clj-fn \"css-fn\" spacejoin)
+  (defcssfn my-clj-fn \"css-fn\" space-join)
   (my-clj-fn (u/s 20) (u/ms 500))   ... compiles to   \"css-fn(20s 500ms)\""
   ([fn-name]
    `(defcssfn ~fn-name ~(str fn-name) nil))

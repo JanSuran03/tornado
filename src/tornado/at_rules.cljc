@@ -16,25 +16,25 @@
   with \"media\" identifier:
 
   (at-media {:screen    :only
-             :max-width (u/px 600)
-             :min-width (u/px 800}
-             [:& {:margin [[(u/px 15 0 (u/px 15) (u/px 20]]
-             [:.abc #:def {:margin  (u/px 20)
-                           :padding [[(u/px 30) (u/px 15)]]
-               [:span {:background-color (colors/mix :red :green)]]
-             [:footer {:font-size (u/em 1)])
+             :max-width (px 600)
+             :min-width (px 800)}
+             [:& {:margin (join 15 0 15 20)}]
+             [:.abc #:def {:margin  (px 20)
+                           :padding (join 30 15)}
+               [:span {:background-color (mix-colors :red :green)}]]
+             [:footer {:font-size (em 1)}])
 
   The :& selector selects the current element.
   As you can see, you can nest the affected CSS hiccup how you only want.
   Special rules values: :screen :only => only screen
-                        :screen true  => screen
-                        :screen false => not screen
+                   :screen true  => screen
+                   :screen false => not screen
 
   {:screen    true
    :speech    false
-   :max-width (u/px 600)
-   :min-width (u/px 800}
-   => @media screen and not speech and (min-width: 600px) and (max-width: 800px) {..."
+   :max-width (px 600)
+   :min-width (px 800)}
+   => @media screen and not speech and (min-width: 600px) and (max-width: 800px) {...}"
   [rules & changes]
   (cssatrule "media" {:rules   rules
                       :changes changes}))
@@ -44,7 +44,7 @@
   props-maps look like:
 
   {:src         [[(f/url \"../webfonts/woff2/roboto.woff2\") (f/css-format :woff2)]
-                 [(f/url \"../webfonts/woff/roboto.woff\") (f/css-format :woff)]])
+                 [(f/url \"../webfonts/woff/roboto.woff\") (f/css-format :woff)]]
    :font-family \"Roboto\"
    :font-weight :normal
    :font-style  :italic}

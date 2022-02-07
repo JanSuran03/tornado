@@ -7,6 +7,10 @@
             [clojure.string :as str])
   #?(:clj (:import (tornado.types CSSUnit))))
 
+#?(:cljs (def js-str (type "")))
+(def str-type #?(:clj  String
+                 :cljs js-str))
+
 (defn math-round [x]
   #?(:clj  (Math/round (float x))
      :cljs (js/Math.round x)))

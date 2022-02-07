@@ -16,21 +16,19 @@
      :cljs (t/CSSColor. type value)))
 
 (defn get-color-type
-  "Returns the type of a given color, either :type of a CSSColor record or the
+  "Returns the type of the given color, either :type of a CSSColor record or the
   argument's class. If the class cannot represent a CSS color, throws an exception."
   [color]
   (condp = (type color) CSS-Color (:type color)
-                        #?(:clj  String
-                           :cljs (type "")) #?(:clj  String
-                                               :cljs (type ""))
+                        util/str-type util/str-type
                         Keyword Keyword
                         Symbol Symbol
                         (util/exception
                           (str "The given color is none of a tornado CSSColor record, color keyword,"
                                " color symbol or a string: " color))))
 
-(defn color->1-wd
-  "Assumes that clojure.core/name can be casted to the argument. Transforms all 3 versions
+(defn color->1-word
+  "Assumes that clojure.core/name can be cast to the argument. Transforms all 3 versions
   (string, symbol, keyword) to a keyword with removed dashes (e.g. 'dark-red -> :darkred)."
   [color]
   (-> color name
@@ -274,7 +272,7 @@
   default colors (e.g. :crimson, \"dark-orchid\", 'chocolate)."
   [x]
   (when (util/valid? x)
-    (contains? default-colors (color->1-wd x))))
+    (contains? default-colors (color->1-word x))))
 
 (defn color? [x]
   ((some-fn rgb? rgba? hsl? hsla? hex? named-color?) x))
@@ -408,11 +406,11 @@
 
 (defn- try-named-color
   "Tries to get a hex-code color from default-colors map under the given key. If it does
-  not find the color, throws an expception. Otherwise, this function returns the color
+  not find the color, throws an exception. Otherwise, this function returns the color
   in hex code."
   [color]
   (if (util/valid? color)
-    (if-let [color' (get default-colors (color->1-wd color))]
+    (if-let [color' (get default-colors (color->1-word color))]
       color'
       (unknown-color-type color))
     (unknown-color-type color)))
@@ -656,7 +654,7 @@
          types (->> colors (map get-color-type) (filter string?) (#(if (seq %) % ["rgba"])))
          colors (->> colors (map (fn [color]
                                    (if (util/valid? color)
-                                     (get default-colors (color->1-wd color) color)
+                                     (get default-colors (color->1-word color) color)
                                      color))))
          some-alpha-hex? (some alpha-hex? colors)
          dominant-type (->> types frequencies (sort-by second >)

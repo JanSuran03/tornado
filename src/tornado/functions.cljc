@@ -7,14 +7,14 @@
   #?(:cljs (:require-macros [tornado.macros :refer [defcssfn]])))
 
 (defn comma-join
-  "A CSSFunction util/str-commajoin compile function. Compiles the
+  "A CSSFunction util/str-comma-join compile function. Compiles the
   function to a form <fn-name>(arg1, arg2, arg3, ...),"
   [{:keys [compiles-to args]}]
   (str compiles-to "(" (->> args (map compile-expression)
                             util/str-comma-join) ")"))
 
 (defn space-join
-  "A CSSFunction util/str-spacejoin compile function. Compiles the
+  "A CSSFunction util/str-space-join compile function. Compiles the
   function to a form <fn-name>(arg1 arg2 arg3 ...),"
   [{:keys [compiles-to args]}]
   (str compiles-to "(" (->> args (map compile-expression)
@@ -22,7 +22,7 @@
 
 (defn single-arg
   "A CSSFunction compile function. Presumes that only one arg is given.
-  If not, calls commajoin function above and gives us a warning instead."
+  If not, calls comma-join function above and gives us a warning instead."
   [{:keys [compiles-to args] :as cssfn}]
   (if (= (count args) 1)
     (str compiles-to "(" (-> args first compile-expression) ")")

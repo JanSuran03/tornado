@@ -10,8 +10,7 @@
   a keyword, a string or a symbol, return a grid-areas string:
 
   (grid-areas [(repeat 3 :header) [:. :content :.] (repeat 3 :footer)])
-  Output CSS string: ``\"header header header\" \". content .\" \"footer footer footer\"``
-  "
+  Output CSS string: ``\"header header header\" \". content .\" \"footer footer footer\"``"
   [[first-row & more :as all-rows]]
   (assert (and (every? sequential? all-rows)
                (every? #(every? util/valid? %) all-rows))

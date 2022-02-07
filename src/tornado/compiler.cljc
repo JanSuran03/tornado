@@ -15,50 +15,48 @@
                     (clojure.lang Keyword Symbol))
      :cljs (:require-macros [tornado.macros :refer [cartesian-product]])))
 
-(def CSS-Unit #?(:clj CSSUnit
-              :cljs   t/CSSUnit))
+(def CSS-Unit #?(:clj  CSSUnit
+                 :cljs t/CSSUnit))
 
-(def CSS-AtRule #?(:clj CSSAtRule
-                :cljs   t/CSSAtRule))
+(def CSS-AtRule #?(:clj  CSSAtRule
+                   :cljs t/CSSAtRule))
 
-(def CSS-Function #?(:clj CSSFunction
-                  :cljs   t/CSSFunction))
+(def CSS-Function #?(:clj  CSSFunction
+                     :cljs t/CSSFunction))
 
-(def CSS-Color #?(:clj CSSColor
-               :cljs   t/CSSColor))
+(def CSS-Color #?(:clj  CSSColor
+                  :cljs t/CSSColor))
 
-(def CSS-Combinator #?(:clj CSSCombinator
-                    :cljs   t/CSSCombinator))
+(def CSS-Combinator #?(:clj  CSSCombinator
+                       :cljs t/CSSCombinator))
 
-(def CSS-Attribute #?(:clj CSSAttributeSelector
-                   :cljs   t/CSSAttributeSelector))
+(def CSS-Attribute #?(:clj  CSSAttributeSelector
+                      :cljs t/CSSAttributeSelector))
 
-(def CSS-PseudoClass #?(:clj CSSPseudoClass
-                     :cljs   t/CSSPseudoClass))
+(def CSS-PseudoClass #?(:clj  CSSPseudoClass
+                        :cljs t/CSSPseudoClass))
 
-(def CSS-PseudoElement #?(:clj CSSPseudoElement
-                       :cljs   t/CSSPseudoElement))
+(def CSS-PseudoElement #?(:clj  CSSPseudoElement
+                          :cljs t/CSSPseudoElement))
 
-(def CSS-PseudoClassFn #?(:clj CSSPseudoClassFn
-                       :cljs   t/CSSPseudoClassFn))
+(def CSS-PseudoClassFn #?(:clj  CSSPseudoClassFn
+                          :cljs t/CSSPseudoClassFn))
 
-(def ^{:dynamic true
-       :doc     "The current flags for a tornado build compilation:
+(def ^:dynamic *flags*
+  "The current flags for a tornado build compilation:
 
-             :indent-length - Specifies, how many indentation spaces should be in the compiled
-                              CSS file after any nesting in @rule or params map. Defaults to 4.
+  :indent-length - Specifies, how many indentation spaces should be in the compiled
+                   CSS file after any nesting in @rule or params map. Defaults to 4.
 
-             :pretty-print? - Specifies, whether the compiled CSS should be pretty printed.
-                              Defaults to true. If set to false, the CSS file will be compressed
-                              after compilation (removal of unnecessary characters like spaces
-                              and newlines) to make the CSS file a bit smaller.
+  :pretty-print? - Specifies, whether the compiled CSS should be pretty printed.
+                   Defaults to true. If set to false, the CSS file will be compressed
+                   after compilation (removal of unnecessary characters like spaces
+                   and newlines) to make the CSS file a bit smaller.
 
-             :output-to     - Specifies, where the compiled CSS file should be saved.
-
-             _show-time     - When set to true, elapsed time will be printed."}
-  *flags* {:indent-length 4
-           :pretty-print? true
-           :output-to     nil})
+  :output-to     - Specifies, where the compiled CSS file should be saved."
+  {:indent-length 4
+   :pretty-print? true
+   :output-to     nil})
 
 (def ^:dynamic *compress?* false)
 
@@ -107,7 +105,7 @@
              :cljs (fn [sel]
                        (cond (keyword? sel) Keyword
                              (symbol? sel) Symbol
-                             (string? sel) (type "")
+                             (string? sel) util/js-str
                              (instance? CSS-Attribute sel) CSS-Attribute
                              (instance? CSS-PseudoClass sel) CSS-PseudoClass
                              (instance? CSS-PseudoElement sel) CSS-PseudoElement
@@ -122,8 +120,7 @@
   [selector]
   (name selector))
 
-(defmethod compile-selector #?(:clj  String
-                               :cljs (type ""))
+(defmethod compile-selector util/str-type
   [selector]
   (name selector))
 
@@ -150,7 +147,7 @@
        util/str-space-join))
 
 (defn compile-selectors-sequence
-  "Given a selectors path, which can contain special selectors, this function
+  "Given a path of selectors, which can contain special selectors, this function
   generates a CSS string from the selectors."
   [selectors-path]
   (->> selectors-path (reduce (fn [selectors next-selector]
@@ -287,19 +284,20 @@
   (compile-expression [[(u/px 15) (u/percent 20)] [:red :chocolate]])
   => \"15px 20%, #FF0000 #D2691E\""
   [expr]
-  (cond (and (util/valid? expr)
-             (get colors/default-colors (colors/color->1-wd expr))) (get colors/default-colors (colors/color->1-wd expr))
-        (get calc-keywords expr) (get calc-keywords expr)
-        (util/valid? expr) (name expr)
-        (number? expr) (util/int* expr)
-        (record? expr) (compile-css-record expr)
-        (and (sequential? expr)
-             (every? sequential? expr)) (->> expr (map #(->> % (map compile-expression)
-                                                             util/str-space-join))
-                                             util/str-comma-join)
-        :else (util/exception
-                (str "None of a CSS unit, CSS function, CSS at-rule, a keyword a string, a number or"
-                     " a sequential structure consisting of more sequential structures:\n" expr))))
+  (if-let [as-color-hex (when (util/valid? expr)
+                          (get colors/default-colors (colors/color->1-word expr)))]
+    as-color-hex
+    (cond (get calc-keywords expr) (get calc-keywords expr)
+          (util/valid? expr) (name expr)
+          (number? expr) (util/int* expr)
+          (record? expr) (compile-css-record expr)
+          (and (sequential? expr)
+               (every? sequential? expr)) (->> expr (map #(->> % (map compile-expression)
+                                                               util/str-space-join))
+                                               util/str-comma-join)
+          :else (util/exception
+                  (str "None of a CSS unit, CSS function, CSS at-rule, a keyword a string, a number or"
+                       " a sequential structure consisting of more sequential structures:\n" expr)))))
 
 (defn compile-attributes-map
   "Compiles an attributes map, returns a sequence of [compiled-attribute compiled-value]."
@@ -382,7 +380,7 @@
   "A special map for generating media queries rules, e.g.:
   (tornado.at-rules/at-media {:rules {:screen  :only   -> \"only screen\"
                                       :screen  false   -> \"not screen\"
-                                      :screen  true    -> \"screen\"} ... "
+                                      :screen  true    -> \"screen\"} ... })"
   {:only #(str "only " (name %))
    true  name
    false #(str "not " (name %))})
@@ -448,7 +446,7 @@
   elements. Besides :params, which is returned as a map, since there cannot be more
   than 1 params map.
   Including incorrect elements or failing to comply the right order of the elements
-  (selector -> & more-selectors -> maybe-params -> & maybe-children & maybe-at-media)
+  [selector &more-selectors? params? &<children? at-media?*>]
   will throw a detailed error message."
   [hiccup]
   (as-> hiccup <> (reduce (fn [{:keys [selectors params children at-media] :as spc-map} hiccup-element]
@@ -576,7 +574,7 @@
 
 (defn compile-all-selectors-params-combinations
   "Given a prepared hiccup vector (with precalculated and simplified combinations of all
-  selectors, children and params, this function generates a CSS string from the data."
+  selectors, children and params), this function generates a CSS string from the data."
   [prepared-hiccup]
   (->> prepared-hiccup (map compile-selectors-and-params)
        (remove nil?)
