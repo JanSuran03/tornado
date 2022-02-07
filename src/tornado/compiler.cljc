@@ -1,6 +1,6 @@
 (ns tornado.compiler
-  "The Tornado compiler, where you should only care about these 3 functions:
-  css, repl-css, compile-expression."
+  "The Tornado compiler, where you should only care about these 4 functions:
+  css, repl-css, compile-expression, html-style."
   (:require [tornado.types :as t]
             [tornado.at-rules :as at-rules]
             [tornado.util :as util]
@@ -8,7 +8,8 @@
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
             [tornado.compression :as compression]
-            #?(:clj [tornado.macros :as m]))
+            #?(:clj [tornado.macros :as m])
+            [clojure.pprint :as pp])
   #?(:clj  (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                                    CSSCombinator CSSAttributeSelector
                                    CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
@@ -311,7 +312,7 @@
   "Compiles an attributes map and translates the compiled data to CSS:
   (attr-map-to-css {:width            (units/percent 50)
                     :margin           [[0 (units/px 15) (units/css-rem 3) :auto]]
-                    :background-color (colors/rotate-hue \"#ff0000\" 60)}
+                    :background-color (colors/rotate-hue \"#ff0000\" 60)})
   => width: 50%;
      margin: 0 15px rem3 auto;
      background-color: hsl(60 1 0.5);"
@@ -456,6 +457,7 @@
                                                         (map? hiccup-element)) :params
                                                    (vector? hiccup-element) :children
                                                    (at-rules/at-media? hiccup-element) :at-media
+                                                   (at-rules/at-font-face? hiccup-element) :at-font-face
                                                    :else (util/exception
                                                            (str "Invalid hiccup element: " hiccup-element "\nin"
                                                                 " hiccup: " hiccup "\nNone from a class, id,"
@@ -474,10 +476,11 @@
                                        " than one parameters map. At-font-face can be included anywhere in the"
                                        " hiccup vector.\nHiccup received: " hiccup))
                                 (update spc-map belongs-to conj hiccup-element))))
-                          {:selectors []
-                           :params    []
-                           :children  []
-                           :at-media  []} <>)
+                          {:selectors    []
+                           :params       []
+                           :children     []
+                           :at-media     []
+                           :at-font-face []} <>)
         (update <> :params first)))
 
 (defn- update-unevaluated-hiccup
@@ -523,7 +526,7 @@
   [parents unevaluated-hiccup hiccup-vector]
   (cond (at-rules/at-font-face? hiccup-vector) (conj unevaluated-hiccup {:at-font-face hiccup-vector})
         (at-rules/at-keyframes? hiccup-vector) (conj unevaluated-hiccup {:at-keyframes hiccup-vector})
-        :else (let [{:keys [selectors params children at-media]} (selectors-params-children hiccup-vector)
+        :else (let [{:keys [selectors params children at-media at-font-face]} (selectors-params-children hiccup-vector)
                     maybe-at-media (when (seq at-media)
                                      (as-> selectors <> (map (partial util/conjv parents) <>)
                                            (#?(:clj  m/cartesian-product
@@ -531,9 +534,8 @@
                                            (map (fn [[path media-rules]]
                                                   {:path     path
                                                    :at-media media-rules}) <>)))
-                    unevaluated-hiccup (if maybe-at-media
-                                         (reduce conj unevaluated-hiccup maybe-at-media)
-                                         unevaluated-hiccup)]
+                    unevaluated-hiccup (-> unevaluated-hiccup (into maybe-at-media)
+                                           (into (map #(hash-map :at-font-face %) at-font-face)))]
                 (if (seq children)
                   (reduce (fn [current-unevaluated-hiccup [selector child]]
                             (let [new-parents (util/conjv parents selector)

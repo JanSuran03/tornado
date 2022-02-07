@@ -15,7 +15,7 @@
 (defn compile-expression
   "Compiles an expression: a number, string, symbol or a record. If the expression is
   a vector of sequential structures, compiles each of the structures and str/joins them
-  with a space. Then, str/joins all these str/spacejoined structures with a comma.
+  with a space. Then, str/joins all these str/space-joined structures with a comma.
 
   E.g.:
   (compile-expression [[(px 15) (percent 20)] [:red :chocolate]])
@@ -64,7 +64,7 @@
                   => {:style {:width            \"500px\",
                               :background-color \"rgb(100, 150, 200) !important\",
                               :border           \"1px solid #000000\",
-                              :display          \"flex\"}"
+                              :display          \"flex\"}}"
   [attributes-map] (compiler/compile-params attributes-map))
 
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
