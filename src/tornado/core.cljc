@@ -793,3 +793,13 @@
   => \"3em 15px 4fr 3px\""
   ([value] (common/join value))
   ([unit-or-value & more-values] (apply common/join unit-or-value more-values)))
+
+(defn css-class
+  "Returns a keyword representing a CSS class. Accepts a keyword, a string or a symbol."
+  [named]
+  (common/css-class named))
+
+(defn css-id
+  "Returns a keyword representing a CSS id. Accepts a keyword, a string or a symbol."
+  [named]
+  (common/css-id named))

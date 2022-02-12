@@ -51,7 +51,7 @@
 
   (compile-expression (join (em 3) 15 (fr 4) 3)
   ; is equal to [[(em 3) (px 15) (fr 4) (px 3)]]
-  => \"3em 15px 4fr 3px\""                                       ;; TODO: wrong
+  => \"3em 15px 4fr 3px\""
   ([value]
    (px value))
   ([unit-or-value & more-values]
@@ -61,3 +61,13 @@
               (px %)
               %)
            (cons unit-or-value more-values))])))
+
+(defn css-class
+  "Returns a keyword representing a CSS class. Accepts a keyword, a string or a symbol."
+  [named]
+  (keyword (str "." (name named))))
+
+(defn css-id
+  "Returns a keyword representing a CSS id. Accepts a keyword, a string or a symbol."
+  [named]
+  (keyword (str "#" (name named))))

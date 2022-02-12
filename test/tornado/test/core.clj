@@ -4,6 +4,7 @@
             [tornado.test.colors]
             [tornado.test.common]
             [tornado.test.functions]
+            [tornado.test.nesting]
             [tornado.test.selectors]
             [tornado.test.units]))
 
@@ -11,6 +12,7 @@
   (run-tests 'tornado.test.at-rules
              'tornado.test.colors
              'tornado.test.functions
+             'tornado.test.nesting
              'tornado.test.selectors
              'tornado.test.units
              'tornado.test.common))
