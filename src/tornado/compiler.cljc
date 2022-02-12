@@ -8,8 +8,7 @@
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
             [tornado.compression :as compression]
-            #?(:clj [tornado.macros :as m])
-            [clojure.pprint :as pp])
+            #?(:clj [tornado.macros :as m]))
   #?(:clj  (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                                    CSSCombinator CSSAttributeSelector
                                    CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
@@ -526,7 +525,13 @@
   [parents unevaluated-hiccup hiccup-vector]
   (cond (at-rules/at-font-face? hiccup-vector) (conj unevaluated-hiccup {:at-font-face hiccup-vector})
         (at-rules/at-keyframes? hiccup-vector) (conj unevaluated-hiccup {:at-keyframes hiccup-vector})
-        :else (let [{:keys [selectors params children at-media at-font-face]} (selectors-params-children hiccup-vector)
+        :else (let [with-flattened-inner (-> (reduce (fn [ret next-item]
+                                                       (if (seq? next-item)
+                                                         (reduce conj! ret next-item)
+                                                         (conj! ret next-item)))
+                                                     (transient []) hiccup-vector)
+                                             persistent!)
+                    {:keys [selectors params children at-media at-font-face]} (selectors-params-children with-flattened-inner)
                     maybe-at-media (when (seq at-media)
                                      (as-> selectors <> (map (partial util/conjv parents) <>)
                                            (#?(:clj  m/cartesian-product
