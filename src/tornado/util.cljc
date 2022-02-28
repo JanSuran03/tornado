@@ -235,8 +235,8 @@
 
 (defn some-instance?
   "Returns true if the expression is an instance of any from the given classes."
-  [expr & instances]
-  (some #(instance? % expr) instances))
+  [expr & classes]
+  (some #(instance? % expr) classes))
 
 (defn prune-nils
   "Given a map, removes all keys having nil value. If the pruned map is empty, returns nil."

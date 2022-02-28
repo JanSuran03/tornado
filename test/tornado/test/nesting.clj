@@ -3,8 +3,7 @@
             [tornado.core :refer :all]))
 
 (defmacro test-all-equal [& xs]
-  (let [as-css (mapv #(list css %) xs)]
-    `(is (= ~@as-css))))
+  `(is (= ~@(map #(list css %) xs))))
 
 (deftest map-for-expansion
   (let [both-map-and-for

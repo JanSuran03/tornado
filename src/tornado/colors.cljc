@@ -8,8 +8,8 @@
   #?(:clj (:import (tornado.types CSSColor)
                    (clojure.lang Keyword Symbol))))
 
-(def CSS-Color #?(:clj CSSColor
-               :cljs   t/CSSColor))
+(def CSS-Color #?(:clj  CSSColor
+                  :cljs t/CSSColor))
 
 (defn color [type value]
   #?(:clj  (CSSColor. type value)
@@ -593,7 +593,8 @@
                        the colors are converted to the same type by a function 'mix-colors'"
             :arglists '([color-type colors])}
           -mix-colors
-          first)
+          (fn [color-type _]
+            color-type))
 
 (defmethod -mix-colors "rgb"
   [_ colors]
