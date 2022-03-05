@@ -9,6 +9,12 @@ A lot of defs and fully variadic defmacros in tornado.core were rewritten to def
 
 Some clj?s defs were rewritten to better match conventions by correctly differentiating between records and protocols.
 
+BUGFIX: Fixed mixing of colors.
+
+BUGFIX: At-font-face can now be placed inside the hiccup as well (could be placed only at the top until now).
+
+NEW FEATURE: Enabled unnesting of seqs (created with e.g. `map` and `for`).
+
 ## 0.2.8
 Added much more dynamism to the "join" common function:
 ```clojure
