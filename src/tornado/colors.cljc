@@ -271,7 +271,7 @@
   "Returns true if the given color is in the name form and if it is contained in the
   default colors (e.g. :crimson, \"dark-orchid\", 'chocolate)."
   [x]
-  (when (util/valid? x)
+  (when (util/named? x)
     (contains? default-colors (color->1-word x))))
 
 (defn color? [x]
@@ -409,7 +409,7 @@
   not find the color, throws an exception. Otherwise, this function returns the color
   in hex code."
   [color]
-  (if (util/valid? color)
+  (if (util/named? color)
     (if-let [color' (get default-colors (color->1-word color))]
       color'
       (unknown-color-type color))
@@ -649,12 +649,12 @@
      (unknown-color-type color)))
   ([color1 & more]
    (let [colors (cons color1 more)
-         colors (map #(if (and (util/valid? %) (not (str/starts-with? (name %) "#")))
+         colors (map #(if (and (util/named? %) (not (str/starts-with? (name %) "#")))
                         (try-named-color %)
                         %) colors)
          types (->> colors (map get-color-type) (filter string?) (#(if (seq %) % ["rgba"])))
          colors (->> colors (map (fn [color]
-                                   (if (util/valid? color)
+                                   (if (util/named? color)
                                      (get default-colors (color->1-word color) color)
                                      color))))
          some-alpha-hex? (some alpha-hex? colors)

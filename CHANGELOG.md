@@ -1,6 +1,37 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## 0.2.10
+Fixed a very well hidden bug with at-media rules which caused the "not" keyword to be omitted.
+
+Added an option useful for grid areas which allows to specify grid areas as namespaced keywords which allows to differentiate between similar grid areas: E.g.
+```clojure
+[:.foo {:display    :grid
+        :grid-areas (grid-areas [(repeat 2 :header) (repeat 2 ::content) (repeat 2 :foo/ter)])}
+  [:.bar {:grid-area ::content}]
+  [:.footer {:grid-area :foo/ter}]
+  [:.baz {:grid-area :header}]]
+```
+will compile into
+```css
+.foo {
+    display: grid;
+    grid-areas: "header header" "user-somens--content user-somens--content" "foo--ter foo--ter";
+}
+
+.foo .bar {
+    grid-area: user-somens--content;
+}
+
+.foo .footer {
+    grid-area: foo--ter;
+}
+
+.foo .baz {
+    grid-area: header;
+}
+```
+
 ## 0.2.9
 Added test namespaces (right at the beginning of patch 0.2.9) which will be run before every release and extended as new features come out.
 

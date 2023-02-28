@@ -201,22 +201,29 @@
                               :cljs t/CSSPseudoClassFn)
                            #?(:clj  CSSPseudoElement
                               :cljs t/CSSPseudoElement))
-      (and (util/valid? x)
+      (and (util/named? x)
            (contains? special-selectors (name x)))))
+
+(defn class-or-id-str-form [x]
+  (and x
+       (util/named? x)
+       (name x)))
 
 (defn css-class?
   "Returns true if the argument is a keyword, a string or a symbol
   and (name argument) starts with \".\"."
   [x]
-  (and (-> x util/get-str-form (or "") (str/starts-with? "."))
-       (> (count (name x)) 1)))
+  (when-let [s (class-or-id-str-form x)]
+    (and (str/starts-with? s ".")
+         (> (count s) 1))))
 
 (defn css-id?
   "Returns true if the argument is a keyword, a string or a symbol
   and (name argument) starts with \"#\"."
   [x]
-  (and (-> x util/get-str-form (or "") (str/starts-with? "#"))
-       (> (count (name x)) 1)))
+  (when-let [s (class-or-id-str-form x)]
+    (and (str/starts-with? s "#")
+         (> (count s) 1))))
 
 (defn html-tag?
   "Returns true if the argument is a keyword, a string or a symbol

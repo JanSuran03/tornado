@@ -1,6 +1,8 @@
 (ns tornado.test.common
-  (:require [clojure.test :refer :all]
-            [tornado.core :refer :all]))
+  (:require [clojure.string :as str]
+            [clojure.test :refer :all]
+            [tornado.core :refer :all]
+            [tornado.util :as util]))
 
 (defmacro commons-test-template [& body]
   `(are [x# y#] (= (compile-expression x#) y#)
@@ -25,4 +27,11 @@
     "\"header header header\" \". content .\" \"footer footer footer\""
 
     (grid-areas (for [i (range 3)] (repeat 5 (str "xyz-" i))))
-    "\"xyz-0 xyz-0 xyz-0 xyz-0 xyz-0\" \"xyz-1 xyz-1 xyz-1 xyz-1 xyz-1\" \"xyz-2 xyz-2 xyz-2 xyz-2 xyz-2\""))
+    "\"xyz-0 xyz-0 xyz-0 xyz-0 xyz-0\" \"xyz-1 xyz-1 xyz-1 xyz-1 xyz-1\" \"xyz-2 xyz-2 xyz-2 xyz-2 xyz-2\""
+
+    (grid-areas [(repeat 3 :header) (repeat 3 ::content) (repeat 3 :foo/ter)])
+    (str "\"header header header\" \""
+         (str/replace (str/join " " (map util/ns-kw->str (repeat 3 ::content))) #"\/" "--")
+         "\" \""
+         (str/replace (str/join " " (map util/ns-kw->str (repeat 3 :foo/ter))) #"\/" "--")
+         "\"")))

@@ -3,7 +3,7 @@
   css, repl-css, compile-expression, html-style."
   (:require [tornado.types :as t]
             [tornado.at-rules :as at-rules]
-            [tornado.util :as util]
+            [tornado.util :as util :refer [*compress?*]]
             [clojure.string :as str]
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
@@ -58,8 +58,6 @@
    :pretty-print? true
    :output-to     nil})
 
-(def ^:dynamic *compress?* false)
-
 (defn update-in-keys
   "Given a map or a record, a function, a common partial path and keys which will be
   appended to that path, updates all keys in the given map with that function."
@@ -105,7 +103,7 @@
              :cljs (fn [sel]
                        (cond (keyword? sel) Keyword
                              (symbol? sel) Symbol
-                             (string? sel) util/js-str
+                             (string? sel) util/JS-STR-TYPE
                              (instance? CSS-Attribute sel) CSS-Attribute
                              (instance? CSS-PseudoClass sel) CSS-PseudoClass
                              (instance? CSS-PseudoElement sel) CSS-PseudoElement
@@ -284,11 +282,11 @@
   (compile-expression [[(u/px 15) (u/percent 20)] [:red :chocolate]])
   => \"15px 20%, #FF0000 #D2691E\""
   [expr]
-  (if-let [as-color-hex (when (util/valid? expr)
+  (if-let [as-color-hex (when (util/named? expr)
                           (get colors/default-colors (colors/color->1-word expr)))]
     as-color-hex
     (cond (get calc-keywords expr) (get calc-keywords expr)
-          (util/valid? expr) (name expr)
+          (util/named? expr) (util/ns-kw->str expr)
           (number? expr) (util/int* expr)
           (record? expr) (compile-css-record expr)
           (and (sequential? expr)
@@ -390,7 +388,7 @@
   (let [paths *media-query-parents*
         {:keys [rules changes]} value
         compiled-media-rules (->> (for [[param value] rules]
-                                    (if-let [param-fn (get special-media-rules-map value)]
+                                    (if-some [param-fn (get special-media-rules-map value)]
                                       (param-fn param)
                                       (if-let [compiled-param (util/get-str-form param)]
                                         (let [compiled-unit (compile-expression value)]

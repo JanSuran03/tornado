@@ -7,9 +7,9 @@
             [clojure.string :as str])
   #?(:clj (:import (tornado.types CSSUnit))))
 
-#?(:cljs (def js-str (type "")))
+#?(:cljs (def JS-STR-TYPE (type "")))
 (def str-type #?(:clj  String
-                 :cljs js-str))
+                 :cljs JS-STR-TYPE))
 
 (defn math-round [x]
   #?(:clj  (Math/round (float x))
@@ -39,7 +39,7 @@
     (#?(:clj  IllegalArgumentException.
         :cljs js/Error.) arg)))
 
-(defn valid?
+(defn named?
   "Returns true if the argument is a symbol, a keyword or a string."
   [x]
   (or (keyword? x)
@@ -50,7 +50,7 @@
   "If the argument is a symbol, a keyword or a string, returns its string form.
    Otherwise, returns nil."
   [x]
-  (when (valid? x)
+  (when (named? x)
     (name x)))
 
 (defn int*
@@ -221,9 +221,9 @@
   "Equal to (conj (vec v) value)."
   [v value]
   (cond (sequential? v) (conj (if (vector? v)
-                                   v
-                                   (vec v))
-                                 value)
+                                v
+                                (vec v))
+                              value)
         (nil? v) [value]
         :else (exception (str "Not sequential, nor `nil`: " v))))
 
@@ -245,3 +245,14 @@
                    (nil? v)))
        (into {})
        not-empty))
+
+(def ^:dynamic *compress?*
+  "Moved from this ns to util in version 0.2.10 to prevent cyclic dependency needed in `ns-kw->str`."
+  false)
+
+(defn ns-kw->str [expr]
+  (if (and (keyword? expr)
+           (namespace expr))
+    (-> (str (namespace expr) (if *compress?* "-" "--") (name expr))
+        (str/replace #"\." "-"))
+    (name expr)))
