@@ -4,7 +4,7 @@
 
 (deftest compress-whitespace
   (is (= " a b c "
-         (compression/compress-whitespace"   a   \n b c   "))))
+         (compression/compress-whitespace "   a   \n b c   "))))
 
 (deftest strip-whitespace-around
   (is (= "[]{};,:()"
