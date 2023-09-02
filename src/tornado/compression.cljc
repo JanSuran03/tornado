@@ -15,7 +15,7 @@
 
 (defn compress
   "Compress a stylesheet by removing any extra whitespace."
-  ^String [expr]
+  ^String [^String expr]
   (-> expr
       compress-whitespace
       strip-whitespace-around))
