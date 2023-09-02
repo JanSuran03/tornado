@@ -6,15 +6,14 @@ data structures with focus on simplicity.
 ## Changelog
 is available [here](CHANGELOG.md)
 
+[![Build](https://github.com/JanSuran03/tornado/actions/workflows/clojure.yml/badge.svg)](https://github.com/JanSuran03/tornado/actions/workflows/clojure.yml)
+
 ## Benefits
-- if you know Garden or Hiccup, nothing new can surprise you in Tornado
+- simple description as data - vectors for selectors, maps for styles, like in Hiccup or Garden
 - works in both Clojure and ClojureScript
-- the CSS data description is very simple - similar to Hiccup or Garden + everything can be found in a single namespace, you do not have to think about where to find what you need
-- the code is easy to read, the compilation part is logical
-- the library is very fast
+- everything can be found in a single namespace and there aren't any collisions, you can just `:refer :all`
 
-## Usage
-
+## Clojars builds
 
 [![Clojars Project](https://img.shields.io/clojars/v/org.clojars.jansuran03/tornado.svg)](https://clojars.org/org.clojars.jansuran03/tornado)
 
@@ -102,10 +101,13 @@ ClojureScript:
 - The code could be simpler on some places.
 - More examples in the OrgPad document.
 
+## Contributions
+- are welcome
+
 ## Contact
 
-Although there are more ways to contact me, you can send me an e-mail to **suran (dot) orgpad (at) gmail (dot) com**. I will
-always try to reply as soon as possible. I am also on discord: **Honza_Suran#6703**
+Although there are more ways to contact me, you can e-mail me to **honzik (dot) suran (at) seznam (dot) cz**. I will
+always try to reply ASAP. I am also on discord: **Honza_Suran#6703**
 
 ## License
 
