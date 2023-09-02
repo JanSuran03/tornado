@@ -15,14 +15,13 @@ is available [here](CHANGELOG.md)
 
 ## Clojars builds
 
-[![Clojars Project](https://img.shields.io/clojars/v/org.clojars.jansuran03/tornado.svg)](https://clojars.org/org.clojars.jansuran03/tornado)
-
+[![Clojars Project](http://clojars.org/org.clojars.jansuran03/tornado/latest-version.svg)](http://clojars.org/org.clojars.jansuran03/tornado)
 
 ### [Lein-tornado](https://github.com/JanSuran03/lein-tornado)
 
 A hot-code reloading plugin for automatic compilation of Tornado stylesheets:
 
-[![Clojars Project](https://img.shields.io/clojars/v/org.clojars.jansuran03/lein-tornado.svg)](https://clojars.org/org.clojars.jansuran03/lein-tornado)
+[![Clojars Project](http://clojars.org/org.clojars.jansuran03/lein-tornado/latest-version.svg)](http://clojars.org/org.clojars.jansuran03/lein-tornado)
 
 
 If you are familiar with [garden](https://github.com/noprompt/garden), you should not have any problems with switching to Tornado.
