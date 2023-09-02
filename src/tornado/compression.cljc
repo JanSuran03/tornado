@@ -1,7 +1,6 @@
 (ns tornado.compression
   "A namespace for compression of the compiled CSS file."
-  (:require
-   [clojure.string :as str]))
+  (:require [clojure.string :as str]))
 
 
 (defn compress-whitespace
