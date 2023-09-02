@@ -13,6 +13,6 @@
 (deftest compress
   (is (= "div{border-color:rgb(255,255,255);}"
          (compression/compress
-          "div {
-               border-color: rgb( 255, 255, 255);
-           }"))))
+           "div {
+                border-color: rgb( 255, 255, 255);
+            }"))))
