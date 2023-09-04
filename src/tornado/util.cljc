@@ -1,10 +1,11 @@
 (ns tornado.util
   "Utility functions used internally in Tornado."
-  (:require [tornado.types :as t]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
+            [tornado.context :as ctx]
+            [tornado.types :as t]
             [#?(:clj  clojure.edn
-                :cljs cljs.reader) :as edn]
-            [clojure.set :as set]
-            [clojure.string :as str])
+                :cljs cljs.reader) :as edn])
   #?(:clj (:import (tornado.types CSSUnit))))
 
 #?(:cljs (def JS-STR-TYPE (type "")))
@@ -246,16 +247,21 @@
        (into {})
        not-empty))
 
-(def ^:dynamic *compress?*
-  "Moved from this ns to util in version 0.2.10 to prevent cyclic dependency needed in `ns-kw->str`."
-  false)
-
 (defn ns-kw->str [expr]
   (if (and (keyword? expr)
            (namespace expr))
-    (-> (str (namespace expr) (if *compress?* "-" "--") (name expr))
+    (-> (str (namespace expr) (if ctx/*compress?* "-" "--") (name expr))
         (str/replace #"\." "-"))
     (name expr)))
 
 (defn or-nil [x]
   (if (nil? x) "nil" x))
+
+(defn update-in-keys
+  "Given a map or a record, a function, a common partial path and keys which will be
+  appended to that path, updates all keys in the given map with that function."
+  [m f path & ks]
+  (reduce (fn [m k]
+            (update-in m (conj path k) f))
+          m
+          ks))
