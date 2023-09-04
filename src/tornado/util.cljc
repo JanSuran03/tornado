@@ -155,7 +155,7 @@
   [coll]
   (apply average coll))
 
-(defn between
+(defn between?
   "Returns true if value is smaller than or equal n1 and greater than or equal n2."
   [value n1 n2]
   (<= (min n1 n2) value (max n1 n2)))
@@ -256,3 +256,6 @@
     (-> (str (namespace expr) (if *compress?* "-" "--") (name expr))
         (str/replace #"\." "-"))
     (name expr)))
+
+(defn or-nil [x]
+  (if (nil? x) "nil" x))

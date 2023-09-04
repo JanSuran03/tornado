@@ -197,7 +197,7 @@
 (defn rgb
   "Creates an rgb CSSColor record."
   ([[red green blue]]
-   (if (every? #(util/between % 0 255) [red green blue])
+   (if (every? #(util/between? % 0 255) [red green blue])
      (color "rgb" {:red red, :green green, :blue blue})
      (util/exception (str "All values of an rgb color must be between 0 and 255: "
                           red ", " green ", " blue))))
@@ -208,7 +208,7 @@
   "Creates an rgba CSSColor record."
   ([[red green blue alpha]]
    (let [alpha (or alpha 1)]
-     (if (and (every? #(util/between % 0 255) [red green blue]) (util/between alpha 0 1))
+     (if (and (every? #(util/between? % 0 255) [red green blue]) (util/between? alpha 0 1))
        (color "rgba" {:red red, :green green, :blue blue, :alpha (util/percent->number alpha true)})
        (util/exception
          (str "All r, g, b values of an rgb color must be between 0 and 255: "

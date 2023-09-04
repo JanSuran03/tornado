@@ -1,4 +1,5 @@
-(ns tornado.colors2)
+(ns tornado.colors2
+  (:require [tornado.util :as util]))
 
 (defprotocol ICSSColor)
 
@@ -199,3 +200,64 @@
    :whitesmoke           "#F5F5F5"
    :yellow               "#FFFF00"
    :yellowgreen          "#9ACD32"})
+
+(defn rgb
+  "Creates an Rgb color record."
+  ([-rgb]
+   (let [[red green blue] (cond (map? -rgb) ((juxt :red :green :blue) -rgb)
+                                (vector? -rgb) -rgb
+                                :else (util/exception (str "Cannot build RGB color from: " (util/or-nil -rgb))))]
+     (if (every? #(and (int? %)
+                       (util/between? % 0 255))
+                 [red green blue])
+       (Rgb. red green blue)
+       (util/exception (str "All values of an rgb color must be between 0 and 255: "
+                            red ", " green ", " blue)))))
+  ([red green blue] (rgb [red green blue])))
+
+(defn rgba
+  "Creates an Rgba color record."
+  ([-rgba]
+   (let [[red green blue alpha] (cond (map? -rgba) ((juxt :red :green :blue :alpha) -rgba)
+                                      (vector? -rgba) -rgba
+                                      :else (util/exception (str "Cannot build RGBA color from: " (util/or-nil -rgba))))
+         alpha (or alpha 1)]
+     (if (and (util/between? alpha 0 1)
+              (every? #(and (int? %)
+                            (util/between? % 0 255))
+                      [red green blue]))
+       (Rgba. red green blue alpha)
+       (util/exception (str "All values of an rgba color must be between 0 and 255: "
+                            red ", " green ", " blue " and alpha between 0 and 1: " alpha)))))
+  ([red green blue alpha] (rgba [red green blue alpha])))
+
+(defn hsl
+  "Creates an Hsl color record."
+  ([-hsl]
+   (let [[hue saturation lightness] (cond (map? -hsl) ((juxt :hue :saturation :lightness) -hsl)
+                                          (vector? -hsl) -hsl
+                                          :else (util/exception (str "Cannot build HSL color from: " (util/or-nil -hsl))))]
+     (Hsl. hue (util/percent->number saturation) (util/percent->number lightness))))
+  ([hue saturation lightness] (hsl [hue saturation lightness])))
+
+(defn hsl
+  "Creates an Hsla color record."
+  ([-hsl]
+   (let [[hue saturation lightness alpha] (cond (map? -hsl) ((juxt :hue :saturation :lightness) -hsl)
+                                                (vector? -hsl) -hsl
+                                                :else (util/exception (str "Cannot build HSL color from: " (util/or-nil -hsl))))
+         alpha (or alpha 1)]
+     (Hsla. hue (util/percent->number saturation) (util/percent->number lightness) (util/percent->number alpha))))
+  ([hue saturation lightness] (hsl [hue saturation lightness])))
+
+(defn rgb? [x]
+  (instance? Rgb x))
+
+(defn rgba? [x]
+  (instance? Rgba x))
+
+(defn hsl? [x]
+  (instance? Hsl x))
+
+(defn hsla? [x]
+  (instance? Hsla x))
