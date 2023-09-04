@@ -1,47 +1,6 @@
 (ns tornado.colors2
   (:require [tornado.util :as util]))
 
-(defprotocol ICSSColor)
-
-(defprotocol ICSSAlpha)
-
-(defprotocol IHex)
-
-(defrecord Rgb [red green blue]
-  ICSSColor)
-
-(defrecord Rgba [red green blue alpha]
-  ICSSColor
-  ICSSAlpha)
-
-(defrecord Hsl [hue saturation lightness]
-  ICSSColor)
-
-(defrecord Hsla [hue saturation lightness alpha]
-  ICSSColor
-  ICSSAlpha)
-
-(defprotocol IRgbConvertible
-  (->rgb [this] "Converts a color to rgb")
-  (->rgba [this] "Converts a color to rgba"))
-
-(defprotocol IHslConvertible
-  (->hsl [this] "Converts a color to hsl")
-  (->hsla [this] "Converts a color to hsla"))
-
-(defprotocol IWithAlpha
-  (with-alpha [this] "Changes a color's alpha, keeps all color channels."))
-
-(defprotocol IWithRgb
-  (with-red [this] "Changes a color's red channel, keeps green, blue and alpha.")
-  (with-green [this] "Changes a color's green channel, keeps red, blue and alpha.")
-  (with-blue [this] "Changes a color's blue channel, keeps red, green and alpha."))
-
-(defprotocol IWithHsl
-  (with-hue [this] "Changes a color's hue, keeps saturation, lightness and alpha.")
-  (with-saturation [this] "Changes a color's saturation, keeps hue, lightness and alpha")
-  (with-lightness [this] "Changes a color's lightness, keeps hue, saturation and alpha"))
-
 (def default-colors
   "Available default colors in tornado.
   Usage: {:color            :black
@@ -201,6 +160,47 @@
    :yellow               "#FFFF00"
    :yellowgreen          "#9ACD32"})
 
+(defprotocol ICSSColor)
+
+(defprotocol ICSSAlpha)
+
+(defprotocol IHex)
+
+(defrecord Rgb [red green blue]
+  ICSSColor)
+
+(defrecord Rgba [red green blue alpha]
+  ICSSColor
+  ICSSAlpha)
+
+(defrecord Hsl [hue saturation lightness]
+  ICSSColor)
+
+(defrecord Hsla [hue saturation lightness alpha]
+  ICSSColor
+  ICSSAlpha)
+
+(defprotocol IRgbConvertible
+  (->rgb [this] "Converts a color to rgb")
+  (->rgba [this] "Converts a color to rgba"))
+
+(defprotocol IHslConvertible
+  (->hsl [this] "Converts a color to hsl")
+  (->hsla [this] "Converts a color to hsla"))
+
+(defprotocol IWithAlpha
+  (with-alpha [this] "Changes a color's alpha, keeps all color channels."))
+
+(defprotocol IWithRgb
+  (with-red [this] "Changes a color's red channel, keeps green, blue and alpha.")
+  (with-green [this] "Changes a color's green channel, keeps red, blue and alpha.")
+  (with-blue [this] "Changes a color's blue channel, keeps red, green and alpha."))
+
+(defprotocol IWithHsl
+  (with-hue [this] "Changes a color's hue, keeps saturation, lightness and alpha.")
+  (with-saturation [this] "Changes a color's saturation, keeps hue, lightness and alpha")
+  (with-lightness [this] "Changes a color's lightness, keeps hue, saturation and alpha"))
+
 (defn rgb
   "Creates an Rgb color record."
   ([-rgb]
@@ -240,7 +240,7 @@
      (Hsl. hue (util/percent->number saturation) (util/percent->number lightness))))
   ([hue saturation lightness] (hsl [hue saturation lightness])))
 
-(defn hsl
+(defn hsla
   "Creates an Hsla color record."
   ([-hsl]
    (let [[hue saturation lightness alpha] (cond (map? -hsl) ((juxt :hue :saturation :lightness) -hsl)
@@ -248,7 +248,7 @@
                                                 :else (util/exception (str "Cannot build HSL color from: " (util/or-nil -hsl))))
          alpha (or alpha 1)]
      (Hsla. hue (util/percent->number saturation) (util/percent->number lightness) (util/percent->number alpha))))
-  ([hue saturation lightness] (hsl [hue saturation lightness])))
+  ([hue saturation lightness] (hsla [hue saturation lightness])))
 
 (defn rgb? [x]
   (instance? Rgb x))
@@ -261,3 +261,52 @@
 
 (defn hsla? [x]
   (instance? Hsla x))
+
+(defn color? [x]
+  (satisfies? ICSSColor x))
+
+;; ------------------------------------- TEST -------------------------------------
+
+(defmacro with-err-out [& body]
+  `(binding [*out* *err*]
+     ~@body))
+
+(defmacro test-one
+  "All the color tests be moved to the test namespaces after being ready to replace
+  the older API, now kept here for simplicity and ease of development"
+  [test-name & body]
+  (let [[gres gfail] (repeatedly gensym)]
+    `(let [~gres (try ~@body
+                      (catch Throwable t#
+                        t#))
+           ~gfail ~(str "Failed on test case: " test-name ", form: " body)]
+       (if (or (not ~gres) (instance? Throwable ~gres))
+         (with-err-out (println (str ~gfail
+                                     (when ~gres
+                                       (str ", reason: " (.getMessage ~gres))))))))))
+
+(defmacro test-multiple
+  [test-name & forms]
+  `(do ~@(map-indexed (fn [i form]
+                        `(test-one ~(keyword (str (name test-name) "-" (inc i)))
+                                   ~form))
+                      forms)))
+
+(test-multiple :test-colors
+               (color? (rgb 1 2 3))
+               (color? (rgba 1 2 3 0.1))
+               (color? (hsl 1 1 1))
+               (color? (hsla 1 1 1))
+               (color? :darkblue)
+               (color? :dark-blue)
+               (color? 'darkblue)
+               (color? 'dark-blue)
+               (color? "darkblue")
+               (color? "dark-blue")
+               (not (color? :darqblue))
+               (color? "#123456")
+               (color? "#12345678")
+               (not (color? "123456"))
+               (not (color? "1234567"))
+               (not (color? "#12345z"))
+               (not (color? "#1234567z")))
