@@ -334,7 +334,29 @@
   (->hsla [this] (map->Hsla (assoc this :alpha 1)))
   Hsla
   (->hsl [this] (map->Hsl (dissoc this :alpha)))
-  (->hsla [this] this))
+  (->hsla [this] this)
+  Rgb
+  (->hsl [{:keys [red green blue alpha]}]
+    (let [[R' G' B' :as rgb'] (map #(/ % 255) [red green blue])
+          Cmax (apply max rgb')
+          Cmin (apply min rgb')
+          Crange (- Cmax Cmin)
+          hue (cond (zero? Crange) 0
+                    (= Cmax R') (* 60 (mod (/ (- G' B') Crange) 6))
+                    (= Cmax G') (* 60 (+ (/ (- B' R') Crange) 2))
+                    :else (* 60 (+ (/ (- R' G') Crange) 4)))
+          lightness (util/average Cmax Cmin)
+          saturation (if (zero? Crange) 0 (/ Crange (- 1 (util/math-abs (- (* 2 lightness) 1)))))
+          [H S L] [(util/math-round hue) (util/round-4d saturation) (util/round-4d lightness)]
+          [H S L] (map #(if (= (double (int %)) %)
+                          (int %)
+                          %) [H S L])]
+      (Hsl. H S L)))
+  (->hsla [this]
+    (-> this ->hsl (assoc :alpha 1) map->Hsla))
+  Rgba
+  (->hsl [this] (-> this ->rgb ->hsl))
+  (->hsla [{:keys [alpha] :as this}] (-> this ->hsl (assoc :alpha alpha) map->Hsla)))
 
 (defn rgb
   "Creates an Rgb color record."
@@ -427,7 +449,7 @@
     `(let [~gres (try ~@body
                       (catch Throwable t#
                         t#))
-           ~gfail ~(str "Failed on test case: " test-name ", form: " body)]
+           ~gfail ~(apply str "Failed on test case: " test-name ", form: " body)]
        (if (or (not ~gres) (instance? Throwable ~gres))
          (with-err-out (println (str ~gfail
                                      (when ~gres
@@ -515,10 +537,10 @@
 
 (test-multiple :to-rgb
   ;; hsl->rgb
-  (= (->rgb (Hsl. 120 1 0.5)) (rgb 0 255 0))
-  (= (->rgba (Hsl. 120 1 0.5)) (rgba 0 255 0 1))
-  (= (->rgb (Hsla. 120 1 0.5 0.42)) (rgb 0 255 0))
-  (= (->rgba (Hsla. 120 1 0.5 half)) (rgba 0 255 0 half))
+  (= (->rgb (hsl 120 1 0.5)) (rgb 0 255 0))
+  (= (->rgba (hsl 120 1 0.5)) (rgba 0 255 0 1))
+  (= (->rgb (hsla 120 1 0.5 0.42)) (rgb 0 255 0))
+  (= (->rgba (hsla 120 1 0.5 0.42)) (rgba 0 255 0 0.42))
   ;; hex->rgb
   (= (->rgb "#ff0000") (rgb 255 0 0))
   (= (->rgba "#ff0000") (rgba 255 0 0 1))
@@ -532,7 +554,10 @@
 
 (test-multiple :to-hsl
   ;; rgb->hsl
-  ;; TODO
+  (= (->hsl (rgb 0 255 0)) (hsl 120 1 0.5))
+  (= (->hsla (rgb 0 255 0)) (hsla 120 1 0.5 1))
+  (= (->hsl (rgba 0 255 0 0.42)) (hsl 120 1 0.5))
+  (= (->hsla (rgba 0 255 0 0.42)) (hsla 120 1 0.5 0.42))
   ;; hex->hsl
   ;; TODO
   ;; hsl->hsl
