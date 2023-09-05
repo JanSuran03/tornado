@@ -21,9 +21,7 @@
       :cljs js/Math.pow) x y))
 
 (defn math-abs [x]
-  #?(:clj  (Math/abs (if (ratio? x)
-                       (float x)
-                       x))
+  #?(:clj  (Math/abs (float x))
      :cljs js/Math.abs))
 
 (defn parse-float [s]
@@ -35,7 +33,7 @@
   [s]
   (subs s 0 (dec (count s))))
 
-(defn exception [arg]
+(defn exception [#?(:clj ^String arg :cljs arg)]
   (throw
     (#?(:clj  IllegalArgumentException.
         :cljs js/Error.) arg)))
@@ -265,3 +263,8 @@
             (update-in m (conj path k) f))
           m
           ks))
+
+(defn char-at
+  [s n]
+  #?(:clj  (.charAt ^String s ^int n)
+     :cljs (.at s n)))

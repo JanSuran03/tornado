@@ -1,5 +1,7 @@
 (ns tornado.colors2
-  (:require [tornado.util :as util]))
+  (:require [clojure.string :as str]
+            [tornado.context :as ctx]
+            [tornado.util :as util]))
 
 (def default-colors
   "Available default colors in tornado.
@@ -160,25 +162,14 @@
    :yellow               "#FFFF00"
    :yellowgreen          "#9ACD32"})
 
-(defprotocol ICSSColor)
+(defprotocol ICSSColor
+  (to-css [this] "Compiles the color to CSS.")
+  (->hex [this])
+  (->hex-alpha [this]))
 
 (defprotocol ICSSAlpha)
 
 (defprotocol IHex)
-
-(defrecord Rgb [red green blue]
-  ICSSColor)
-
-(defrecord Rgba [red green blue alpha]
-  ICSSColor
-  ICSSAlpha)
-
-(defrecord Hsl [hue saturation lightness]
-  ICSSColor)
-
-(defrecord Hsla [hue saturation lightness alpha]
-  ICSSColor
-  ICSSAlpha)
 
 (defprotocol IRgbConvertible
   (->rgb [this] "Converts a color to rgb")
@@ -200,6 +191,47 @@
   (with-hue [this] "Changes a color's hue, keeps saturation, lightness and alpha.")
   (with-saturation [this] "Changes a color's saturation, keeps hue, lightness and alpha")
   (with-lightness [this] "Changes a color's lightness, keeps hue, saturation and alpha"))
+
+(defrecord Rgb [red green blue]
+  ICSSColor)
+
+(defrecord Rgba [red green blue alpha]
+  ICSSColor
+  ICSSAlpha)
+
+(defrecord Hsl [hue saturation lightness]
+  ICSSColor)
+
+(defrecord Hsla [hue saturation lightness alpha]
+  ICSSColor
+  ICSSAlpha)
+
+(defn hex? [s]
+  (and (string? s)
+       (and (= (util/char-at s 0) \#)
+            (util/double-hex? (subs s 1)))))
+
+(defn non-alpha-hex? [x]
+  (and (hex? x)
+       (= (count x) 7)))
+
+(defn alpha-hex? [x]
+  (and (hex? x)
+       (= (count x) 9)))
+
+(defn color->1-word
+  "Given a named object (string/symbol/keyword) removes dashes and returns it as a keyword."
+  [color]
+  (-> color name
+      (str/replace #"\-" "")
+      keyword))
+
+(defn color-literal?
+  "Returns true iff the given color is a string/symbol/keyword and is contained in the
+  default colors map. Extra dashes are allowed."
+  [x]
+  (and (util/named? x)
+       (contains? default-colors (color->1-word x))))
 
 (defn rgb
   "Creates an Rgb color record."
@@ -263,7 +295,9 @@
   (instance? Hsla x))
 
 (defn color? [x]
-  (satisfies? ICSSColor x))
+  (or (satisfies? ICSSColor x)
+      (color-literal? x)
+      (hex? x)))
 
 ;; ------------------------------------- TEST -------------------------------------
 
@@ -292,21 +326,23 @@
                                    ~form))
                       forms)))
 
-(test-multiple :test-colors
-               (color? (rgb 1 2 3))
-               (color? (rgba 1 2 3 0.1))
-               (color? (hsl 1 1 1))
-               (color? (hsla 1 1 1))
-               (color? :darkblue)
-               (color? :dark-blue)
-               (color? 'darkblue)
-               (color? 'dark-blue)
-               (color? "darkblue")
-               (color? "dark-blue")
-               (not (color? :darqblue))
-               (color? "#123456")
-               (color? "#12345678")
-               (not (color? "123456"))
-               (not (color? "1234567"))
-               (not (color? "#12345z"))
-               (not (color? "#1234567z")))
+(test-multiple :test-color-instance
+  (color? (rgb 1 2 3))
+  (color? (rgba 1 2 3 0.1))
+  (color? (hsl 1 1 1))
+  (color? (hsla 1 1 1))
+  (color? :darkblue)
+  (color? :dark-blue)
+  (color? 'darkblue)
+  (color? 'dark-blue)
+  (color? "darkblue")
+  (color? "dark-blue")
+  (not (color? :darqblue))
+  (color? "#123456")
+  (color? "#12345678")
+  (not (color? "123456"))
+  (not (color? "1234567"))
+  (not (color? "#12345z"))
+  (not (color? "#1234567z")))
+
+
