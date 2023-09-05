@@ -334,7 +334,7 @@
            (mapv #(get util/double-hex->base10-map %) <>)
            (if (= (count <>) 3)
              (conj <> alpha)
-             (update <> 3 #(util/int* (/ % 256))))
+             (update <> 3 #(util/int* (/ % 255))))
            (rgba <>)))))
 
 ;; this function currently does not have any usage

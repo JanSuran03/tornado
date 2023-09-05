@@ -215,8 +215,7 @@
 
 (defrecord Rgba [red green blue alpha]
   ICSSColor
-  (->hex [this]
-    (->hex (->rgb this)))
+  (->hex [this] (-> this ->rgb ->hex))
   (->hex-alpha [this]
     (str (->hex (->rgb this)) (util/base10->double-hex-map (util/denormalize alpha))))
   ICSSAlpha
@@ -252,14 +251,6 @@
         (if (= alpha 1)
           (color->css "hsl" hue saturation lightness)
           (color->css "hsla" hue saturation lightness alpha))))))
-(extend-protocol IRgbConvertible
-  Rgb
-  (->rgb [this] this)
-  (->rgba [this] (map->Rgba (assoc this :alpha 1)))
-  Rgba
-  (->rgb [this] (map->Rgb (dissoc this :alpha)))
-  (->rgba [this] this))
-
 
 (defn hex? [s]
   (and (string? s)
@@ -288,6 +279,44 @@
   (and (util/named? x)
        (contains? default-colors (color->1-word x))))
 
+(extend-protocol IRgbConvertible
+  Rgb
+  (->rgb [this] this)
+  (->rgba [this] (map->Rgba (assoc this :alpha 1)))
+  Rgba
+  (->rgb [this] (map->Rgb (dissoc this :alpha)))
+  (->rgba [this] this)
+  Hsl
+  (->rgb [{:keys [hue saturation lightness]}]
+    (let [C (* (- 1 (util/math-abs (- (* 2 lightness) 1))) saturation)
+          X (* C (- 1 (util/math-abs (- (mod (/ hue 60) 2) 1))))
+          m (- lightness (/ C 2))
+          idx0 (mod (int (/ (+ 240 hue) 120)) 3)
+          idxC (int (mod (+ idx0 1 (mod (/ hue 60) 2)) 3))
+          idxX (int (mod (+ idx0 1 (mod (inc (/ hue 60)) 2)) 3))
+          c-x-m [[0 idx0] [C idxC] [X idxX]]
+          [[R' _] [G' _] [B' _]] (sort-by second < c-x-m)
+          [R G B] (map #(util/math-round (* (+ % m) 255)) [R' G' B'])]
+      (Rgb. R G B)))
+  (->rgba [this]
+    (map->Rgba (assoc (->rgb this) :alpha 1)))
+  String
+  (->rgba [this]
+    (let [as-hex (if (hex? this)
+                   this
+                   (let [as-literal-kw (color->1-word this)]
+                     (if-let [color (default-colors as-literal-kw)]
+                       color
+                       (util/exception (str "Cannot convert string to hex: " (pr-str this))))
+                     (util/exception (str "Cannot convert string to hex: " (pr-str this)))))
+          [r g b alpha] (->> (util/partition-string 2 (subs as-hex 1))
+                             (map util/double-hex->base10-map))
+          alpha (if alpha
+                  (util/normalize alpha)
+                  1)]
+      (Rgba. r g b alpha)))
+  (->rgb [this] (-> this ->rgba ->rgb)))
+
 (defn rgb
   "Creates an Rgb color record."
   ([-rgb]
@@ -308,7 +337,7 @@
    (let [[red green blue alpha] (cond (map? -rgba) ((juxt :red :green :blue :alpha) -rgba)
                                       (vector? -rgba) -rgba
                                       :else (util/exception (str "Cannot build RGBA color from: " (util/or-nil -rgba))))
-         alpha (or alpha 1)]
+         alpha (util/ratio?->double alpha)]
      (if (and (util/between? alpha 0 1)
               (every? #(and (int? %)
                             (util/between? % 0 255))
@@ -333,7 +362,7 @@
    (let [[hue saturation lightness alpha] (cond (map? -hsl) ((juxt :hue :saturation :lightness) -hsl)
                                                 (vector? -hsl) -hsl
                                                 :else (util/exception (str "Cannot build HSL color from: " (util/or-nil -hsl))))
-         alpha (or alpha 1)]
+         alpha (util/ratio?->double alpha)]
      (Hsla. hue (util/percent->number saturation) (util/percent->number lightness) (util/percent->number alpha))))
   ([hue saturation lightness alpha] (hsla [hue saturation lightness alpha])))
 
@@ -381,6 +410,19 @@
                                    ~form))
                       forms)))
 
+(let [cmp (fn [[x y]]
+            (cond (or (string? x) (int? x)) (= x y)
+                  (float? x) (if (zero? y)
+                               (zero? x)
+                               (let [div (= x y)]
+                                 (< (Math/abs (dec div))
+                                    0.001)))))]
+  (defn color= [x y]
+    (if (and (satisfies? ICSSColor x) (satisfies? ICSSColor y))
+      (and (= (class x) (class y))
+           (every? cmp (->> (interleave (vals x) (vals y))
+                            (partition 2)))))))
+
 (test-multiple :test-color-instance
   (color? (rgb 1 2 3))
   (color? (rgba 1 2 3 0.1))
@@ -413,4 +455,10 @@
   (= (->hex (rgb 80 160 240)) "#50a0f0")
   (= (->hex-alpha (rgb 80 160 240)) "#50a0f0ff")
   (= (->hex (rgba 80 160 240 0.5)) "#50a0f0")
-  (= (->hex-alpha (rgba 80 160 240 0.5)) "#50a0f080"))
+  (= (->hex-alpha (rgba 80 160 240 0.5)) "#50a0f080")
+  (= (->rgb (Hsl. 120 1 0.5)) (rgb 0 255 0))
+  (= (->rgba (Hsl. 120 1 0.5)) (rgba 0 255 0 1))
+  (= (->rgb "#ff0000") (rgb 255 0 0))
+  (= (->rgba "#ff0000") (rgba 255 0 0 1))
+  (= (->rgb "#ff000080") (rgb 255 0 0))
+  (= (->rgba "#ff000080") (rgba 255 0 0 (/ 128 255))))

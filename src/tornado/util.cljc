@@ -278,7 +278,27 @@
   #?(:clj  (.charAt ^String s ^int n)
      :cljs (.at s n)))
 
+(defn normalize
+  "Normalizes a float 0 <= x <= 255 to 0 <= x <= 1."
+  [x]
+  (double (/ x 255)))
+
 (defn denormalize
   "Denormalizes a float 0 <= x <= 1 to 0 <= x <= 255."
   [x]
-  (math-round (* 255 x)))
+  (math-round (* x 255)))
+
+(defn partition-string
+  ([step ^String s]
+   (let [strlen (.length s)]
+     (reduce (fn [v i]
+               (if (< i strlen)
+                 (conj v (subs s i (min strlen (+ i step))))
+                 (reduced v)))
+             []
+             (range 0 strlen step)))))
+
+(defn ratio?->double [x]
+  (cond (nil? x) 1
+        (ratio? x) (double x)
+        :else x))
