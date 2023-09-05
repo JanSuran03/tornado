@@ -529,3 +529,14 @@
   (= (->rgba (rgb 20 40 60)) (rgba 20 40 60 1))
   (= (->rgb (rgba 20 40 60 0.5)) (rgb 20 40 60))
   (= (->rgba (rgba 20 40 60 0.5)) (rgba 20 40 60 0.5)))
+
+(test-multiple :to-hsl
+  ;; rgb->hsl
+  ;; TODO
+  ;; hex->hsl
+  ;; TODO
+  ;; hsl->hsl
+  (= (->hsl (hsl 120 0.3 0.5)) (hsl 120 0.3 0.5))
+  (= (->hsla (hsl 120 0.3 0.5)) (hsla 120 0.3 0.5 1))
+  (= (->hsl (hsla 120 0.3 0.5 0.7)) (hsl 120 0.3 0.5))
+  (= (->hsla (hsla 120 0.3 0.5 0.7)) (hsla 120 0.3 0.5 0.7)))
