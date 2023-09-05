@@ -1,6 +1,7 @@
 (ns tornado.colors2
   (:require [clojure.string :as str]
             [tornado.context :as ctx]
+            [tornado.types :as t]
             [tornado.util :as util]))
 
 (def default-colors
@@ -163,7 +164,6 @@
    :yellowgreen          "#9ACD32"})
 
 (defprotocol ICSSColor
-  (to-css [this] "Compiles the color to CSS.")
   (->hex [this])
   (->hex-alpha [this]))
 
@@ -192,19 +192,58 @@
   (with-saturation [this] "Changes a color's saturation, keeps hue, lightness and alpha")
   (with-lightness [this] "Changes a color's lightness, keeps hue, saturation and alpha"))
 
+(let [xf (interpose ", ")]
+  (defn color->css [color-name & color-components]
+    (str color-name "(" (transduce xf str color-components) ")"))
+
+  (defn color-alpha->css [color-name & color-components]
+    (let [alpha (last color-components)
+          color-components (butlast color-components)]
+      (str color-name "(" (transduce xf str color-components) ", " alpha ")"))))
+
 (defrecord Rgb [red green blue]
-  ICSSColor)
+  ICSSColor
+  t/ICSSRenderable
+  (to-css [this]
+    (if ctx/*compress?*
+      (->hex this)
+      (color->css "rgb" red green blue))))
 
 (defrecord Rgba [red green blue alpha]
   ICSSColor
-  ICSSAlpha)
+  ICSSAlpha
+  t/ICSSRenderable
+  (to-css [this]
+    (if ctx/*compress?*
+      (if (= alpha 1)
+        (->hex this)
+        (->hex-alpha this))
+      (if (= alpha 1)
+        (color->css "rgb" red green blue)
+        (color-alpha->css "rgba" red green blue alpha)))))
 
 (defrecord Hsl [hue saturation lightness]
-  ICSSColor)
+  ICSSColor
+  t/ICSSRenderable
+  (to-css [this]
+    (if ctx/*compress?*
+      (->hex this)
+      (let [[saturation lightness] (map util/percent-with-symbol-append [saturation lightness])]
+        (color->css "hsl" hue saturation lightness)))))
 
 (defrecord Hsla [hue saturation lightness alpha]
   ICSSColor
-  ICSSAlpha)
+  ICSSAlpha
+  t/ICSSRenderable
+  (to-css [this]
+    (if ctx/*compress?*
+      (if (= alpha 1)
+        (->hex this)
+        (->hex-alpha this))
+      (let [[saturation lightness] (map util/percent-with-symbol-append [saturation lightness])]
+        (if (= alpha 1)
+          (color->css "hsl" hue saturation lightness)
+          (color->css "hsla" hue saturation lightness alpha))))))
 
 (defn hex? [s]
   (and (string? s)
@@ -280,7 +319,7 @@
                                                 :else (util/exception (str "Cannot build HSL color from: " (util/or-nil -hsl))))
          alpha (or alpha 1)]
      (Hsla. hue (util/percent->number saturation) (util/percent->number lightness) (util/percent->number alpha))))
-  ([hue saturation lightness] (hsla [hue saturation lightness])))
+  ([hue saturation lightness alpha] (hsla [hue saturation lightness alpha])))
 
 (defn rgb? [x]
   (instance? Rgb x))
@@ -330,7 +369,7 @@
   (color? (rgb 1 2 3))
   (color? (rgba 1 2 3 0.1))
   (color? (hsl 1 1 1))
-  (color? (hsla 1 1 1))
+  (color? (hsla 1 1 1 1))
   (color? :darkblue)
   (color? :dark-blue)
   (color? 'darkblue)
@@ -345,4 +384,11 @@
   (not (color? "#12345z"))
   (not (color? "#1234567z")))
 
-
+(test-multiple :colors-to-css
+  (= (t/to-css (rgb 100 120 140)) "rgb(100, 120, 140)")
+  (= (t/to-css (rgba 100 120 140 1)) "rgb(100, 120, 140)")
+  (= (t/to-css (rgba 100 120 140 0.9)) "rgba(100, 120, 140, 0.9)")
+  (= (t/to-css (rgba 100 120 140 0)) "rgba(100, 120, 140, 0)")
+  (= (t/to-css (hsl 120 0.3 0.8)) "hsl(120, 30%, 80%)")
+  (= (t/to-css (hsla 120 0.3 0.8 1)) "hsl(120, 30%, 80%)")
+  (= (t/to-css (hsla 120 0.3 0.8 0.8)) "hsla(120, 30%, 80%, 0.8)"))
