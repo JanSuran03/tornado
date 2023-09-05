@@ -277,3 +277,8 @@
   [s n]
   #?(:clj  (.charAt ^String s ^int n)
      :cljs (.at s n)))
+
+(defn denormalize
+  "Denormalizes a float 0 <= x <= 1 to 0 <= x <= 255."
+  [x]
+  (math-round (* 255 x)))

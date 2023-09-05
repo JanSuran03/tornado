@@ -205,6 +205,8 @@
   ICSSColor
   (->hex [this]
     (transduce (map util/base10->double-hex-map) str "#" [red green blue]))
+  (->hex-alpha [this]
+    (str (->hex this) "ff"))
   t/ICSSRenderable
   (to-css [this]
     (if ctx/*compress?*
@@ -213,6 +215,10 @@
 
 (defrecord Rgba [red green blue alpha]
   ICSSColor
+  (->hex [this]
+    (->hex (->rgb this)))
+  (->hex-alpha [this]
+    (str (->hex (->rgb this)) (util/base10->double-hex-map (util/denormalize alpha))))
   ICSSAlpha
   t/ICSSRenderable
   (to-css [this]
@@ -246,6 +252,14 @@
         (if (= alpha 1)
           (color->css "hsl" hue saturation lightness)
           (color->css "hsla" hue saturation lightness alpha))))))
+(extend-protocol IRgbConvertible
+  Rgb
+  (->rgb [this] this)
+  (->rgba [this] (map->Rgba (assoc this :alpha 1)))
+  Rgba
+  (->rgb [this] (map->Rgb (dissoc this :alpha)))
+  (->rgba [this] this))
+
 
 (defn hex? [s]
   (and (string? s)
@@ -396,4 +410,7 @@
   (= (t/to-css (hsla 120 0.3 0.8 0.8)) "hsla(120, 30%, 80%, 0.8)"))
 
 (test-multiple :to-hex
-  (= (->hex (rgb 80 160 240)) "#50a0f0"))
+  (= (->hex (rgb 80 160 240)) "#50a0f0")
+  (= (->hex-alpha (rgb 80 160 240)) "#50a0f0ff")
+  (= (->hex (rgba 80 160 240 0.5)) "#50a0f0")
+  (= (->hex-alpha (rgba 80 160 240 0.5)) "#50a0f080"))
