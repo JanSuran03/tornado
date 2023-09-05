@@ -203,6 +203,8 @@
 
 (defrecord Rgb [red green blue]
   ICSSColor
+  (->hex [this]
+    (transduce (map util/base10->double-hex-map) str "#" [red green blue]))
   t/ICSSRenderable
   (to-css [this]
     (if ctx/*compress?*
@@ -392,3 +394,6 @@
   (= (t/to-css (hsl 120 0.3 0.8)) "hsl(120, 30%, 80%)")
   (= (t/to-css (hsla 120 0.3 0.8 1)) "hsl(120, 30%, 80%)")
   (= (t/to-css (hsla 120 0.3 0.8 0.8)) "hsla(120, 30%, 80%, 0.8)"))
+
+(test-multiple :to-hex
+  (= (->hex (rgb 80 160 240)) "#50a0f0"))

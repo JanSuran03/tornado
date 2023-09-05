@@ -1,7 +1,6 @@
 (ns tornado.util
   "Utility functions used internally in Tornado."
-  (:require [clojure.set :as set]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [tornado.context :as ctx]
             [tornado.types :as t]
             [#?(:clj  clojure.edn
@@ -191,7 +190,17 @@
        (apply concat)
        (into {})))
 
-(def base10->double-hex-map (set/map-invert double-hex->base10-map))
+(defn is-lowercase [c]
+  (or (<= (int \a) (int c) (int \z))
+      (<= (int \0) (int c) (int \9))))
+
+(def base10->double-hex-map
+  (into {}
+        (comp (filter (fn [[k _]]
+                        (every? is-lowercase k)))
+              (map (fn [[k v]]
+                     [v k])))
+        double-hex->base10-map))
 
 (defn double-hex?
   "Returns true if every 2-characters substring of the given string expression
