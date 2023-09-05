@@ -479,7 +479,7 @@
   (not (color? "#12345z"))
   (not (color? "#1234567z")))
 
-(test-multiple :colors-to-css
+(test-multiple :to-css
   (= (t/to-css (rgb 100 120 140)) "rgb(100, 120, 140)")
   (= (t/to-css (rgba 100 120 140 1)) "rgb(100, 120, 140)")
   (= (t/to-css (rgba 100 120 140 0.9)) "rgba(100, 120, 140, 0.9)")
@@ -514,11 +514,18 @@
   (expect-throw (->hex-alpha "#123456789")))
 
 (test-multiple :to-rgb
+  ;; hsl->rgb
   (= (->rgb (Hsl. 120 1 0.5)) (rgb 0 255 0))
   (= (->rgba (Hsl. 120 1 0.5)) (rgba 0 255 0 1))
   (= (->rgb (Hsla. 120 1 0.5 0.42)) (rgb 0 255 0))
   (= (->rgba (Hsla. 120 1 0.5 half)) (rgba 0 255 0 half))
+  ;; hex->rgb
   (= (->rgb "#ff0000") (rgb 255 0 0))
   (= (->rgba "#ff0000") (rgba 255 0 0 1))
   (= (->rgb "#ff000080") (rgb 255 0 0))
-  (= (->rgba "#ff000080") (rgba 255 0 0 half)))
+  (= (->rgba "#ff000080") (rgba 255 0 0 half))
+  ;; rgb->rgb
+  (= (->rgb (rgb 20 40 60)) (rgb 20 40 60))
+  (= (->rgba (rgb 20 40 60)) (rgba 20 40 60 1))
+  (= (->rgb (rgba 20 40 60 0.5)) (rgb 20 40 60))
+  (= (->rgba (rgba 20 40 60 0.5)) (rgba 20 40 60 0.5)))
