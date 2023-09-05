@@ -231,6 +231,8 @@
 
 (defrecord Hsl [hue saturation lightness]
   ICSSColor
+  (->hex [this] (-> this ->rgb ->hex))
+  (->hex-alpha [this] (-> this ->hsla ->hex-alpha))
   t/ICSSRenderable
   (to-css [this]
     (if ctx/*compress?*
@@ -240,6 +242,9 @@
 
 (defrecord Hsla [hue saturation lightness alpha]
   ICSSColor
+  (->hex [this] (-> this ->hsl ->hex))
+  (->hex-alpha [this] (-> this ->hex
+                          (str (util/base10->double-hex-map (util/denormalize alpha)))))
   ICSSAlpha
   t/ICSSRenderable
   (to-css [this]
@@ -437,6 +442,8 @@
            (every? cmp (->> (interleave (vals x) (vals y))
                             (partition 2)))))))
 
+(def half (double (/ 128 255)))
+
 (test-multiple :test-color-instance
   (color? (rgb 1 2 3))
   (color? (rgba 1 2 3 0.1))
@@ -466,15 +473,23 @@
   (= (t/to-css (hsla 120 0.3 0.8 0.8)) "hsla(120, 30%, 80%, 0.8)"))
 
 (test-multiple :to-hex
+  ;; rgb->hex
   (= (->hex (rgb 80 160 240)) "#50a0f0")
   (= (->hex-alpha (rgb 80 160 240)) "#50a0f0ff")
   (= (->hex (rgba 80 160 240 0.5)) "#50a0f0")
   (= (->hex-alpha (rgba 80 160 240 0.5)) "#50a0f080")
+  ;; hsl->hex
+  (= (->hex (hsl 120 1 0.5)) "#00ff00")
+  (= (->hex-alpha (hsl 120 1 0.5)) "#00ff00ff")
+  (= (->hex (hsla 120 1 0.5 0.5)) "#00ff00")
+  (= (->hex-alpha (hsla 120 1 0.5 half)) "#00ff0080"))
+
+(test-multiple :to-rgb
   (= (->rgb (Hsl. 120 1 0.5)) (rgb 0 255 0))
   (= (->rgba (Hsl. 120 1 0.5)) (rgba 0 255 0 1))
   (= (->rgb (Hsla. 120 1 0.5 0.42)) (rgb 0 255 0))
-  (= (->rgba (Hsla. 120 1 0.5 0.42)) (rgba 0 255 0 0.42))
+  (= (->rgba (Hsla. 120 1 0.5 half)) (rgba 0 255 0 half))
   (= (->rgb "#ff0000") (rgb 255 0 0))
   (= (->rgba "#ff0000") (rgba 255 0 0 1))
   (= (->rgb "#ff000080") (rgb 255 0 0))
-  (= (->rgba "#ff000080") (rgba 255 0 0 (/ 128 255))))
+  (= (->rgba "#ff000080") (rgba 255 0 0 half)))
