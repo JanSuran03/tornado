@@ -300,6 +300,12 @@
       (Rgb. R G B)))
   (->rgba [this]
     (map->Rgba (assoc (->rgb this) :alpha 1)))
+  Hsla
+  (->rgb [this] (-> this ->hsl ->rgb))
+  (->rgba [{:keys [alpha] :as this}] (-> this ->hsl
+                                         ->rgb
+                                         (assoc :alpha alpha)
+                                         map->Rgba))
   String
   (->rgba [this]
     (let [as-hex (if (hex? this)
@@ -316,6 +322,14 @@
                   1)]
       (Rgba. r g b alpha)))
   (->rgb [this] (-> this ->rgba ->rgb)))
+
+(extend-protocol IHslConvertible
+  Hsl
+  (->hsl [this] this)
+  (->hsla [this] (map->Hsla (assoc this :alpha 1)))
+  Hsla
+  (->hsl [this] (map->Hsl (dissoc this :alpha)))
+  (->hsla [this] this))
 
 (defn rgb
   "Creates an Rgb color record."
@@ -458,6 +472,8 @@
   (= (->hex-alpha (rgba 80 160 240 0.5)) "#50a0f080")
   (= (->rgb (Hsl. 120 1 0.5)) (rgb 0 255 0))
   (= (->rgba (Hsl. 120 1 0.5)) (rgba 0 255 0 1))
+  (= (->rgb (Hsla. 120 1 0.5 0.42)) (rgb 0 255 0))
+  (= (->rgba (Hsla. 120 1 0.5 0.42)) (rgba 0 255 0 0.42))
   (= (->rgb "#ff0000") (rgb 255 0 0))
   (= (->rgba "#ff0000") (rgba 255 0 0 1))
   (= (->rgb "#ff000080") (rgb 255 0 0))
