@@ -398,9 +398,20 @@
   (instance? Hsla x))
 
 (defn color? [x]
-  (or (satisfies? ICSSColor x)
+  (or (and (satisfies? ICSSColor x) (record? x))
       (color-literal? x)
       (hex? x)))
+
+(extend-protocol ICSSColor
+  String
+  (->hex [this]
+    (cond (alpha-hex? this) (subs this 0 (- (count this) 2))
+          (hex? this) this
+          :else (util/exception (str "Cannot convert co hex: " this))))
+  (->hex-alpha [this]
+    (cond (alpha-hex? this) this
+          (hex? this) (str this "ff")
+          :else (util/exception (str "Cannot convert co hex-alpha: " this)))))
 
 ;; ------------------------------------- TEST -------------------------------------
 
@@ -428,6 +439,11 @@
                         `(test-one ~(keyword (str (name test-name) "-" (inc i)))
                                    ~form))
                       forms)))
+
+(defmacro expect-throw [& body]
+  `(try ~@body
+        nil
+        (catch Throwable _# true)))
 
 (let [cmp (fn [[x y]]
             (cond (or (string? x) (int? x)) (= x y)
@@ -482,7 +498,20 @@
   (= (->hex (hsl 120 1 0.5)) "#00ff00")
   (= (->hex-alpha (hsl 120 1 0.5)) "#00ff00ff")
   (= (->hex (hsla 120 1 0.5 0.5)) "#00ff00")
-  (= (->hex-alpha (hsla 120 1 0.5 half)) "#00ff0080"))
+  (= (->hex-alpha (hsla 120 1 0.5 half)) "#00ff0080")
+  ;; hex->hex
+  (= (->hex "#123456") "#123456")
+  (= (->hex-alpha "#123456") "#123456ff")
+  (= (->hex "#12345678") "#123456")
+  (= (->hex-alpha "#12345678") "#12345678")
+  ;; INVALID tries
+  (not (expect-throw (= (->hex-alpha "#12345678") "#12345678")))
+  (expect-throw (->hex-alpha "1234567"))
+  (expect-throw (->hex-alpha "12345678"))
+  (expect-throw (->hex-alpha "123456789"))
+  (expect-throw (->hex-alpha "#12345"))
+  (expect-throw (->hex-alpha "#1234567"))
+  (expect-throw (->hex-alpha "#123456789")))
 
 (test-multiple :to-rgb
   (= (->rgb (Hsl. 120 1 0.5)) (rgb 0 255 0))
