@@ -356,7 +356,10 @@
     (-> this ->hsl (assoc :alpha 1) map->Hsla))
   Rgba
   (->hsl [this] (-> this ->rgb ->hsl))
-  (->hsla [{:keys [alpha] :as this}] (-> this ->hsl (assoc :alpha alpha) map->Hsla)))
+  (->hsla [{:keys [alpha] :as this}] (-> this ->hsl (assoc :alpha alpha) map->Hsla))
+  String
+  (->hsl [this] (-> this ->rgb ->hsl))
+  (->hsla [this] (-> this ->rgba ->hsla)))
 
 (defn rgb
   "Creates an Rgb color record."
@@ -559,7 +562,10 @@
   (= (->hsl (rgba 0 255 0 0.42)) (hsl 120 1 0.5))
   (= (->hsla (rgba 0 255 0 0.42)) (hsla 120 1 0.5 0.42))
   ;; hex->hsl
-  ;; TODO
+  (= (->hsl  "#00ff00") (hsl 120 1 0.5))
+  (= (->hsla "#00ff00") (hsla 120 1 0.5 1))
+  (= (->hsl  "#00ff0080") (hsl 120 1 0.5))
+  (= (->hsla "#00ff0080") (hsla 120 1 0.5 half))
   ;; hsl->hsl
   (= (->hsl (hsl 120 0.3 0.5)) (hsl 120 0.3 0.5))
   (= (->hsla (hsl 120 0.3 0.5)) (hsla 120 0.3 0.5 1))
