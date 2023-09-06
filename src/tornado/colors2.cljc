@@ -2,7 +2,8 @@
   (:require [clojure.string :as str]
             [tornado.context :as ctx]
             [tornado.types :as t]
-            [tornado.util :as util]))
+            [tornado.util :as util])
+  #?(:clj (:import (clojure.lang Keyword Symbol))))
 
 (def default-colors
   "Available default colors in tornado.
@@ -271,18 +272,18 @@
        (= (count x) 9)))
 
 (defn color->1-word
-  "Given a named object (string/symbol/keyword) removes dashes and returns it as a keyword."
+  "Given a named object (string/symbol/keyword), removes dashes and returns it as a keyword."
   [color]
   (-> color name
       (str/replace #"\-" "")
       keyword))
 
-(defn color-literal?
-  "Returns true iff the given color is a string/symbol/keyword and is contained in the
-  default colors map. Extra dashes are allowed."
+(defn from-literal
+  "Returns the hex representation of a color iff the given color is a string/symbol/keyword
+  and is contained in the default colors map. Extra dashes are allowed."
   [x]
   (and (util/named? x)
-       (contains? default-colors (color->1-word x))))
+       (default-colors (color->1-word x))))
 
 (extend-protocol IRgbConvertible
   Rgb
@@ -424,7 +425,7 @@
 
 (defn color? [x]
   (or (and (satisfies? ICSSColor x) (record? x))
-      (color-literal? x)
+      (from-literal x)
       (hex? x)))
 
 (extend-protocol ICSSColor
@@ -432,11 +433,27 @@
   (->hex [this]
     (cond (alpha-hex? this) (subs this 0 (- (count this) 2))
           (hex? this) this
-          :else (util/exception (str "Cannot convert co hex: " this))))
+          :else (if-let [as-hex (from-literal this)]
+                  as-hex
+                  (util/exception (str "Cannot convert co hex: " this)))))
   (->hex-alpha [this]
     (cond (alpha-hex? this) this
           (hex? this) (str this "ff")
-          :else (util/exception (str "Cannot convert co hex-alpha: " this)))))
+          :else (if-let [as-hex (from-literal this)]
+                  (->hex-alpha as-hex)
+                  (util/exception (str "Cannot convert co hex-alpha: " this)))))
+  Keyword
+  (->hex [this]
+    (if-let [as-hex (from-literal this)]
+      as-hex
+      (util/exception (str "Cannot convert to hex: " this))))
+  (->hex-alpha [this]
+    (if-let [as-hex (from-literal this)]
+      (str as-hex "ff")
+      (util/exception (str "Cannot convert to hex-alpha: " this))))
+  Symbol
+  (->hex [this] (->hex (keyword this)))
+  (->hex-alpha [this] (->hex-alpha (keyword this))))
 
 ;; ------------------------------------- TEST -------------------------------------
 
@@ -536,7 +553,17 @@
   (expect-throw (->hex-alpha "123456789"))
   (expect-throw (->hex-alpha "#12345"))
   (expect-throw (->hex-alpha "#1234567"))
-  (expect-throw (->hex-alpha "#123456789")))
+  (expect-throw (->hex-alpha "#123456789"))
+  ;; ident->hex
+  (= (->hex :light-salmon) "#FFA07A")
+  (= (->hex :lightsalmon) "#FFA07A")
+  (= (->hex 'light-salmon) "#FFA07A")
+  (= (->hex 'lightsalmon) "#FFA07A")
+  (= (->hex "light-salmon") "#FFA07A")
+  (= (->hex "lightsalmon") "#FFA07A")
+  (expect-throw (->hex :foo))
+  (expect-throw (->hex 'foo))
+  (expect-throw (->hex "foo")))
 
 (test-multiple :to-rgb
   ;; hsl->rgb
@@ -568,9 +595,9 @@
   (= (->hsl (rgba 0 255 0 0.42)) (hsl 120 1 0.5))
   (= (->hsla (rgba 0 255 0 0.42)) (hsla 120 1 0.5 0.42))
   ;; hex->hsl
-  (= (->hsl  "#00ff00") (hsl 120 1 0.5))
+  (= (->hsl "#00ff00") (hsl 120 1 0.5))
   (= (->hsla "#00ff00") (hsla 120 1 0.5 1))
-  (= (->hsl  "#00ff0080") (hsl 120 1 0.5))
+  (= (->hsl "#00ff0080") (hsl 120 1 0.5))
   (= (->hsla "#00ff0080") (hsla 120 1 0.5 half))
   (expect-throw (->hsl "#ff00008"))
   (expect-throw (->hsl "#ff00008?"))
