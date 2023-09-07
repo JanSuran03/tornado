@@ -271,6 +271,16 @@
   (and (hex? x)
        (= (count x) 9)))
 
+(defn has-alpha?
+  "Returns, whether the argument is a CSS Color and has the alpha channel."
+  [x]
+  (or (and (satisfies? ICSSAlpha x) (record? x))
+      (alpha-hex? x)))
+
+(defn rotate-hue
+  "Rotates hue of a color by the given angle in degrees."
+  [color angle])
+
 (defn color->1-word
   "Given a named object (string/symbol/keyword), removes dashes and returns it as a keyword."
   [color]
@@ -660,3 +670,23 @@
   (expect-throw (->hsla :ret))
   (expect-throw (->hsla 'ret))
   (expect-throw (->hsla "ret")))
+
+(test-multiple :has-alpha
+  (not (has-alpha? (rgb 20 40 60)))
+  (has-alpha? (rgba 20 40 60 0.5))
+  (has-alpha? (rgba 20 40 60 1))
+  (not (has-alpha? (hsl 20 0.4 0.8)))
+  (has-alpha? (hsla 20 0.4 0.8 0.5))
+  (has-alpha? (hsla 20 0.4 0.8 1))
+  (not (has-alpha? "#12345"))
+  (not (has-alpha? "#123456"))
+  (not (has-alpha? "#1234567"))
+  (not (has-alpha? "123456"))
+  (not (has-alpha? "1234567"))
+  (not (has-alpha? "12345678"))
+  (not (has-alpha? "123456789"))
+  (has-alpha? "#12345678")
+  (not (has-alpha? :red))
+  (not (has-alpha? :green))
+  (not (has-alpha? :blue))
+  (not (has-alpha? 42)))
