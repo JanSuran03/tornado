@@ -313,21 +313,25 @@
                                          (assoc :alpha alpha)
                                          map->Rgba))
   String
+  (->rgb [this] (-> this ->rgba ->rgb))
   (->rgba [this]
     (let [as-hex (if (hex? this)
                    this
-                   (let [as-literal-kw (color->1-word this)]
-                     (if-let [color (default-colors as-literal-kw)]
-                       color
-                       (util/exception (str "Cannot convert string to hex: " (pr-str this))))
-                     (util/exception (str "Cannot convert string to hex: " (pr-str this)))))
+                   (if-let [color (from-literal this)]
+                     (str color "ff")
+                     (util/exception (str "Cannot convert string to rgba: " (pr-str this)))))
           [r g b alpha] (->> (util/partition-string 2 (subs as-hex 1))
                              (map util/double-hex->base10-map))
           alpha (if alpha
                   (util/normalize alpha)
                   1)]
       (Rgba. r g b alpha)))
-  (->rgb [this] (-> this ->rgba ->rgb)))
+  Keyword
+  (->rgb [this] (-> this ->hex ->rgb))
+  (->rgba [this] (-> this ->hex-alpha ->rgba))
+  Symbol
+  (->rgb [this] (->rgb (keyword this)))
+  (->rgba [this] (->rgba (keyword this))))
 
 (extend-protocol IHslConvertible
   Hsl
@@ -360,7 +364,13 @@
   (->hsla [{:keys [alpha] :as this}] (-> this ->hsl (assoc :alpha alpha) map->Hsla))
   String
   (->hsl [this] (-> this ->rgb ->hsl))
-  (->hsla [this] (-> this ->rgba ->hsla)))
+  (->hsla [this] (-> this ->rgba ->hsla))
+  Keyword
+  (->hsl [this] (-> this name ->hsl))
+  (->hsla [this] (-> this name ->hsla))
+  Symbol
+  (->hsl [this] (-> this name ->hsl))
+  (->hsla [this] (-> this name ->hsla)))
 
 (defn rgb
   "Creates an Rgb color record."
@@ -561,9 +571,18 @@
   (= (->hex 'lightsalmon) "#FFA07A")
   (= (->hex "light-salmon") "#FFA07A")
   (= (->hex "lightsalmon") "#FFA07A")
+  (= (->hex-alpha :light-salmon) "#FFA07Aff")
+  (= (->hex-alpha :lightsalmon) "#FFA07Aff")
+  (= (->hex-alpha 'light-salmon) "#FFA07Aff")
+  (= (->hex-alpha 'lightsalmon) "#FFA07Aff")
+  (= (->hex-alpha "light-salmon") "#FFA07Aff")
+  (= (->hex-alpha "lightsalmon") "#FFA07Aff")
   (expect-throw (->hex :foo))
   (expect-throw (->hex 'foo))
-  (expect-throw (->hex "foo")))
+  (expect-throw (->hex "foo"))
+  (expect-throw (->hex-alpha :foo))
+  (expect-throw (->hex-alpha 'foo))
+  (expect-throw (->hex-alpha "foo")))
 
 (test-multiple :to-rgb
   ;; hsl->rgb
@@ -586,7 +605,26 @@
   (= (->rgb (rgb 20 40 60)) (rgb 20 40 60))
   (= (->rgba (rgb 20 40 60)) (rgba 20 40 60 1))
   (= (->rgb (rgba 20 40 60 0.5)) (rgb 20 40 60))
-  (= (->rgba (rgba 20 40 60 0.5)) (rgba 20 40 60 0.5)))
+  (= (->rgba (rgba 20 40 60 0.5)) (rgba 20 40 60 0.5))
+  ;; literals
+  (= (->rgb :light-salmon) (rgb 255 160 122))
+  (= (->rgb :lightsalmon) (rgb 255 160 122))
+  (= (->rgb 'light-salmon) (rgb 255 160 122))
+  (= (->rgb 'lightsalmon) (rgb 255 160 122))
+  (= (->rgb "light-salmon") (rgb 255 160 122))
+  (= (->rgb "lightsalmon") (rgb 255 160 122))
+  (= (->rgba :light-salmon) (rgba 255 160 122 1))
+  (= (->rgba :lightsalmon) (rgba 255 160 122 1))
+  (= (->rgba 'light-salmon) (rgba 255 160 122 1))
+  (= (->rgba 'lightsalmon) (rgba 255 160 122 1))
+  (= (->rgba "light-salmon") (rgba 255 160 122 1))
+  (= (->rgba "lightsalmon") (rgba 255 160 122 1))
+  (expect-throw (->rgb :foo))
+  (expect-throw (->rgb "foo"))
+  (expect-throw (->rgb 'foo))
+  (expect-throw (->rgba :foo))
+  (expect-throw (->rgba "foo"))
+  (expect-throw (->rgba 'foo)))
 
 (test-multiple :to-hsl
   ;; rgb->hsl
@@ -609,4 +647,16 @@
   (= (->hsl (hsl 120 0.3 0.5)) (hsl 120 0.3 0.5))
   (= (->hsla (hsl 120 0.3 0.5)) (hsla 120 0.3 0.5 1))
   (= (->hsl (hsla 120 0.3 0.5 0.7)) (hsl 120 0.3 0.5))
-  (= (->hsla (hsla 120 0.3 0.5 0.7)) (hsla 120 0.3 0.5 0.7)))
+  (= (->hsla (hsla 120 0.3 0.5 0.7)) (hsla 120 0.3 0.5 0.7))
+  (= (->hsl :red) (hsl 0 1 0.5))
+  (= (->hsl 'red) (hsl 0 1 0.5))
+  (= (->hsl "red") (hsl 0 1 0.5))
+  (= (->hsla :red) (hsla 0 1 0.5 1))
+  (= (->hsla 'red) (hsla 0 1 0.5 1))
+  (= (->hsla "red") (hsla 0 1 0.5 1))
+  (expect-throw (->hsl :ret))
+  (expect-throw (->hsl 'ret))
+  (expect-throw (->hsl "ret"))
+  (expect-throw (->hsla :ret))
+  (expect-throw (->hsla 'ret))
+  (expect-throw (->hsla "ret")))

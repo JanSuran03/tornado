@@ -281,7 +281,10 @@
 (defn normalize
   "Normalizes a float 0 <= x <= 255 to 0 <= x <= 1."
   [x]
-  (double (/ x 255)))
+  (let [v (double (/ x 255))]
+    (if (= (double (int v)) v)
+      (int v)
+      v)))
 
 (defn denormalize
   "Denormalizes a float 0 <= x <= 1 to 0 <= x <= 255."
