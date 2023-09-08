@@ -499,36 +499,25 @@
 
 ; TODO: refactor!
 
-(defn with-hue [color hue]
-  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
-        (has-alpha? color) (map->Hsla (assoc (->hsla color) :hue hue))
-        :else (map->Hsl (assoc (->hsl color) :hue hue))))
+(defn- with-param-fn [param-kw to-with-alpha to-without-alpha map->with-alpha map->without-alpha]
+  (fn [color arg]
+    (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
+          (has-alpha? color) (map->with-alpha (assoc (to-with-alpha color) param-kw arg))
+          :else (map->without-alpha (assoc (to-without-alpha color) param-kw arg)))))
 
-(defn with-saturation [color saturation]
-  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
-        (has-alpha? color) (map->Hsla (assoc (->hsla color) :saturation saturation))
-        :else (map->Hsl (assoc (->hsl color) :saturation saturation))))
+(defn- with-hsl-fn [param-kw]
+  (with-param-fn param-kw ->hsla ->hsl map->Hsla map->Hsl))
 
-(defn with-lightness [color lightness]
-  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
-        (has-alpha? color) (map->Hsla (assoc (->hsla color) :lightness lightness))
-        :else (map->Hsl (assoc (->hsl color) :lightness lightness))))
+(def with-hue (with-hsl-fn :hue))
+(def with-saturation (with-hsl-fn :saturation))
+(def with-lightness (with-hsl-fn :lightness))
 
-(defn with-red [color red]
-  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
-        (has-alpha? color) (map->Rgba (assoc (->rgba color) :red red))
-        :else (map->Rgb (assoc (->rgb color) :red red))))
+(defn- with-rgb-fn [param-kw]
+  (with-param-fn param-kw ->rgba ->rgb map->Rgba map->Rgb))
 
-(defn with-green [color green]
-  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
-        (has-alpha? color) (map->Rgba (assoc (->rgba color) :green green))
-        :else (map->Rgb (assoc (->rgb color) :green green))))
-
-(defn with-blue [color blue]
-  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
-        (has-alpha? color) (map->Rgba (assoc (->rgba color) :blue blue))
-        :else (map->Rgb (assoc (->rgb color) :blue blue))))
-
+(def with-red (with-rgb-fn :red))
+(def with-green (with-rgb-fn :green))
+(def with-blue (with-rgb-fn :blue))
 
 ;; ------------------------------------- TEST -------------------------------------
 
