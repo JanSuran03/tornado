@@ -181,7 +181,7 @@
   (->hsla [this] "Converts a color to hsla"))
 
 (defprotocol IWithAlpha
-  (with-alpha [this] "Changes a color's alpha, keeps all color channels."))
+  (-with-alpha [this alpha] "Changes a color's alpha, keeps all color channels."))
 
 (defprotocol IWithRgb
   (with-red [this] "Changes a color's red channel, keeps green, blue and alpha.")
@@ -490,6 +490,25 @@
   "Rotates a color's hue by 180°."
   [color] (rotate-hue color 180))
 
+(extend-protocol IWithAlpha
+  Rgb
+  (-with-alpha [this alpha] (map->Rgba (assoc this :alpha alpha)))
+  Rgba
+  (-with-alpha [this alpha] (map->Rgba (assoc this :alpha alpha)))
+  Hsl
+  (-with-alpha [this alpha] (map->Hsla (assoc this :alpha alpha)))
+  Hsla
+  (-with-alpha [this alpha] (map->Hsla (assoc this :alpha alpha)))
+  String
+  (-with-alpha [this alpha] (-with-alpha (->rgb this) alpha))
+  Symbol
+  (-with-alpha [this alpha] (-with-alpha (->rgb this) alpha))
+  Keyword
+  (-with-alpha [this alpha] (-with-alpha (->rgb this) alpha)))
+
+(defn with-alpha [color alpha]
+  (-with-alpha color alpha))
+
 ;; ------------------------------------- TEST -------------------------------------
 
 (defmacro with-err-out [& body]
@@ -714,3 +733,15 @@
      (->hex (triad-next "#123456"))
      (->hex (triad-previous "#345612")))
   (= (opposite-hue :yellow) (->hsl :blue)))
+
+(test-multiple :with-alpha
+  (= (with-alpha :red 0.3) (rgba 255 0 0 0.3))
+  (= (with-alpha 'red 0.3) (rgba 255 0 0 0.3))
+  (= (with-alpha "red" 0.3) (rgba 255 0 0 0.3))
+  (= (with-alpha (rgb 255 0 0) 0.3) (rgba 255 0 0 0.3))
+  (= (with-alpha (rgba 255 0 0 0.5) 0.3) (rgba 255 0 0 0.3))
+  (= (with-alpha (hsl 120 0.3 0.8) 0.4) (hsla 120 0.3 0.8 0.4))
+  (= (with-alpha (hsla 120 0.3 0.8 0.7) 0.4) (hsla 120 0.3 0.8 0.4))
+  (= (with-alpha (hsla 120 0.3 0.8 0.7) 0.4) (hsla 120 0.3 0.8 0.4))
+  (= (with-alpha :red 0.3) (rgba 255 0 0 0.3))
+  (expect-throw (with-alpha 42 0.3)))
