@@ -170,8 +170,6 @@
 
 (defprotocol ICSSAlpha)
 
-(defprotocol IHex)
-
 (defprotocol IRgbConvertible
   (->rgb [this] "Converts a color to rgb")
   (->rgba [this] "Converts a color to rgba"))
@@ -182,11 +180,6 @@
 
 (defprotocol IWithAlpha
   (-with-alpha [this alpha] "Changes a color's alpha, keeps all color channels."))
-
-(defprotocol IWithRgb
-  (with-red [this] "Changes a color's red channel, keeps green, blue and alpha.")
-  (with-green [this] "Changes a color's green channel, keeps red, blue and alpha.")
-  (with-blue [this] "Changes a color's blue channel, keeps red, green and alpha."))
 
 (let [xf (interpose ", ")]
   (defn color->css [color-name & color-components]
@@ -521,6 +514,21 @@
         (has-alpha? color) (map->Hsla (assoc (->hsla color) :lightness lightness))
         :else (map->Hsl (assoc (->hsl color) :lightness lightness))))
 
+(defn with-red [color red]
+  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
+        (has-alpha? color) (map->Rgba (assoc (->rgba color) :red red))
+        :else (map->Rgb (assoc (->rgb color) :red red))))
+
+(defn with-green [color green]
+  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
+        (has-alpha? color) (map->Rgba (assoc (->rgba color) :green green))
+        :else (map->Rgb (assoc (->rgb color) :green green))))
+
+(defn with-blue [color blue]
+  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
+        (has-alpha? color) (map->Rgba (assoc (->rgba color) :blue blue))
+        :else (map->Rgb (assoc (->rgb color) :blue blue))))
+
 
 ;; ------------------------------------- TEST -------------------------------------
 
@@ -780,3 +788,22 @@
   (= (with-lightness (hsl 20 0.3 0.6) 0.7) (hsl 20 0.3 0.7))
   (= (with-lightness (hsla 20 0.3 0.6 0.1) 0.7) (hsla 20 0.3 0.7 0.1))
   (expect-throw (with-saturation 42 240)))
+
+(test-multiple :with-rgb
+  ;; red
+  (= (with-red (rgb 0 255 0) 255) (rgb 255 255 0))
+  (= (with-red (rgba 0 255 0 0.7) 255) (rgba 255 255 0 0.7))
+  (= (with-red (hsl 120 1 0.5) 255) (rgb 255 255 0))
+  (= (with-red (hsla 120 1 0.5 0.7) 255) (rgba 255 255 0 0.7))
+  (= (with-red "#00ff00" 255) (rgb 255 255 0))
+  (= (with-red "#00ff0080" 255) (rgba 255 255 0 half))
+  (= (with-red :lime 255) (rgb 255 255 0))
+  (= (with-red 'lime 255) (rgb 255 255 0))
+  (= (with-red "lime" 255) (rgb 255 255 0))
+  (expect-throw (with-red 42 255))
+  ;; green
+  (= (with-green :magenta 255) (rgb 255 255 255))
+  (expect-throw (with-green 42 255))
+  ;;blue
+  (= (with-blue :yellow 255) (rgb 255 255 255))
+  (expect-throw (with-blue 42 255)))
