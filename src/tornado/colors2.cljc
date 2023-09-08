@@ -188,11 +188,6 @@
   (with-green [this] "Changes a color's green channel, keeps red, blue and alpha.")
   (with-blue [this] "Changes a color's blue channel, keeps red, green and alpha."))
 
-(defprotocol IWithHsl
-  (with-hue [this] "Changes a color's hue, keeps saturation, lightness and alpha.")
-  (with-saturation [this] "Changes a color's saturation, keeps hue, lightness and alpha")
-  (with-lightness [this] "Changes a color's lightness, keeps hue, saturation and alpha"))
-
 (let [xf (interpose ", ")]
   (defn color->css [color-name & color-components]
     (str color-name "(" (transduce xf str color-components) ")"))
@@ -509,6 +504,24 @@
 (defn with-alpha [color alpha]
   (-with-alpha color alpha))
 
+; TODO: refactor!
+
+(defn with-hue [color hue]
+  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
+        (has-alpha? color) (map->Hsla (assoc (->hsla color) :hue hue))
+        :else (map->Hsl (assoc (->hsl color) :hue hue))))
+
+(defn with-saturation [color saturation]
+  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
+        (has-alpha? color) (map->Hsla (assoc (->hsla color) :saturation saturation))
+        :else (map->Hsl (assoc (->hsl color) :saturation saturation))))
+
+(defn with-lightness [color lightness]
+  (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
+        (has-alpha? color) (map->Hsla (assoc (->hsla color) :lightness lightness))
+        :else (map->Hsl (assoc (->hsl color) :lightness lightness))))
+
+
 ;; ------------------------------------- TEST -------------------------------------
 
 (defmacro with-err-out [& body]
@@ -735,6 +748,7 @@
   (= (opposite-hue :yellow) (->hsl :blue)))
 
 (test-multiple :with-alpha
+  ;; hue
   (= (with-alpha :red 0.3) (rgba 255 0 0 0.3))
   (= (with-alpha 'red 0.3) (rgba 255 0 0 0.3))
   (= (with-alpha "red" 0.3) (rgba 255 0 0 0.3))
@@ -745,3 +759,24 @@
   (= (with-alpha (hsla 120 0.3 0.8 0.7) 0.4) (hsla 120 0.3 0.8 0.4))
   (= (with-alpha :red 0.3) (rgba 255 0 0 0.3))
   (expect-throw (with-alpha 42 0.3)))
+
+(test-multiple :with-hsl
+  ;; hue
+  (= (with-hue (rgb 255 0 0) 240) (hsl 240 1 0.5))
+  (= (with-hue (rgba 255 0 0 0.7) 240) (hsla 240 1 0.5 0.7))
+  (= (with-hue (hsl 69 0.42 0.666) 240) (hsl 240 0.42 0.666))
+  (= (with-hue (hsla 69 0.42 0.666 0.7) 240) (hsla 240 0.42 0.666 0.7))
+  (= (with-hue "#ff0000" 240) (hsl 240 1 0.5))
+  (= (with-hue "#ff000080" 240) (hsla 240 1 0.5 half))
+  (= (with-hue :red 240) (hsl 240 1 0.5))
+  (= (with-hue 'red 240) (hsl 240 1 0.5))
+  (= (with-hue "red" 240) (hsl 240 1 0.5))
+  (expect-throw (with-hue 42 240))
+  ;; saturation
+  (= (with-saturation (hsl 20 0.3 0.6) 0.7) (hsl 20 0.7 0.6))
+  (= (with-saturation (hsla 20 0.3 0.6 0.1) 0.7) (hsla 20 0.7 0.6 0.1))
+  (expect-throw (with-saturation 42 240))
+  ;; lightness
+  (= (with-lightness (hsl 20 0.3 0.6) 0.7) (hsl 20 0.3 0.7))
+  (= (with-lightness (hsla 20 0.3 0.6 0.1) 0.7) (hsla 20 0.3 0.7 0.1))
+  (expect-throw (with-saturation 42 240)))
