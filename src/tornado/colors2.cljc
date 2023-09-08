@@ -277,10 +277,6 @@
   (or (and (satisfies? ICSSAlpha x) (record? x))
       (alpha-hex? x)))
 
-(defn rotate-hue
-  "Rotates hue of a color by the given angle in degrees."
-  [color angle])
-
 (defn color->1-word
   "Given a named object (string/symbol/keyword), removes dashes and returns it as a keyword."
   [color]
@@ -351,7 +347,7 @@
   (->hsl [this] (map->Hsl (dissoc this :alpha)))
   (->hsla [this] this)
   Rgb
-  (->hsl [{:keys [red green blue alpha]}]
+  (->hsl [{:keys [red green blue]}]
     (let [[R' G' B' :as rgb'] (map #(/ % 255) [red green blue])
           Cmax (apply max rgb')
           Cmin (apply min rgb')
@@ -474,6 +470,25 @@
   Symbol
   (->hex [this] (->hex (keyword this)))
   (->hex-alpha [this] (->hex-alpha (keyword this))))
+
+(defn rotate-hue
+  "Rotates hue of a color by the given angle in degrees."
+  [color angle]
+  (cond (not (color? color)) (util/exception "Cannot convert to color")
+        (has-alpha? color) (map->Hsla (update (->hsla color) :hue + angle))
+        :else (map->Hsl (update (->hsl color) :hue + angle))))
+
+(defn triad-next
+  "Rotates a color's hue by 120°."
+  [color] (rotate-hue color 120))
+
+(defn triad-previous
+  "Rotates a color's hue by 240°."
+  [color] (rotate-hue color 240))
+
+(defn opposite-hue
+  "Rotates a color's hue by 180°."
+  [color] (rotate-hue color 180))
 
 ;; ------------------------------------- TEST -------------------------------------
 
@@ -690,3 +705,12 @@
   (not (has-alpha? :green))
   (not (has-alpha? :blue))
   (not (has-alpha? 42)))
+
+(test-multiple :rotate-hue
+  (= (rotate-hue (hsl 20 0.3 0.4) 50) (hsl 70 0.3 0.4))
+  (= (rotate-hue (hsla 20 0.3 0.4 0.2) 50) (hsla 70 0.3 0.4 0.2))
+  (= (->hex (rotate-hue "#123456" 120))
+     "#561234"
+     (->hex (triad-next "#123456"))
+     (->hex (triad-previous "#345612")))
+  (= (opposite-hue :yellow) (->hsl :blue)))
