@@ -497,8 +497,6 @@
 (defn with-alpha [color alpha]
   (-with-alpha color alpha))
 
-; TODO: refactor!
-
 (defn- with-param-fn [param-kw to-with-alpha to-without-alpha map->with-alpha map->without-alpha]
   (fn [color arg]
     (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
@@ -519,6 +517,92 @@
 (def with-green (with-rgb-fn :green))
 (def with-blue (with-rgb-fn :blue))
 
+(comment
+  (defn- range-0-1
+    "If the given value is below 0, return 0, if below 1,return 1,
+    otherwise return the value."
+    [value]
+    (util/in-range value 0 1))
+
+  (defn- ->rgb?a [color]
+    (if (has-alpha? color)
+      (->rgba color)
+      (->rgb color)))
+
+  (defn- ->hsl?a [color]
+    (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
+          (has-alpha? color) (->hsla color)
+          :else (->hsl color)))
+
+  (defn- ->hex?a [color]
+    (if (has-alpha? color)
+      (->hex-alpha color)
+      (->hex color)))
+
+  (defn- map->hsl?a [color]
+    (if (:alpha color)
+      (map->Hsla color)
+      (map->Hsl color)))
+
+  (defn saturate
+    "Saturates a color by a given value: 0.15, (percent 15), \"15%\" work the same way."
+    [color value]
+    (let [value (util/percent->number value)]
+      (-> color ->hsl?a (update :saturation #(range-0-1 (+ % value))) map->hsl?a)))
+
+  (defn desaturate
+    "Same as (saturate color value), but the value is subtracted instead."
+    [color value]
+    (saturate color (- (util/percent->number value))))
+
+  (defn scale-saturation
+    "Multiplies a color's saturation by a given value. "
+    [color value]
+    (-> color ->hsl?a (update :saturation #(range-0-1 (* % value))) map->hsl?a))
+
+  (defn lighten
+    "Lightens a color by a given value: 0.15, (percent 15), \"15%\" work the same way."
+    [color value]
+    (let [value (util/percent->number value)]
+      (-> color ->hsl?a (update :lightness #(range-0-1 (+ % value))) map->hsl?a)))
+
+  (defn darken
+    "Same as (lighten color value), but the value is subtracted instead."
+    [color value]
+    (lighten color (- (util/percent->number value))))
+
+  (defn scale-lightness
+    "Multiplies a color's lightness by a given value. "
+    [color value]
+    (-> color ->hsl?a (update :lightness #(range-0-1 (* % value))) map->hsl?a))
+
+  (defn with-default-alpha [color]
+    (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
+          (has-alpha? color) color
+          :else (with-alpha color 1)))
+
+  (defn opacify
+    "Opacifies a color by a given value: 0.15, (percent 15), \"15%\" work the same way."
+    [color value]
+    (let [value (util/percent->number value)]
+      (cond (not (color? color)) (util/exception (str "Cannot convert to color: " color))
+            (hex? color) (-> color ->rgb?a
+                             (update :alpha #(range-0-1 (+ % value)))
+                             ->hex?a)
+            :else (-> color with-default-alpha
+                      (update :alpha #(range-0-1 (+ % value)))))))
+
+  (defn transparentize
+    "Same as (opacify color value), but the value is subtracted instead."
+    [color value]
+    (opacify color (- (util/percent->number value))))
+
+  (defn scale-alpha
+    "Multiplies a color's alpha by a given value. "
+    [color value]
+    ()
+    (-> color (update :alpha #(range-0-1 (* % value))))))
+
 ;; ------------------------------------- TEST -------------------------------------
 
 (defmacro with-err-out [& body]
@@ -529,15 +613,14 @@
   "All the color tests be moved to the test namespaces after being ready to replace
   the older API, now kept here for simplicity and ease of development"
   [test-name & body]
-  (let [[gres gfail] (repeatedly gensym)]
-    `(let [~gres (try ~@body
-                      (catch Throwable t#
-                        t#))
-           ~gfail ~(apply str "Failed on test case: " test-name ", form: " body)]
-       (if (or (not ~gres) (instance? Throwable ~gres))
-         (with-err-out (println (str ~gfail
-                                     (when ~gres
-                                       (str ", reason: " (.getMessage ~gres))))))))))
+  `(let [gres# (try ~@body
+                    (catch Throwable t#
+                      t#))
+         gfail# ~(apply str "Failed on test case: " test-name ", form: " body)]
+     (if (or (not gres#) (instance? Throwable gres#))
+       (with-err-out (println (str gfail#
+                                   (when gres#
+                                     (str ", reason: " (.getMessage gfail#)))))))))
 
 (defmacro test-multiple
   [test-name & forms]
