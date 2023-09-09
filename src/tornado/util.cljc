@@ -256,3 +256,17 @@
     (-> (str (namespace expr) (if *compress?* "-" "--") (name expr))
         (str/replace #"\." "-"))
     (name expr)))
+
+(defn make-css-type-checker
+  "Using as e.g. `(make-css-type-checker \"color\")` returns a function, which takes
+  an object and if it has the :type property (and hence is most likely a map or
+  a record) and the value of the property has namespace equal to `type-ns`, returns
+  the whole :type property value.
+
+  ((make-css-type-checker \"color\") {:type :color/rgb :red 1 :green 2 :blue 3})
+  => :color/rgb"
+  [type-ns]
+  (fn [obj]
+    (when-let [type (:type obj)]
+      (when (= (namespace type) type-ns)
+        type))))
