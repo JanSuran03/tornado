@@ -18,3 +18,6 @@
 (defrecord CSSPseudoClassFn [compiles-to arg])
 
 (defrecord CSSPseudoElement [pseudoelement])
+
+(defprotocol ICSSRenderable
+  (to-css [this] "Compiles an expression to CSS."))

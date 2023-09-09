@@ -1,10 +1,10 @@
 (ns tornado.util
   "Utility functions used internally in Tornado."
-  (:require [tornado.types :as t]
+  (:require [clojure.string :as str]
+            [tornado.context :as ctx]
+            [tornado.types :as t]
             [#?(:clj  clojure.edn
-                :cljs cljs.reader) :as edn]
-            [clojure.set :as set]
-            [clojure.string :as str])
+                :cljs cljs.reader) :as edn])
   #?(:clj (:import (tornado.types CSSUnit))))
 
 #?(:cljs (def JS-STR-TYPE (type "")))
@@ -20,9 +20,7 @@
       :cljs js/Math.pow) x y))
 
 (defn math-abs [x]
-  #?(:clj  (Math/abs (if (ratio? x)
-                       (float x)
-                       x))
+  #?(:clj  (Math/abs (float x))
      :cljs js/Math.abs))
 
 (defn parse-float [s]
@@ -34,7 +32,7 @@
   [s]
   (subs s 0 (dec (count s))))
 
-(defn exception [arg]
+(defn exception [#?(:clj ^String arg :cljs arg)]
   (throw
     (#?(:clj  IllegalArgumentException.
         :cljs js/Error.) arg)))
@@ -155,7 +153,7 @@
   [coll]
   (apply average coll))
 
-(defn between
+(defn between?
   "Returns true if value is smaller than or equal n1 and greater than or equal n2."
   [value n1 n2]
   (<= (min n1 n2) value (max n1 n2)))
@@ -192,7 +190,17 @@
        (apply concat)
        (into {})))
 
-(def base10->double-hex-map (set/map-invert double-hex->base10-map))
+(defn is-lowercase [c]
+  (or (<= (int \a) (int c) (int \z))
+      (<= (int \0) (int c) (int \9))))
+
+(def base10->double-hex-map
+  (into {}
+        (comp (filter (fn [[k _]]
+                        (every? is-lowercase k)))
+              (map (fn [[k v]]
+                     [v k])))
+        double-hex->base10-map))
 
 (defn double-hex?
   "Returns true if every 2-characters substring of the given string expression
@@ -246,13 +254,54 @@
        (into {})
        not-empty))
 
-(def ^:dynamic *compress?*
-  "Moved from this ns to util in version 0.2.10 to prevent cyclic dependency needed in `ns-kw->str`."
-  false)
-
 (defn ns-kw->str [expr]
   (if (and (keyword? expr)
            (namespace expr))
-    (-> (str (namespace expr) (if *compress?* "-" "--") (name expr))
+    (-> (str (namespace expr) (if ctx/*compress?* "-" "--") (name expr))
         (str/replace #"\." "-"))
     (name expr)))
+
+(defn or-nil [x]
+  (if (nil? x) "nil" x))
+
+(defn update-in-keys
+  "Given a map or a record, a function, a common partial path and keys which will be
+  appended to that path, updates all keys in the given map with that function."
+  [m f path & ks]
+  (reduce (fn [m k]
+            (update-in m (conj path k) f))
+          m
+          ks))
+
+(defn char-at
+  [s n]
+  #?(:clj  (.charAt ^String s ^int n)
+     :cljs (.at s n)))
+
+(defn normalize
+  "Normalizes a float 0 <= x <= 255 to 0 <= x <= 1."
+  [x]
+  (let [v (double (/ x 255))]
+    (if (= (double (int v)) v)
+      (int v)
+      v)))
+
+(defn denormalize
+  "Denormalizes a float 0 <= x <= 1 to 0 <= x <= 255."
+  [x]
+  (math-round (* x 255)))
+
+(defn partition-string
+  ([step ^String s]
+   (let [strlen (.length s)]
+     (reduce (fn [v i]
+               (if (< i strlen)
+                 (conj v (subs s i (min strlen (+ i step))))
+                 (reduced v)))
+             []
+             (range 0 strlen step)))))
+
+(defn ratio?->double [x]
+  (cond (nil? x) 1
+        (ratio? x) (double x)
+        :else x))

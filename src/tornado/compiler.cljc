@@ -1,13 +1,14 @@
 (ns tornado.compiler
   "The Tornado compiler, where you should only care about these 4 functions:
   css, repl-css, compile-expression, html-style."
-  (:require [tornado.types :as t]
+  (:require [clojure.string :as str]
             [tornado.at-rules :as at-rules]
-            [tornado.util :as util :refer [*compress?*]]
-            [clojure.string :as str]
-            [tornado.selectors :as sel]
             [tornado.colors :as colors]
             [tornado.compression :as compression]
+            [tornado.context :as ctx]
+            [tornado.selectors :as sel]
+            [tornado.types :as t]
+            [tornado.util :as util]
             #?(:clj [tornado.macros :as m]))
   #?(:clj  (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                                    CSSCombinator CSSAttributeSelector
@@ -41,48 +42,6 @@
 
 (def CSS-PseudoClassFn #?(:clj  CSSPseudoClassFn
                           :cljs t/CSSPseudoClassFn))
-
-(def ^:dynamic *flags*
-  "The current flags for a tornado build compilation:
-
-  :indent-length - Specifies, how many indentation spaces should be in the compiled
-                   CSS file after any nesting in @rule or params map. Defaults to 4.
-
-  :pretty-print? - Specifies, whether the compiled CSS should be pretty printed.
-                   Defaults to true. If set to false, the CSS file will be compressed
-                   after compilation (removal of unnecessary characters like spaces
-                   and newlines) to make the CSS file a bit smaller.
-
-  :output-to     - Specifies, where the compiled CSS file should be saved."
-  {:indent-length 4
-   :pretty-print? true
-   :output-to     nil})
-
-(defn update-in-keys
-  "Given a map or a record, a function, a common partial path and keys which will be
-  appended to that path, updates all keys in the given map with that function."
-  [m f path & ks]
-  (reduce (fn [m k]
-            (update-in m (conj path k) f))
-          m
-          ks))
-
-(def ^:dynamic *indent* (apply str (repeat (:indent-length *flags*) " ")))
-
-(def ^:dynamic *media-query-parents*
-  "Current parents Used for compiling @media to temporarily store parents
-  paths for compiling @media changes."
-  nil)
-
-(def ^:dynamic *at-media-indent*
-  "Extra indentation when nested inside a media query."
-  "")
-
-(def ^:dynamic *keyframes-indent*
-  "Extra indentation when nested inside keyframes."
-  "")
-
-(def ^:dynamic *in-params-context* false)
 
 (declare compile-expression
          compile-at-rule
@@ -169,7 +128,7 @@
   [selectors-sequences]
   (let [compiled-selectors (->> selectors-sequences (map compile-selectors-sequence)
                                 util/str-comma-join)]
-    (str *at-media-indent* compiled-selectors)))
+    (str ctx/*at-media-indent* compiled-selectors)))
 
 (defmulti compile-color
           "Generates CSS from a color, calls a relevant method to do so depending on the
@@ -181,8 +140,8 @@
 
 (defmethod compile-color "rgb"
   [{:keys [value] :as color}]
-  (if *compress?*
-    (-> color (update-in-keys util/math-round [:value] :red :green :blue)
+  (if ctx/*compress?*
+    (-> color (util/update-in-keys util/math-round [:value] :red :green :blue)
         colors/rgb->hex)
     (let [{:keys [red green blue]} value
           [red green blue] (map util/math-round [red green blue])]
@@ -190,8 +149,8 @@
 
 (defmethod compile-color "rgba"
   [{:keys [value] :as color}]
-  (if *compress?*
-    (-> color (update-in-keys util/math-round [:value] :red :green :blue)
+  (if ctx/*compress?*
+    (-> color (util/update-in-keys util/math-round [:value] :red :green :blue)
         (update-in [:value :alpha] util/percent->number)
         colors/maybe-without-alpha
         colors/rgb->hex)
@@ -202,7 +161,7 @@
 
 (defmethod compile-color "hsl"
   [{:keys [value] :as color}]
-  (if *compress?*
+  (if ctx/*compress?*
     (-> color (update-in [:value :hue] util/math-round)
         colors/hsl->rgb
         colors/rgb->hex)
@@ -214,7 +173,7 @@
 
 (defmethod compile-color "hsla"
   [{:keys [value] :as color}]
-  (if *compress?*
+  (if ctx/*compress?*
     (-> color (update-in [:value :hue] util/math-round)
         colors/maybe-without-alpha
         colors/hsl->rgb
@@ -302,7 +261,7 @@
   [attributes-map]
   (when-let [attributes-map (util/prune-nils attributes-map)]
     (for [[attribute value] attributes-map]
-      [(compile-expression attribute) (binding [*in-params-context* true]
+      [(compile-expression attribute) (binding [ctx/*in-params-context* true]
                                         (compile-expression value))])))
 
 (defn attr-map-to-css
@@ -317,9 +276,9 @@
   (when attributes-map
     (->> attributes-map compile-attributes-map
          (map util/str-colon-join)
-         (map #(str *keyframes-indent* *at-media-indent* % ";"))
-         (str/join (str "\n" *indent* *at-media-indent*))
-         (str *keyframes-indent*))))
+         (map #(str ctx/*keyframes-indent* ctx/*at-media-indent* % ";"))
+         (str/join (str "\n" ctx/*indent* ctx/*at-media-indent*))
+         (str ctx/*keyframes-indent*))))
 
 (defn compile-params
   "Given a map of HTML style attributes described in Tornado, compiles all the values
@@ -385,7 +344,7 @@
 
 (defmethod compile-at-rule "media"
   [{:keys [value] :as at-media}]
-  (let [paths *media-query-parents*
+  (let [paths ctx/*media-query-parents*
         {:keys [rules changes]} value
         compiled-media-rules (->> (for [[param value] rules]
                                     (if-some [param-fn (get special-media-rules-map value)]
@@ -408,22 +367,22 @@
 (defmethod compile-at-rule "font-face"
   [{:keys [value]}]
   (let [compiled-params (->> value (map attr-map-to-css)
-                             (str/join (str "\n" *indent*)))]
-    (str "@font-face {\n" *indent* compiled-params "\n}")))
+                             (str/join (str "\n" ctx/*indent*)))]
+    (str "@font-face {\n" ctx/*indent* compiled-params "\n}")))
 
 (defmethod compile-at-rule "keyframes"
   [{:keys [value]}]
   (let [{:keys [anim-name frames]} value]
-    (if *in-params-context*
+    (if ctx/*in-params-context*
       anim-name
-      (binding [*keyframes-indent* *indent*]
+      (binding [ctx/*keyframes-indent* ctx/*indent*]
         (let [compiled-frames (->> frames (map (fn [[progress params]]
                                                  (let [compiled-progress (compile-expression progress)
                                                        compiled-params (attr-map-to-css params)]
                                                    (str compiled-progress " {\n"
-                                                        compiled-params "\n" *keyframes-indent* "}"))))
-                                   (str/join (str "\n" *keyframes-indent*))
-                                   (str *keyframes-indent*))]
+                                                        compiled-params "\n" ctx/*keyframes-indent* "}"))))
+                                   (str/join (str "\n" ctx/*keyframes-indent*))
+                                   (str ctx/*keyframes-indent*))]
           (str "@keyframes " anim-name " {\n" compiled-frames "\n}"))))))
 
 (defn flatten-seqs
@@ -568,14 +527,14 @@
          display: flex;
       }"
   [{:keys [paths params at-media at-font-face at-keyframes]}]
-  (cond at-media (binding [*media-query-parents* paths
-                           *at-media-indent* *indent*]
+  (cond at-media (binding [ctx/*media-query-parents* paths
+                           ctx/*at-media-indent* ctx/*indent*]
                    (compile-at-rule at-media))
         at-font-face (compile-css-record at-font-face)
         at-keyframes (compile-css-record at-keyframes)
         :else (when params (let [compiled-selectors (compile-selectors paths)
                                  compiled-params (attr-map-to-css params)]
-                             (str compiled-selectors " {\n" *indent* compiled-params "\n" *at-media-indent* "}")))))
+                             (str compiled-selectors " {\n" ctx/*indent* compiled-params "\n" ctx/*at-media-indent* "}")))))
 
 (defn compile-all-selectors-params-combinations
   "Given a prepared hiccup vector (with precalculated and simplified combinations of all
@@ -622,12 +581,12 @@
   ([css-hiccup]
    (css nil css-hiccup))
   ([flags css-hiccup]
-   (binding [*flags* (merge *flags* flags)]
-     (let [{:keys [output-to pretty-print? indent-length]} *flags*]
-       (binding [*compress?* (not pretty-print?)
-                 *indent* (apply str (repeat indent-length " "))]
+   (binding [ctx/*flags* (merge ctx/*flags* flags)]
+     (let [{:keys [output-to pretty-print? indent-length]} ctx/*flags*]
+       (binding [ctx/*compress?* (not pretty-print?)
+                 ctx/*indent* (apply str (repeat indent-length " "))]
          (cond->> css-hiccup true just-css
-                  *compress?* compression/compress
+                  ctx/*compress?* compression/compress
                   output-to ((fn [x] #?(:clj  (do (spit output-to x)
                                                   (println "   Wrote: " output-to))
                                         :cljs (util/exception "Cannot save compiled stylesheet in ClojureScript."))))))))))
