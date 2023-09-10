@@ -34,10 +34,10 @@
   [s]
   (subs s 0 (dec (count s))))
 
-(defn exception [arg]
+(defn exception [& args]
   (throw
     (#?(:clj  IllegalArgumentException.
-        :cljs js/Error.) arg)))
+        :cljs js/Error.) (apply str args))))
 
 (defn named?
   "Returns true if the argument is a symbol, a keyword or a string."
