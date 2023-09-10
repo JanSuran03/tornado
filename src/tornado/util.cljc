@@ -34,10 +34,10 @@
   [s]
   (subs s 0 (dec (count s))))
 
-(defn exception [arg]
+(defn exception [& args]
   (throw
     (#?(:clj  IllegalArgumentException.
-        :cljs js/Error.) arg)))
+        :cljs js/Error.) (apply str args))))
 
 (defn named?
   "Returns true if the argument is a symbol, a keyword or a string."
@@ -256,3 +256,17 @@
     (-> (str (namespace expr) (if *compress?* "-" "--") (name expr))
         (str/replace #"\." "-"))
     (name expr)))
+
+(defn make-css-type-checker
+  "Using as e.g. `(make-css-type-checker \"color\")` returns a function, which takes
+  an object and if it has the :type property (and hence is most likely a map or
+  a record) and the value of the property has namespace equal to `type-ns`, returns
+  the whole :type property value.
+
+  ((make-css-type-checker \"color\") {:type :color/rgb :red 1 :green 2 :blue 3})
+  => :color/rgb"
+  [type-ns]
+  (fn [obj]
+    (when-let [type (:type obj)]
+      (when (= (namespace type) type-ns)
+        type))))
