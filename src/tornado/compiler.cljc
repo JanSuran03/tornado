@@ -447,25 +447,25 @@
   [selector &more-selectors? params? &<children? at-media?*>]
   will throw a detailed error message."
   [hiccup]
-  (as-> hiccup <> (reduce (fn [{:keys [selectors params children at-media] :as spc-map} hiccup-element]
+  (as-> hiccup <> (reduce (fn [{:hiccup/keys [selectors attributes children at-media] :as spc-map} hiccup-element]
                             (let [belongs-to (cond (or (sel/id-class-tag? hiccup-element)
-                                                       (sel/selector? hiccup-element)) :selectors
+                                                       (sel/selector? hiccup-element)) :hiccup/selectors
                                                    (and (not (record? hiccup-element))
-                                                        (map? hiccup-element)) :params
-                                                   (vector? hiccup-element) :children
-                                                   (at-rules/at-media? hiccup-element) :at-media
-                                                   (at-rules/at-font-face? hiccup-element) :at-font-face
+                                                        (map? hiccup-element)) :hiccup/attributes
+                                                   (vector? hiccup-element) :hiccup/children
+                                                   (at-rules/at-media? hiccup-element) :hiccup/at-media
+                                                   (at-rules/at-font-face? hiccup-element) :hiccup/at-font-face
                                                    :else (util/exception
                                                            (str "Invalid hiccup element: " hiccup-element "\nin"
                                                                 " hiccup: " hiccup "\nNone from a class, id,"
                                                                 " selector, child-vector, at-media CSSAtRule"
                                                                 " instance or a params map.")))]
-                              (if (or (and (not= belongs-to :selectors)
+                              (if (or (and (not= belongs-to :hiccup/selectors)
                                            (empty? selectors))
-                                      (and (= belongs-to :selectors)
-                                           (or (seq params) (seq children) (seq at-media)))
-                                      (and (= belongs-to :params)
-                                           (or (seq params) (seq children) (seq at-media))))
+                                      (and (= belongs-to :hiccup/selectors)
+                                           (or (seq attributes) (seq children) (seq at-media)))
+                                      (and (= belongs-to :hiccup/attributes)
+                                           (or (seq attributes) (seq children) (seq at-media))))
                                 (util/exception
                                   (str "Error: Hiccup rules:\nYou have to include at least one selector before"
                                        " params or children.\nIf you include any of params or children, the order"
@@ -473,43 +473,43 @@
                                        " than one parameters map. At-font-face can be included anywhere in the"
                                        " hiccup vector.\nHiccup received: " hiccup))
                                 (update spc-map belongs-to conj hiccup-element))))
-                          {:selectors    []
-                           :params       []
-                           :children     []
-                           :at-media     []
-                           :at-font-face []} <>)
-        (update <> :params first)))
+                          #:hiccup{:selectors    []
+                                   :attributes   []
+                                   :children     []
+                                   :at-media     []
+                                   :at-font-face []} <>)
+        (update <> :hiccup/attributes first)))
 
 (defn- update-unevaluated-hiccup
-  "An internal function which adds :path, :params map to current unevaluated hiccup vector."
-  [hiccup path params]
-  (util/conjv hiccup {:path   path
-                      :params params}))
+  "An internal function which adds :path, :attributes map to current unevaluated hiccup vector."
+  [hiccup path attributes]
+  (util/conjv hiccup {:path       path
+                      :attributes attributes}))
 
 (defn simplify-prepared-expanded-hiccup
   "Simplifies the expanded hiccup vector: A new map will be created for every unique
-  parameters map or at-media record with {:params {...}, :paths #{...}} (with :at-media
+  parameters map or at-media record with {:attributes {...}, :paths #{...}} (with :at-media
   instead of :params alternatively), where elements with equal params or at-media record
   will be inserted to a set behind the :paths key. This function returns a vector of
   these unique params/at-media maps."
   [path-params-vector]
   (->> path-params-vector
-       (reduce (fn [params->paths-map {:keys [path params at-media at-font-face at-keyframes]}]
+       (reduce (fn [params->paths-map {:keys [path attributes at-media at-font-face at-keyframes]}]
                  (let [known-at-media (get params->paths-map at-media)]
                    (cond at-keyframes (update params->paths-map :keyframes-set conj at-keyframes)
                          at-font-face (update params->paths-map :font-faces-set conjs at-font-face)
                          (and at-media known-at-media) (update params->paths-map at-media conjs path)
                          (and at-media (not known-at-media)) (assoc params->paths-map at-media #{path})
-                         (get params->paths-map params) (update params->paths-map params conjs path)
-                         :else (assoc params->paths-map params #{path}))))
+                         (get params->paths-map attributes) (update params->paths-map attributes conjs path)
+                         :else (assoc params->paths-map attributes #{path}))))
                {})
-       (reduce (fn [final-expanded-hiccup [params selectors-set]]
-                 (cond (at-rules/at-media? params) (conj final-expanded-hiccup {:paths    (vec selectors-set)
-                                                                                :at-media params})
-                       (= :keyframes-set params) (reduce #(conj %1 {:at-keyframes %2}) final-expanded-hiccup selectors-set)
-                       (= :font-faces-set params) (reduce #(conj %1 {:at-font-face %2}) final-expanded-hiccup selectors-set)
-                       :else (conj final-expanded-hiccup {:paths  (vec selectors-set)
-                                                          :params params})))
+       (reduce (fn [final-expanded-hiccup [attributes selectors-set]]
+                 (cond (at-rules/at-media? attributes) (conj final-expanded-hiccup {:paths    (vec selectors-set)
+                                                                                    :at-media attributes})
+                       (= :keyframes-set attributes) (reduce #(conj %1 {:at-keyframes %2}) final-expanded-hiccup selectors-set)
+                       (= :font-faces-set attributes) (reduce #(conj %1 {:at-font-face %2}) final-expanded-hiccup selectors-set)
+                       :else (conj final-expanded-hiccup {:paths      (vec selectors-set)
+                                                          :attributes attributes})))
                [])))
 
 (defn expand-hiccup-vector
@@ -527,9 +527,10 @@
                                                        (if (seq? next-item)
                                                          (reduce conj! ret next-item)
                                                          (conj! ret next-item)))
-                                                     (transient []) hiccup-vector)
+                                                     (transient [])
+                                                     hiccup-vector)
                                              persistent!)
-                    {:keys [selectors params children at-media at-font-face]} (selectors-params-children with-flattened-inner)
+                    {:hiccup/keys [selectors attributes children at-media at-font-face]} (selectors-params-children with-flattened-inner)
                     maybe-at-media (when (seq at-media)
                                      (as-> selectors <> (map (partial util/conjv parents) <>)
                                            (#?(:clj  m/cartesian-product
@@ -542,14 +543,14 @@
                 (if (seq children)
                   (reduce (fn [current-unevaluated-hiccup [selector child]]
                             (let [new-parents (util/conjv parents selector)
-                                  updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)]
+                                  updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents attributes)]
                               (expand-hiccup-list-for-compilation new-parents updated-hiccup (list child))))
                           unevaluated-hiccup
                           (#?(:clj  m/cartesian-product
                               :cljs cartesian-product) selectors children))
                   (reduce (fn [current-unevaluated-hiccup selector]
                             (let [new-parents (util/conjv parents selector)]
-                              (update-unevaluated-hiccup current-unevaluated-hiccup new-parents params)))
+                              (update-unevaluated-hiccup current-unevaluated-hiccup new-parents attributes)))
                           unevaluated-hiccup
                           selectors)))))
 
@@ -559,7 +560,7 @@
   (a shorthand which can be used in CSS). Also translates the params map or at-media
   record to CSS and creates a CSS block from these compiled things, e.g.:
   (compile-selectors-and-params {:paths  #{[:.abc :#def :iframe] [:td :span sel/hover]}
-                                 :params {:color   :font-black
+                                 :attributes {:color   :font-black
                                           :margin  [[(units/px 15) (units/em 2)]]
                                           :display :flex}}
   => .abc #def iframe, td span:hover {
@@ -567,15 +568,15 @@
          margin: 15px 2em;
          display: flex;
       }"
-  [{:keys [paths params at-media at-font-face at-keyframes]}]
+  [{:keys [paths attributes at-media at-font-face at-keyframes]}]
   (cond at-media (binding [*media-query-parents* paths
                            *at-media-indent* *indent*]
                    (compile-at-rule at-media))
         at-font-face (compile-css-record at-font-face)
         at-keyframes (compile-css-record at-keyframes)
-        :else (when params (let [compiled-selectors (compile-selectors paths)
-                                 compiled-params (attr-map-to-css params)]
-                             (str compiled-selectors " {\n" *indent* compiled-params "\n" *at-media-indent* "}")))))
+        :else (when attributes (let [compiled-selectors (compile-selectors paths)
+                                     compiled-params (attr-map-to-css attributes)]
+                                 (str compiled-selectors " {\n" *indent* compiled-params "\n" *at-media-indent* "}")))))
 
 (defn compile-all-selectors-params-combinations
   "Given a prepared hiccup vector (with precalculated and simplified combinations of all
