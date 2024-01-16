@@ -469,10 +469,9 @@
                                 :expect-children (if (identical? element-type :child)
                                                    (update result :children conj element)
                                                    (util/exception (str "Error: Expected child, @media or @font-face, got " element " in: " hiccup))))))
-                          {:selectors  []
-                           :attributes []
-                           :children   []
-                           :state      :expect-selector}
+                          {:selectors []
+                           :children  []
+                           :state     :expect-selector}
                           <>)
         (dissoc <> :state)))
 
@@ -508,7 +507,7 @@
                                                           :attributes attributes})))
                [])))
 
-(defrecord EvalContext [selectors expr])
+(defrecord EvalContext [selectors rule])
 
 (defn expand-hiccup-vector
   "Given (potentially empty) current parent-selectors vector, pending unevaluated
