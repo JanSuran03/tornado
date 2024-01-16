@@ -1,14 +1,15 @@
 (ns tornado.compiler
   "The Tornado compiler, where you should only care about these 4 functions:
   css, repl-css, compile-expression, html-style."
-  (:require [tornado.types :as t]
+  (:require [clojure.pprint :as pp]
+            [tornado.types :as t]
             [tornado.at-rules :as at-rules]
             [tornado.util :as util :refer [*compress?*]]
             [clojure.string :as str]
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
             [tornado.compression :as compression]
-            #?(:clj [tornado.macros :as m]))
+            #?(:clj [tornado.macros :as m :refer [cartesian-product]]))
   #?(:clj  (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                                    CSSCombinator CSSAttributeSelector
                                    CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
@@ -438,47 +439,42 @@
               (list coll)))
           coll))
 
-(defn selectors-params-children
-  "Given a hiccup vector, this function returns a map with keys :selectors, :params,
-  :children and :at-media, where each of these keys' value is a vector of those
-  elements. Besides :params, which is returned as a map, since there cannot be more
-  than 1 params map.
-  Including incorrect elements or failing to comply the right order of the elements
-  [selector &more-selectors? params? &<children? at-media?*>]
-  will throw a detailed error message."
+(defn selectors-attributes-children
+  "Given a hiccup vector [selector(+) attributes(0|1) #{child, @media, @font-face}(*)],
+  asserts the hiccup structure and returns a map of these."
   [hiccup]
-  (as-> hiccup <> (reduce (fn [{:hiccup/keys [selectors attributes children at-media] :as spc-map} hiccup-element]
-                            (let [belongs-to (cond (or (sel/id-class-tag? hiccup-element)
-                                                       (sel/selector? hiccup-element)) :hiccup/selectors
-                                                   (and (not (record? hiccup-element))
-                                                        (map? hiccup-element)) :hiccup/attributes
-                                                   (vector? hiccup-element) :hiccup/children
-                                                   (at-rules/at-media? hiccup-element) :hiccup/at-media
-                                                   (at-rules/at-font-face? hiccup-element) :hiccup/at-font-face
-                                                   :else (util/exception
-                                                           (str "Invalid hiccup element: " hiccup-element "\nin"
-                                                                " hiccup: " hiccup "\nNone from a class, id,"
-                                                                " selector, child-vector, at-media CSSAtRule"
-                                                                " instance or a params map.")))]
-                              (if (or (and (not= belongs-to :hiccup/selectors)
-                                           (empty? selectors))
-                                      (and (= belongs-to :hiccup/selectors)
-                                           (or (seq attributes) (seq children) (seq at-media)))
-                                      (and (= belongs-to :hiccup/attributes)
-                                           (or (seq attributes) (seq children) (seq at-media))))
-                                (util/exception
-                                  (str "Error: Hiccup rules:\nYou have to include at least one selector before"
-                                       " params or children.\nIf you include any of params or children, the order"
-                                       " has to be selectors -> params -> children.\nYou also cannot include more"
-                                       " than one parameters map. At-font-face can be included anywhere in the"
-                                       " hiccup vector.\nHiccup received: " hiccup))
-                                (update spc-map belongs-to conj hiccup-element))))
-                          #:hiccup{:selectors    []
-                                   :attributes   []
-                                   :children     []
-                                   :at-media     []
-                                   :at-font-face []} <>)
-        (update <> :hiccup/attributes first)))
+  (as-> hiccup <> (reduce (fn [{:keys [state] :as result} element]
+                            (let [element-type (cond (or (sel/id-class-tag? element)
+                                                         (sel/selector? element)) :selector
+                                                     (and (not (record? element))
+                                                          (map? element)) :attributes
+                                                     (or (vector? element)
+                                                         (at-rules/at-media? element)
+                                                         (at-rules/at-font-face? element)) :child
+                                                     :else (util/exception
+                                                             (str "Invalid hiccup element: " element "\nin"
+                                                                  " hiccup: " hiccup "\nNone from a class, id,"
+                                                                  " selector, child-vector, at-media CSSAtRule"
+                                                                  " instance or a params map.")))]
+                              (case state
+                                :expect-selector (if (identical? element-type :selector)
+                                                   (-> result (update :selectors conj element)
+                                                       (assoc :state :expect-any))
+                                                   (util/exception (str "Error: Expected at least 1 selector in a hiccup vector before other elements: " hiccup)))
+                                :expect-any (case element-type
+                                              :selector (update result :selectors conj element)
+                                              :attributes (assoc result :attributes element :state :expect-children)
+                                              :child (-> result (update :children conj element)
+                                                         (assoc state :expect-children)))
+                                :expect-children (if (identical? element-type :child)
+                                                   (update result :children conj element)
+                                                   (util/exception (str "Error: Expected child, @media or @font-face, got " element " in: " hiccup))))))
+                          {:selectors  []
+                           :attributes []
+                           :children   []
+                           :state      :expect-selector}
+                          <>)
+        (dissoc <> :state)))
 
 (defn- update-unevaluated-hiccup
   "An internal function which adds :path, :attributes map to current unevaluated hiccup vector."
@@ -512,47 +508,33 @@
                                                           :attributes attributes})))
                [])))
 
+(defrecord EvalContext [selectors expr])
+
 (defn expand-hiccup-vector
-  "Given a (potentially nil) current parents sequence, unevaluated hiccup combinations
-  in a vector the current hiccup vector, which is in a form
-  [sel1 maybe-sel2 maybe-sel3 ... {maybe-params-map} [maybe-child1] [maybe-child2] ... ]
-  where each child is a hiccup vector as well, this function adds all combinations
-  of selectors and descendant children and their selectors together with corresponding
-  parameters (or skips the combination of params are nil) to the unevaluated-hiccup
-  argument, recursively."
-  [parents unevaluated-hiccup hiccup-vector]
-  (cond (at-rules/at-font-face? hiccup-vector) (conj unevaluated-hiccup {:at-font-face hiccup-vector})
-        (at-rules/at-keyframes? hiccup-vector) (conj unevaluated-hiccup {:at-keyframes hiccup-vector})
-        :else (let [with-flattened-inner (-> (reduce (fn [ret next-item]
-                                                       (if (seq? next-item)
-                                                         (reduce conj! ret next-item)
-                                                         (conj! ret next-item)))
-                                                     (transient [])
-                                                     hiccup-vector)
-                                             persistent!)
-                    {:hiccup/keys [selectors attributes children at-media at-font-face]} (selectors-params-children with-flattened-inner)
-                    maybe-at-media (when (seq at-media)
-                                     (as-> selectors <> (map (partial util/conjv parents) <>)
-                                           (#?(:clj  m/cartesian-product
-                                               :cljs cartesian-product) <> at-media)
-                                           (map (fn [[path media-rules]]
-                                                  {:path     path
-                                                   :at-media media-rules}) <>)))
-                    unevaluated-hiccup (-> unevaluated-hiccup (into maybe-at-media)
-                                           (into (map #(hash-map :at-font-face %) at-font-face)))]
-                (if (seq children)
-                  (reduce (fn [current-unevaluated-hiccup [selector child]]
-                            (let [new-parents (util/conjv parents selector)
-                                  updated-hiccup (update-unevaluated-hiccup current-unevaluated-hiccup new-parents attributes)]
-                              (expand-hiccup-list-for-compilation new-parents updated-hiccup (list child))))
-                          unevaluated-hiccup
-                          (#?(:clj  m/cartesian-product
-                              :cljs cartesian-product) selectors children))
-                  (reduce (fn [current-unevaluated-hiccup selector]
-                            (let [new-parents (util/conjv parents selector)]
-                              (update-unevaluated-hiccup current-unevaluated-hiccup new-parents attributes)))
-                          unevaluated-hiccup
-                          selectors)))))
+  "Given (potentially empty) current parent-selectors vector, pending unevaluated
+   hiccup and the next hiccup item in a form
+   [selector(+) attributes(0|1) #{child, @media, @font-face}(*)],
+   this function walks through the hiccup item and adds expression with selector contexts
+   to be evaluated, recursively, while updating parent selectors accordingly."
+  [parent-selectors pending-hiccup hiccup-item]
+  (if (or (at-rules/at-media? hiccup-item)
+          (at-rules/at-font-face? hiccup-item))
+    (conj pending-hiccup (EvalContext. parent-selectors hiccup-item))
+    (let [flattened (reduce (fn [ret next-item]
+                              (if (seq? next-item)
+                                (into ret next-item)
+                                (conj ret next-item)))
+                            []
+                            hiccup-item)
+          {:keys [selectors attributes children]} (selectors-attributes-children flattened)
+          new-selector-sequences (mapv #(conj parent-selectors %) selectors)
+          pending-hiccup (if attributes
+                           (into pending-hiccup (map #(EvalContext. % attributes)) new-selector-sequences)
+                           pending-hiccup)]
+      (reduce (fn [pending-hiccup [new-selectors child]]
+                (expand-hiccup-vector new-selectors pending-hiccup child))
+              pending-hiccup
+              (cartesian-product new-selector-sequences children)))))
 
 (defn compile-selectors-and-params
   "For a current :paths & :params/:at-media map, translates the paths (selectors) which
@@ -611,8 +593,9 @@
   [css-hiccup]
   (->> css-hiccup list
        (expand-hiccup-list-for-compilation nil [])
-       simplify-prepared-expanded-hiccup
-       compile-all-selectors-params-combinations))
+       ; simplify-prepared-expanded-hiccup
+       ; compile-all-selectors-params-combinations
+       ))
 
 (defn css
   "Generates CSS from a standard Tornado vector (or a list of hiccup vectors). If
