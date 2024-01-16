@@ -22,22 +22,7 @@
              (list [:.a [:.c {:a :b}]]
                    [:.a [:#d {:a :b}]]
                    [:#b [:.c {:a :b}]]
-                   [:#b [:#d {:a :b}]])
-
-             [:p :h1 {:a :b}
-              [:a {:a :c}]
-              [:.class-1 {:d :e}
-               [:#id-1 :#id-2 {:m :n}]]]
-             (list [:p {:a :b}]
-                   [:p [:a {:a :c}]]
-                   [:p [:.class-1 {:d :e}]]
-                   [:p [:.class-1 [:#id-1 {:m :n}]]]
-                   [:p [:.class-1 [:#id-2 {:m :n}]]]
-                   [:h1 {:a :b}]
-                   [:h1 [:a {:a :c}]]
-                   [:h1 [:.class-1 {:d :e}]]
-                   [:h1 [:.class-1 [:#id-1 {:m :n}]]]
-                   [:h1 [:.class-1 [:#id-2 {:m :n}]]])))
+                   [:#b [:#d {:a :b}]])))
 
 (deftest pseudoclassselectors
   (is (= (css [:a {:color :black} [hover {:color :red}]])

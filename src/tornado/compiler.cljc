@@ -1,15 +1,14 @@
 (ns tornado.compiler
   "The Tornado compiler, where you should only care about these 4 functions:
   css, repl-css, compile-expression, html-style."
-  (:require [clojure.pprint :as pp]
-            [tornado.types :as t]
+  (:require [tornado.types :as t]
             [tornado.at-rules :as at-rules]
             [tornado.util :as util :refer [*compress?*]]
             [clojure.string :as str]
             [tornado.selectors :as sel]
             [tornado.colors :as colors]
             [tornado.compression :as compression]
-            #?(:clj [tornado.macros :as m :refer [cartesian-product]]))
+            #?(:clj [tornado.macros :refer [cartesian-product]]))
   #?(:clj  (:import (tornado.types CSSUnit CSSAtRule CSSFunction CSSColor
                                    CSSCombinator CSSAttributeSelector
                                    CSSPseudoClass CSSPseudoElement CSSPseudoClassFn)
@@ -70,11 +69,6 @@
 
 (def ^:dynamic *indent* (apply str (repeat (:indent-length *flags*) " ")))
 
-(def ^:dynamic *media-query-parents*
-  "Current parents Used for compiling @media to temporarily store parents
-  paths for compiling @media changes."
-  nil)
-
 (def ^:dynamic *at-media-indent*
   "Extra indentation when nested inside a media query."
   "")
@@ -89,13 +83,9 @@
          compile-at-rule
          expand-hiccup-list-for-compilation
          attr-map-to-css
-         simplify-prepared-expanded-hiccup
-         compile-all-selectors-params-combinations)
+         compile-prepared-expressions)
 
-(defn conjs
-  "Conj(oin)s to a (potentially empty) set."
-  [s value]
-  (conj (or s #{}) value))
+(defrecord EvalExpr [selectors expr])
 
 (defmulti compile-selector
           "Compiles a CSS combinator, attribute selector, pseudoclass or pseudoelement
@@ -168,6 +158,7 @@
   which is a shorthand that can be used in CSS to give different selectors paths the same
   parameters. ... => \"iframe .abc, #def::after .ghi\""
   [selectors-sequences]
+  (println "SELSEQ = " selectors-sequences)
   (let [compiled-selectors (->> selectors-sequences (map compile-selectors-sequence)
                                 util/str-comma-join)]
     (str *at-media-indent* compiled-selectors)))
@@ -261,7 +252,7 @@
 
 (defmethod compile-css-record CSS-AtRule
   [at-rule-record]
-  (compile-at-rule at-rule-record))
+  (compile-at-rule nil at-rule-record))
 
 (defmethod compile-css-record CSS-Color
   [color-record]
@@ -369,10 +360,11 @@
                                                 :changes [:.abc {:margin-top \"20px\"}]}}
 
           Depending on the :identifier (\"media\" in this case), a relevant method is called."
-          :identifier)
+          (fn [_selectors {:keys [identifier]}]
+            identifier))
 
 (defmethod compile-at-rule :default
-  [{:keys [identifier] :as at-rule}]
+  [_selectors {:keys [identifier] :as at-rule}]
   (util/exception (str "Unknown at-rule identifier: " identifier " of at-rule: " at-rule)))
 
 (def special-media-rules-map
@@ -385,9 +377,8 @@
    false #(str "not " (name %))})
 
 (defmethod compile-at-rule "media"
-  [{:keys [value] :as at-media}]
-  (let [paths *media-query-parents*
-        {:keys [rules changes]} value
+  [selectors {:keys [value] :as at-media}]
+  (let [{:keys [rules changes]} value
         compiled-media-rules (->> (for [[param value] rules]
                                     (if-some [param-fn (get special-media-rules-map value)]
                                       (param-fn param)
@@ -398,22 +389,19 @@
                                           (str "Invalid format of a CSS property: " value " in a map of rules:"
                                                rules " in at-media compilation of @media expression: " at-media)))))
                                   (str/join " and "))
-        compiled-media-changes (->> (for [parents-path paths]
-                                      (-> (expand-hiccup-list-for-compilation parents-path [] changes)
-                                          simplify-prepared-expanded-hiccup
-                                          compile-all-selectors-params-combinations
-                                          (str/replace #" \&" "")))
-                                    (str/join "\n\n"))]
+        compiled-media-changes (-> (expand-hiccup-list-for-compilation selectors [] changes)
+                                   compile-prepared-expressions
+                                   (str/replace #" \&" ""))]
     (str "@media " compiled-media-rules " {\n" compiled-media-changes "\n}")))
 
 (defmethod compile-at-rule "font-face"
-  [{:keys [value]}]
+  [_selectors {:keys [value]}]
   (let [compiled-params (->> value (map attr-map-to-css)
                              (str/join (str "\n" *indent*)))]
     (str "@font-face {\n" *indent* compiled-params "\n}")))
 
 (defmethod compile-at-rule "keyframes"
-  [{:keys [value]}]
+  [_selectors {:keys [value]}]
   (let [{:keys [anim-name frames]} value]
     (if *in-params-context*
       anim-name
@@ -475,40 +463,6 @@
                           <>)
         (dissoc <> :state)))
 
-(defn- update-unevaluated-hiccup
-  "An internal function which adds :path, :attributes map to current unevaluated hiccup vector."
-  [hiccup path attributes]
-  (util/conjv hiccup {:path       path
-                      :attributes attributes}))
-
-(defn simplify-prepared-expanded-hiccup
-  "Simplifies the expanded hiccup vector: A new map will be created for every unique
-  parameters map or at-media record with {:attributes {...}, :paths #{...}} (with :at-media
-  instead of :params alternatively), where elements with equal params or at-media record
-  will be inserted to a set behind the :paths key. This function returns a vector of
-  these unique params/at-media maps."
-  [path-params-vector]
-  (->> path-params-vector
-       (reduce (fn [params->paths-map {:keys [path attributes at-media at-font-face at-keyframes]}]
-                 (let [known-at-media (get params->paths-map at-media)]
-                   (cond at-keyframes (update params->paths-map :keyframes-set conj at-keyframes)
-                         at-font-face (update params->paths-map :font-faces-set conjs at-font-face)
-                         (and at-media known-at-media) (update params->paths-map at-media conjs path)
-                         (and at-media (not known-at-media)) (assoc params->paths-map at-media #{path})
-                         (get params->paths-map attributes) (update params->paths-map attributes conjs path)
-                         :else (assoc params->paths-map attributes #{path}))))
-               {})
-       (reduce (fn [final-expanded-hiccup [attributes selectors-set]]
-                 (cond (at-rules/at-media? attributes) (conj final-expanded-hiccup {:paths    (vec selectors-set)
-                                                                                    :at-media attributes})
-                       (= :keyframes-set attributes) (reduce #(conj %1 {:at-keyframes %2}) final-expanded-hiccup selectors-set)
-                       (= :font-faces-set attributes) (reduce #(conj %1 {:at-font-face %2}) final-expanded-hiccup selectors-set)
-                       :else (conj final-expanded-hiccup {:paths      (vec selectors-set)
-                                                          :attributes attributes})))
-               [])))
-
-(defrecord EvalContext [selectors rule])
-
 (defn expand-hiccup-vector
   "Given (potentially empty) current parent-selectors vector, pending unevaluated
    hiccup and the next hiccup item in a form
@@ -516,9 +470,8 @@
    this function walks through the hiccup item and adds expression with selector contexts
    to be evaluated, recursively, while updating parent selectors accordingly."
   [parent-selectors pending-hiccup hiccup-item]
-  (if (or (at-rules/at-media? hiccup-item)
-          (at-rules/at-font-face? hiccup-item))
-    (conj pending-hiccup (EvalContext. parent-selectors hiccup-item))
+  (if (at-rules/cssatrule? hiccup-item)
+    (conj pending-hiccup (EvalExpr. parent-selectors hiccup-item))
     (let [flattened (reduce (fn [ret next-item]
                               (if (seq? next-item)
                                 (into ret next-item)
@@ -528,7 +481,7 @@
           {:keys [selectors attributes children]} (selectors-attributes-children flattened)
           new-selector-sequences (mapv #(conj parent-selectors %) selectors)
           pending-hiccup (if attributes
-                           (into pending-hiccup (map #(EvalContext. % attributes)) new-selector-sequences)
+                           (into pending-hiccup (map #(EvalExpr. % attributes)) new-selector-sequences)
                            pending-hiccup)]
       (reduce (fn [pending-hiccup [new-selectors child]]
                 (expand-hiccup-vector new-selectors pending-hiccup child))
@@ -549,19 +502,15 @@
          margin: 15px 2em;
          display: flex;
       }"
-  [{:keys [paths attributes at-media at-font-face at-keyframes]}]
-  (cond at-media (binding [*media-query-parents* paths
-                           *at-media-indent* *indent*]
-                   (compile-at-rule at-media))
-        at-font-face (compile-css-record at-font-face)
-        at-keyframes (compile-css-record at-keyframes)
-        :else (when attributes (let [compiled-selectors (compile-selectors paths)
-                                     compiled-params (attr-map-to-css attributes)]
-                                 (str compiled-selectors " {\n" *indent* compiled-params "\n" *at-media-indent* "}")))))
+  [{:keys [selectors expr]}]
+  (cond (at-rules/at-media? expr) (binding [*at-media-indent* *indent*] (compile-at-rule selectors expr))
+        (at-rules/cssatrule? expr) (compile-at-rule selectors expr)
+        :else-attributes (let [compiled-selectors (compile-selectors-sequence selectors)
+                               compiled-attributes (attr-map-to-css expr)]
+                           (str *at-media-indent* compiled-selectors " {\n" *indent* compiled-attributes "\n" *at-media-indent* "}"))))
 
-(defn compile-all-selectors-params-combinations
-  "Given a prepared hiccup vector (with precalculated and simplified combinations of all
-  selectors, children and params), this function generates a CSS string from the data."
+(defn compile-prepared-expressions
+  "Given a vector of EvalExpr records, compiles them to CSS and joins them to one string."
   [prepared-hiccup]
   (->> prepared-hiccup (map compile-selectors-and-params)
        (remove nil?)
@@ -591,10 +540,8 @@
   functions css and repl-css which just do something with the output of this function."
   [css-hiccup]
   (->> css-hiccup list
-       (expand-hiccup-list-for-compilation nil [])
-       ; simplify-prepared-expanded-hiccup
-       ; compile-all-selectors-params-combinations
-       ))
+       (expand-hiccup-list-for-compilation [] [])
+       compile-prepared-expressions))
 
 (defn css
   "Generates CSS from a standard Tornado vector (or a list of hiccup vectors). If
